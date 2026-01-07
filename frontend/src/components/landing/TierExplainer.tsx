@@ -61,16 +61,16 @@ export function TierExplainer({ highlightTier, className }: TierExplainerProps) 
                       key={id}
                       className={cn(
                         'border-b border-border/50 transition-colors',
-                        isHighlighted && 'bg-copper/10'
+                        isHighlighted && 'bg-white/10'
                       )}
                     >
                       <td className="px-4 py-3">
-                        <span className="text-xl">{config.emoji}</span>
+                        <span className="font-mono text-gray-400">[{config.name.toUpperCase().slice(0, 3)}]</span>
                       </td>
                       <td className="px-4 py-3">
                         <span
                           className={cn(
-                            isHighlighted ? 'text-copper' : 'text-text-primary'
+                            isHighlighted ? 'text-white' : 'text-text-primary'
                           )}
                         >
                           {config.name}
@@ -86,8 +86,8 @@ export function TierExplainer({ highlightTier, className }: TierExplainerProps) 
                           className={cn(
                             'font-semibold',
                             isHighlighted
-                              ? 'text-pixel-green'
-                              : 'text-copper'
+                              ? 'text-white glow-white'
+                              : 'text-gray-200'
                           )}
                         >
                           {formatMultiplier(config.multiplier)}
@@ -117,13 +117,13 @@ export function TierExplainer({ highlightTier, className }: TierExplainerProps) 
                 className={cn(
                   'p-4 rounded-lg border transition-colors',
                   isHighlighted
-                    ? 'bg-copper/10 border-copper/30'
+                    ? 'bg-white/10 border-white/30'
                     : 'bg-bg-card border-border'
                 )}
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl">{config.emoji}</span>
+                    <span className="font-mono text-gray-400">[{config.name.toUpperCase().slice(0, 3)}]</span>
                     <div>
                       <div className="font-medium text-text-primary">
                         {config.name}
@@ -139,7 +139,7 @@ export function TierExplainer({ highlightTier, className }: TierExplainerProps) 
                     <div
                       className={cn(
                         'text-lg font-bold',
-                        isHighlighted ? 'text-pixel-green' : 'text-copper'
+                        isHighlighted ? 'text-white glow-white' : 'text-gray-200'
                       )}
                     >
                       {formatMultiplier(config.multiplier)}
@@ -149,7 +149,7 @@ export function TierExplainer({ highlightTier, className }: TierExplainerProps) 
                 </div>
                 <PixelProgress
                   value={progressToMax}
-                  variant={isHighlighted ? 'green' : 'copper'}
+                  variant={isHighlighted ? 'gradient' : 'default'}
                   size="sm"
                   segments={5}
                 />
@@ -161,9 +161,8 @@ export function TierExplainer({ highlightTier, className }: TierExplainerProps) 
         {/* Bottom Note */}
         <div className="mt-8 text-center">
           <p className="text-sm text-text-muted">
-            <span className="text-pixel-gold">⚠</span> Selling resets your
-            streak by one tier. Diamond Hands (30+ days) earn{' '}
-            <span className="text-pixel-green font-semibold">5x</span>{' '}
+            [!] Selling resets your streak by one tier. Diamond Hands (30+ days) earn{' '}
+            <span className="text-white font-semibold glow-white">5x</span>{' '}
             rewards!
           </p>
         </div>

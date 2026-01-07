@@ -13,3 +13,5 @@ export type { HowItWorksProps } from './HowItWorks';
 
 export { TierExplainer } from './TierExplainer';
 export type { TierExplainerProps } from './TierExplainer';
+
+export { WebGLBackground } from './WebGLBackground';

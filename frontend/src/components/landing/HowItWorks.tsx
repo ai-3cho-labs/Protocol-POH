@@ -30,8 +30,8 @@ const STEPS = [
     icon: 'coin' as const,
     title: 'Receive Rewards',
     description:
-      'Trading fees fund buybacks that fill the reward pool. When it hits $250 or 24h passes, rewards drop.',
-    highlight: 'Automatic airdrops',
+      'Trading fees fill the reward pool. When it hits $250 or 24h passes, mining rewards are paid out.',
+    highlight: 'Automatic payouts',
   },
 ];
 
@@ -62,14 +62,14 @@ export function HowItWorks({ className }: HowItWorksProps) {
 
         {/* Connection lines - Desktop only */}
         <div className="hidden lg:flex justify-center mt-8">
-          <div className="flex items-center gap-4 text-copper-dim text-sm">
+          <div className="flex items-center gap-4 text-gray-500 text-sm font-mono">
             <span>HOLD</span>
-            <span className="text-copper">→</span>
+            <span className="text-white">→</span>
             <span>EARN</span>
-            <span className="text-copper">→</span>
+            <span className="text-white">→</span>
             <span>MINE</span>
-            <span className="text-copper">→</span>
-            <span className="text-pixel-green">REPEAT</span>
+            <span className="text-white">→</span>
+            <span className="text-white glow-white">REPEAT</span>
           </div>
         </div>
       </div>
@@ -79,6 +79,7 @@ export function HowItWorks({ className }: HowItWorksProps) {
 
 /**
  * Individual step card
+ * Monochrome design
  */
 function StepCard({
   step,
@@ -93,7 +94,7 @@ function StepCard({
         className={cn(
           'absolute -top-3 left-4',
           'px-2 py-0.5 text-xs font-bold rounded',
-          'bg-copper text-bg-dark'
+          'bg-white text-bg-dark'
         )}
       >
         {step.number}
@@ -102,7 +103,7 @@ function StepCard({
       <div className="pt-4">
         {/* Icon */}
         <div className="mb-4">
-          <PixelIcon name={step.icon} size="xl" variant="copper" />
+          <PixelIcon name={step.icon} size="xl" variant="default" />
         </div>
 
         {/* Title */}
@@ -118,10 +119,10 @@ function StepCard({
           className={cn(
             'inline-flex items-center gap-1.5',
             'px-2 py-1 rounded text-xs',
-            'bg-pixel-green/10 text-pixel-green'
+            'bg-white/10 text-white'
           )}
         >
-          <PixelIcon name="star" size="sm" variant="green" />
+          <PixelIcon name="star" size="sm" variant="accent" />
           <span>{step.highlight}</span>
         </div>
       </div>

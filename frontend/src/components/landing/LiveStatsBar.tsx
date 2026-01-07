@@ -100,6 +100,7 @@ export function LiveStatsBar({
 
 /**
  * Desktop stat item
+ * Monochrome design
  */
 function StatItem({
   label,
@@ -116,11 +117,11 @@ function StatItem({
     <div className="flex items-center gap-2">
       {icon && <span className="text-lg">{icon}</span>}
       <div>
-        <div className="text-xs text-copper-dim">{label}</div>
+        <div className="text-xs text-gray-500">{label}</div>
         <div
           className={cn(
             'tabular-nums',
-            highlight ? 'text-terminal-green' : 'text-zinc-200'
+            highlight ? 'text-white glow-white' : 'text-gray-200'
           )}
         >
           {value}
@@ -132,6 +133,7 @@ function StatItem({
 
 /**
  * Mobile stat item
+ * Monochrome design
  */
 function MobileStatItem({
   label,
@@ -147,12 +149,12 @@ function MobileStatItem({
       <div
         className={cn(
           'text-sm font-medium tabular-nums',
-          highlight ? 'text-terminal-green' : 'text-zinc-200'
+          highlight ? 'text-white glow-white' : 'text-gray-200'
         )}
       >
         {value}
       </div>
-      <div className="text-xs text-zinc-500">{label}</div>
+      <div className="text-xs text-gray-500">{label}</div>
     </div>
   );
 }
@@ -161,7 +163,7 @@ function MobileStatItem({
  * Vertical divider
  */
 function Divider() {
-  return <div className="w-px h-8 bg-terminal-border" />;
+  return <div className="w-px h-8 bg-gray-700" />;
 }
 
 /**

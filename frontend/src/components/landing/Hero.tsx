@@ -19,15 +19,16 @@ export interface HeroProps {
 
 /**
  * Hero - Main landing page hero section
+ * Monochrome terminal aesthetic
  */
 export function Hero({ stats, isLoading, className }: HeroProps) {
   return (
-    <section className={cn('py-12 lg:py-20', className)}>
-      <div className="max-w-4xl mx-auto text-center px-4">
+    <section className={cn('relative py-12 lg:py-20 overflow-hidden', className)}>
+      <div className="relative max-w-4xl mx-auto text-center px-4">
         {/* Badge */}
         <div className="mb-6">
-          <Badge variant="copper" size="lg">
-            Simulated Crypto Mining
+          <Badge variant="tier" size="lg">
+            [SIMULATED CRYPTO MINING]
           </Badge>
         </div>
 
@@ -35,13 +36,13 @@ export function Hero({ stats, isLoading, className }: HeroProps) {
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6">
           <span className="text-text-primary">THE WORKING MAN&apos;S</span>
           <br />
-          <span className="text-copper glow-copper">$COPPER MINE</span>
+          <span className="text-white glow-white">$COPPER MINE</span>
         </h1>
 
         {/* Tagline */}
         <p className="text-lg sm:text-xl text-text-secondary mb-8 max-w-2xl mx-auto">
-          Mine $COPPER without the machines. Hold tokens, earn rewards through
-          buybacks and airdrops. The longer you hold, the more you mine.
+          Mine $COPPER without the machines. Hold tokens, earn mining rewards
+          from trading fees. The longer you hold, the more you mine.
         </p>
 
         {/* Key Points - Desktop Card Style */}
@@ -69,7 +70,7 @@ export function Hero({ stats, isLoading, className }: HeroProps) {
           <ConnectButton size="lg" />
           <a
             href="#how-it-works"
-            className="text-sm text-text-secondary hover:text-copper transition-colors"
+            className="text-sm text-text-secondary hover:text-white transition-colors"
           >
             Learn how it works →
           </a>
@@ -96,6 +97,7 @@ export function Hero({ stats, isLoading, className }: HeroProps) {
 
 /**
  * Feature line with pixel icon
+ * Monochrome design
  */
 function FeatureLine({
   icon,
@@ -107,9 +109,9 @@ function FeatureLine({
   highlight?: boolean;
 }) {
   return (
-    <div className={cn('flex items-center gap-3', highlight && 'text-pixel-green')}>
-      <PixelIcon name={icon} size="md" variant={highlight ? 'green' : 'copper'} />
-      <span className={highlight ? 'text-pixel-green' : 'text-text-primary'}>
+    <div className={cn('flex items-center gap-3', highlight && 'text-white glow-white')}>
+      <PixelIcon name={icon} size="md" variant={highlight ? 'accent' : 'default'} />
+      <span className={highlight ? 'text-white' : 'text-text-primary'}>
         {text}
       </span>
     </div>
@@ -118,11 +120,12 @@ function FeatureLine({
 
 /**
  * Feature chip for mobile hero
+ * Monochrome design
  */
 function FeatureChip({ icon, text }: { icon: 'pickaxe' | 'coin' | 'gem' | 'star'; text: string }) {
   return (
     <div className="flex items-center gap-2 px-3 py-2 bg-bg-surface rounded-lg border border-border">
-      <PixelIcon name={icon} size="sm" variant="copper" />
+      <PixelIcon name={icon} size="sm" variant="default" />
       <span className="text-sm text-text-primary">{text}</span>
     </div>
   );
@@ -130,11 +133,12 @@ function FeatureChip({ icon, text }: { icon: 'pickaxe' | 'coin' | 'gem' | 'star'
 
 /**
  * Stat display
+ * Monochrome design
  */
 function StatDisplay({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-xl lg:text-2xl font-bold text-copper tabular-nums">
+      <div className="text-xl lg:text-2xl font-bold text-white tabular-nums">
         {value}
       </div>
       <div className="text-xs text-text-muted uppercase tracking-wider">{label}</div>
