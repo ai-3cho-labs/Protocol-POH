@@ -9,47 +9,49 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Brand - Copper tones (keep)
-        copper: {
-          DEFAULT: '#B87333',
-          glow: '#CD7F32',
-          dim: '#7a5a2a',
-          light: '#d4956b',
-        },
-        // Backgrounds - Warm browns (replaces terminal blacks)
+        // Monochrome palette
+        accent: '#ffffff',
+        // Backgrounds - Pure darks
         bg: {
-          dark: '#1a1410',
-          card: '#241c16',
-          surface: '#2e241c',
-        },
-        // Pixel semantic colors (16-bit game palette)
-        pixel: {
-          green: '#6abe30',   // Success, rewards
-          red: '#ac3232',     // Errors, negative
-          gold: '#fbf236',    // Highlights, special
-          blue: '#5b6ee1',    // Info, links
+          dark: '#0a0a0a',
+          card: '#111111',
+          surface: '#1a1a1a',
         },
         // Neutrals
-        border: '#3d352d',
+        border: '#333333',
         text: {
-          primary: '#f5f5f5',
-          secondary: '#a08060',
-          muted: '#6b5a4a',
+          primary: '#e5e5e5',
+          secondary: '#a0a0a0',
+          muted: '#666666',
         },
-        // Legacy terminal colors (for gradual migration)
+        // Gray scale for UI elements
+        gray: {
+          50: '#fafafa',
+          100: '#f5f5f5',
+          200: '#e5e5e5',
+          300: '#d4d4d4',
+          400: '#a3a3a3',
+          500: '#737373',
+          600: '#525252',
+          700: '#404040',
+          800: '#262626',
+          900: '#171717',
+        },
+        // Legacy terminal colors (mapped to monochrome)
         terminal: {
-          bg: '#1a1410',
-          card: '#241c16',
-          border: '#3d352d',
-          green: '#6abe30',
-          amber: '#fbf236',
-          red: '#ac3232',
-          text: '#a08060',
-          muted: '#6b5a4a',
+          bg: '#0a0a0a',
+          card: '#111111',
+          border: '#333333',
+          green: '#e5e5e5',
+          amber: '#ffffff',
+          red: '#a0a0a0',
+          text: '#a0a0a0',
+          muted: '#666666',
         },
       },
       fontFamily: {
         mono: [
+          'VT323',
           'IBM Plex Mono',
           'Fira Code',
           'ui-monospace',
@@ -95,18 +97,18 @@ const config: Config = {
         },
       },
       boxShadow: {
-        'copper-glow': '0 0 10px rgba(184, 115, 51, 0.3)',
-        'copper-strong': '0 0 20px rgba(184, 115, 51, 0.5)',
-        'terminal-inset': 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.3)',
+        'white-glow': '0 0 10px rgba(255, 255, 255, 0.3)',
+        'white-strong': '0 0 20px rgba(255, 255, 255, 0.5)',
+        'terminal-inset': 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.5)',
       },
       backgroundImage: {
-        // Warm brown gradients (replaces terminal blacks)
+        // Monochrome gradients
         'cave-gradient':
-          'linear-gradient(180deg, #1a1410 0%, #241c16 100%)',
-        'mobile-gradient': 'linear-gradient(180deg, #1a1410 0%, #0f0c09 100%)',
+          'linear-gradient(180deg, #0a0a0a 0%, #111111 100%)',
+        'mobile-gradient': 'linear-gradient(180deg, #0a0a0a 0%, #050505 100%)',
         // Legacy alias
         'terminal-gradient':
-          'linear-gradient(180deg, #1a1410 0%, #241c16 100%)',
+          'linear-gradient(180deg, #0a0a0a 0%, #111111 100%)',
       },
       spacing: {
         '18': '4.5rem',
