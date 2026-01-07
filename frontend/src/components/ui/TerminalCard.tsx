@@ -16,8 +16,7 @@ export interface TerminalCardProps extends HTMLAttributes<HTMLDivElement> {
 
 /**
  * Terminal-styled card component
- * Desktop: Retro terminal aesthetic with borders
- * Mobile: Clean modern card design
+ * Monochrome terminal aesthetic
  */
 export const TerminalCard = forwardRef<HTMLDivElement, TerminalCardProps>(
   (
@@ -42,12 +41,12 @@ export const TerminalCard = forwardRef<HTMLDivElement, TerminalCardProps>(
           'lg:rounded-sm lg:border',
           'lg:bg-terminal-card lg:border-terminal-border',
           // Mobile: Clean card design
-          'bg-zinc-900/90 border border-zinc-800',
+          'bg-gray-900/90 border border-gray-800',
           // Variant styles (desktop)
           variant === 'highlight' &&
-            'lg:border-copper lg:shadow-copper-glow',
-          variant === 'success' && 'lg:border-terminal-green',
-          variant === 'error' && 'lg:border-terminal-red',
+            'lg:border-gray-400 lg:shadow-white-glow',
+          variant === 'success' && 'lg:border-gray-300',
+          variant === 'error' && 'lg:border-gray-500',
           className
         )}
         {...props}
@@ -60,19 +59,19 @@ export const TerminalCard = forwardRef<HTMLDivElement, TerminalCardProps>(
               // Desktop: Terminal style header
               'lg:border-terminal-border lg:bg-terminal-bg/50',
               // Mobile: Clean header
-              'border-zinc-800 bg-zinc-900/50'
+              'border-gray-800 bg-gray-900/50'
             )}
           >
             <span
               className={cn(
                 'font-medium text-sm',
-                // Desktop: Copper text with prompt
-                'lg:font-mono lg:text-copper',
+                // Desktop: White text with prompt
+                'lg:font-mono lg:text-white',
                 // Mobile: White text
-                'text-zinc-200'
+                'text-gray-200'
               )}
             >
-              <span className="hidden lg:inline text-copper-dim">&gt; </span>
+              <span className="hidden lg:inline text-gray-500">&gt; </span>
               {title}
             </span>
             {headerRight && (

@@ -5,7 +5,7 @@ import { cn } from '@/lib/cn';
 
 export interface TerminalTextProps extends HTMLAttributes<HTMLSpanElement> {
   /** Text variant */
-  variant?: 'default' | 'copper' | 'green' | 'amber' | 'red' | 'muted';
+  variant?: 'default' | 'accent' | 'secondary' | 'muted';
   /** Text size */
   size?: 'xs' | 'sm' | 'base' | 'lg' | 'xl';
   /** Add glow effect (desktop only) */
@@ -51,14 +51,11 @@ export const TerminalText = forwardRef<HTMLSpanElement, TerminalTextProps>(
           size === 'xl' && 'text-xl',
           // Color variants
           variant === 'default' && 'text-zinc-300',
-          variant === 'copper' && 'text-copper',
-          variant === 'green' && 'text-terminal-green',
-          variant === 'amber' && 'text-terminal-amber',
-          variant === 'red' && 'text-terminal-red',
+          variant === 'accent' && 'text-white',
+          variant === 'secondary' && 'text-gray-400',
           variant === 'muted' && 'text-zinc-500',
           // Glow effect (desktop only)
-          glow && variant === 'copper' && 'lg:glow-copper',
-          glow && variant === 'green' && 'lg:text-glow',
+          glow && variant === 'accent' && 'lg:glow-white',
           // Cursor blink
           cursor && 'cursor-blink',
           className

@@ -16,14 +16,14 @@ export interface PixelProgressProps {
   /** Size variant */
   size?: 'sm' | 'md' | 'lg';
   /** Color variant */
-  variant?: 'copper' | 'green' | 'gold' | 'gradient';
+  variant?: 'default' | 'gradient';
   /** Additional class names */
   className?: string;
 }
 
 /**
  * Pixel-styled segmented progress bar
- * Chunky retro game aesthetic
+ * Monochrome terminal aesthetic
  */
 export function PixelProgress({
   value,
@@ -32,7 +32,7 @@ export function PixelProgress({
   showLabel = false,
   label,
   size = 'md',
-  variant = 'copper',
+  variant = 'default',
   className,
 }: PixelProgressProps) {
   const percentage = Math.min(100, Math.max(0, (value / max) * 100));
@@ -69,15 +69,13 @@ export function PixelProgress({
                 // Filled state
                 isFilled
                   ? cn(
-                      variant === 'copper' && 'bg-copper',
-                      variant === 'green' && 'bg-pixel-green',
-                      variant === 'gold' && 'bg-pixel-gold',
+                      variant === 'default' && 'bg-white',
                       variant === 'gradient' &&
                         i < filledSegments * 0.33
-                        ? 'bg-copper-dim'
+                        ? 'bg-gray-500'
                         : i < filledSegments * 0.66
-                        ? 'bg-copper'
-                        : 'bg-copper-glow'
+                        ? 'bg-gray-300'
+                        : 'bg-white'
                     )
                   : 'bg-bg-surface'
               )}
@@ -98,7 +96,7 @@ export function PixelProgress({
 
 /**
  * Simple linear progress bar (non-segmented)
- * For when you need smooth progress indication
+ * Monochrome terminal aesthetic
  */
 export function ProgressBar({
   value,
@@ -106,7 +104,7 @@ export function ProgressBar({
   showLabel = false,
   label,
   size = 'md',
-  variant = 'copper',
+  variant = 'default',
   className,
 }: Omit<PixelProgressProps, 'segments'>) {
   const percentage = Math.min(100, Math.max(0, (value / max) * 100));
@@ -129,11 +127,9 @@ export function ProgressBar({
         <div
           className={cn(
             'h-full transition-all duration-300 ease-out rounded-full',
-            variant === 'copper' && 'bg-copper',
-            variant === 'green' && 'bg-pixel-green',
-            variant === 'gold' && 'bg-pixel-gold',
+            variant === 'default' && 'bg-white',
             variant === 'gradient' &&
-              'bg-gradient-to-r from-copper-dim via-copper to-copper-glow'
+              'bg-gradient-to-r from-gray-500 via-gray-300 to-white'
           )}
           style={{ width: `${percentage}%` }}
         />
@@ -157,13 +153,11 @@ export function AsciiProgressBar({
   value,
   max = 100,
   width = 20,
-  variant = 'copper',
   className,
 }: {
   value: number;
   max?: number;
   width?: number;
-  variant?: 'copper' | 'green' | 'gold';
   className?: string;
 }) {
   return (
@@ -173,7 +167,7 @@ export function AsciiProgressBar({
       segments={width}
       showLabel
       size="sm"
-      variant={variant}
+      variant="default"
       className={className}
     />
   );

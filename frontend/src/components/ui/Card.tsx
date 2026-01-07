@@ -17,8 +17,7 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 /**
- * Card component with pixel art aesthetic
- * Warm brown backgrounds with rounded corners
+ * Card component with monochrome terminal aesthetic
  */
 export const Card = forwardRef<HTMLDivElement, CardProps>(
   (
@@ -44,11 +43,11 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
           // Shadow
           'shadow-lg',
           // Variant styles
-          variant === 'highlight' && 'border-copper shadow-copper-glow',
-          variant === 'success' && 'border-pixel-green',
-          variant === 'error' && 'border-pixel-red',
+          variant === 'highlight' && 'border-gray-400 shadow-white-glow',
+          variant === 'success' && 'border-gray-300',
+          variant === 'error' && 'border-gray-500',
           // Pixel accent
-          pixelAccent && 'border-2 border-copper-dim',
+          pixelAccent && 'border-2 border-gray-600',
           className
         )}
         {...props}
@@ -63,8 +62,8 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
           >
             <span
               className={cn(
-                'font-medium text-sm text-copper',
-                variant === 'highlight' && 'text-copper-glow'
+                'font-medium text-sm text-white',
+                variant === 'highlight' && 'glow-white'
               )}
             >
               {title}

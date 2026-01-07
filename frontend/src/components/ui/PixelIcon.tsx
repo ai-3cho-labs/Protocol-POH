@@ -8,7 +8,7 @@ export interface PixelIconProps {
   /** Icon size (in pixels, will be scaled) */
   size?: 'sm' | 'md' | 'lg' | 'xl';
   /** Icon color variant */
-  variant?: 'copper' | 'green' | 'gold' | 'red' | 'blue' | 'default';
+  variant?: 'default' | 'accent' | 'muted';
   /** Additional class names */
   className?: string;
 }
@@ -16,11 +16,12 @@ export interface PixelIconProps {
 /**
  * Pixel art icon component
  * 16x16 base size, rendered as SVG for crisp scaling
+ * Monochrome design
  */
 export function PixelIcon({
   name,
   size = 'md',
-  variant = 'copper',
+  variant = 'default',
   className,
 }: PixelIconProps) {
   const sizeClass = {
@@ -31,12 +32,9 @@ export function PixelIcon({
   }[size];
 
   const colorClass = {
-    copper: 'text-copper',
-    green: 'text-pixel-green',
-    gold: 'text-pixel-gold',
-    red: 'text-pixel-red',
-    blue: 'text-pixel-blue',
-    default: 'text-text-secondary',
+    default: 'text-white',
+    accent: 'text-gray-100',
+    muted: 'text-gray-500',
   }[variant];
 
   return (
@@ -100,6 +98,7 @@ function getIconPath(name: PixelIconProps['name']) {
 
 /**
  * Animated pixel coin for reward feedback
+ * Monochrome design
  */
 export function PixelCoin({
   size = 'md',
@@ -118,8 +117,8 @@ export function PixelCoin({
     <div
       className={cn(
         sizeClass,
-        'rounded-full bg-gradient-to-br from-pixel-gold via-copper to-copper-dim',
-        'shadow-[0_0_8px_rgba(251,242,54,0.5)]',
+        'rounded-full bg-gradient-to-br from-white via-gray-300 to-gray-500',
+        'shadow-[0_0_8px_rgba(255,255,255,0.3)]',
         'animate-float',
         className
       )}

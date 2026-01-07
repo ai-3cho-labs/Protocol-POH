@@ -14,15 +14,14 @@ export interface ProgressBarProps {
   /** Size variant */
   size?: 'sm' | 'md' | 'lg';
   /** Color variant */
-  variant?: 'copper' | 'green' | 'amber' | 'gradient';
+  variant?: 'default' | 'gradient';
   /** Additional class names */
   className?: string;
 }
 
 /**
  * Progress bar component
- * Desktop: ASCII-style progress bar
- * Mobile: Modern progress bar
+ * Monochrome terminal aesthetic
  */
 export function ProgressBar({
   value,
@@ -30,7 +29,7 @@ export function ProgressBar({
   showLabel = false,
   label,
   size = 'md',
-  variant = 'copper',
+  variant = 'default',
   className,
 }: ProgressBarProps) {
   const percentage = Math.min(100, Math.max(0, (value / max) * 100));
@@ -44,10 +43,8 @@ export function ProgressBar({
 
   // Color classes for the fill
   const fillClasses = {
-    copper: 'bg-copper',
-    green: 'bg-terminal-green',
-    amber: 'bg-terminal-amber',
-    gradient: 'bg-gradient-to-r from-copper-dim via-copper to-copper-glow',
+    default: 'bg-white',
+    gradient: 'bg-gradient-to-r from-gray-500 via-gray-300 to-white',
   };
 
   return (
@@ -56,10 +53,10 @@ export function ProgressBar({
       {(showLabel || label) && (
         <div className="flex justify-between items-center mb-1">
           {label && (
-            <span className="text-xs text-zinc-500 font-mono">{label}</span>
+            <span className="text-xs text-gray-500 font-mono">{label}</span>
           )}
           {showLabel && (
-            <span className="text-xs text-zinc-400 font-mono">
+            <span className="text-xs text-gray-400 font-mono">
               {Math.round(percentage)}%
             </span>
           )}
@@ -70,7 +67,7 @@ export function ProgressBar({
       <div
         className={cn(
           'w-full rounded-full overflow-hidden',
-          'bg-terminal-border',
+          'bg-gray-700',
           sizeClasses[size]
         )}
         role="progressbar"
@@ -99,13 +96,11 @@ export function AsciiProgressBar({
   value,
   max = 100,
   width = 20,
-  variant = 'copper',
   className,
 }: {
   value: number;
   max?: number;
   width?: number;
-  variant?: 'copper' | 'green' | 'amber';
   className?: string;
 }) {
   const percentage = Math.min(100, Math.max(0, (value / max) * 100));
@@ -115,19 +110,13 @@ export function AsciiProgressBar({
   const filledChars = '█'.repeat(filled);
   const emptyChars = '░'.repeat(empty);
 
-  const variantClasses = {
-    copper: 'text-copper',
-    green: 'text-pixel-green',
-    amber: 'text-terminal-amber',
-  };
-
   return (
     <span className={cn('font-mono text-sm whitespace-pre', className)}>
-      <span className="text-terminal-border">[</span>
-      <span className={variantClasses[variant]}>{filledChars}</span>
-      <span className="text-terminal-muted">{emptyChars}</span>
-      <span className="text-terminal-border">]</span>
-      <span className="text-zinc-500 ml-2">{Math.round(percentage)}%</span>
+      <span className="text-gray-500">[</span>
+      <span className="text-white">{filledChars}</span>
+      <span className="text-gray-600">{emptyChars}</span>
+      <span className="text-gray-500">]</span>
+      <span className="text-gray-500 ml-2">{Math.round(percentage)}%</span>
     </span>
   );
 }

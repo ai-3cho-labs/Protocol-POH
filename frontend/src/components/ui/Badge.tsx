@@ -5,7 +5,7 @@ import type { TierInfo } from '@/types/api';
 
 export interface BadgeProps {
   /** Badge variant */
-  variant?: 'default' | 'copper' | 'green' | 'gold' | 'red' | 'blue' | 'tier';
+  variant?: 'default' | 'accent' | 'muted' | 'tier';
   /** Badge size */
   size?: 'sm' | 'md' | 'lg';
   /** Badge content */
@@ -15,7 +15,7 @@ export interface BadgeProps {
 }
 
 /**
- * Badge component with pixel art palette
+ * Badge component with monochrome palette
  */
 export function Badge({
   variant = 'default',
@@ -32,14 +32,11 @@ export function Badge({
         size === 'sm' && 'px-2 py-0.5 text-xs',
         size === 'md' && 'px-2.5 py-0.5 text-sm',
         size === 'lg' && 'px-3 py-1 text-sm',
-        // Color variants (pixel palette)
+        // Color variants (monochrome)
         variant === 'default' && 'bg-bg-surface text-text-secondary',
-        variant === 'copper' && 'bg-copper/20 text-copper',
-        variant === 'green' && 'bg-pixel-green/20 text-pixel-green',
-        variant === 'gold' && 'bg-pixel-gold/20 text-pixel-gold',
-        variant === 'red' && 'bg-pixel-red/20 text-pixel-red',
-        variant === 'blue' && 'bg-pixel-blue/20 text-pixel-blue',
-        variant === 'tier' && 'bg-copper/10 text-copper border border-copper/30',
+        variant === 'accent' && 'bg-white/20 text-white',
+        variant === 'muted' && 'bg-gray-700/50 text-gray-400',
+        variant === 'tier' && 'bg-white/10 text-white border border-white/30',
         className
       )}
     >
@@ -50,7 +47,7 @@ export function Badge({
 
 /**
  * Tier badge component
- * Displays tier emoji and name
+ * Displays tier name in brackets [TIER]
  */
 export function TierBadge({
   tier,
@@ -65,10 +62,9 @@ export function TierBadge({
 }) {
   return (
     <Badge variant="tier" size={size} className={className}>
-      <span className="mr-1">{tier.emoji}</span>
-      <span>{tier.name}</span>
+      <span>[{tier.name.toUpperCase()}]</span>
       {showMultiplier && (
-        <span className="ml-1 text-copper-dim">({tier.multiplier}x)</span>
+        <span className="ml-1 text-gray-500">({tier.multiplier}x)</span>
       )}
     </Badge>
   );
@@ -76,7 +72,7 @@ export function TierBadge({
 
 /**
  * Rank badge component
- * Displays user rank with medal
+ * Displays user rank
  */
 export function RankBadge({
   rank,
@@ -87,17 +83,12 @@ export function RankBadge({
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }) {
-  // Medal emoji for top 3
-  const medal =
-    rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null;
-
   return (
     <Badge
-      variant={rank <= 3 ? 'copper' : 'default'}
+      variant={rank <= 3 ? 'accent' : 'default'}
       size={size}
       className={className}
     >
-      {medal && <span className="mr-1">{medal}</span>}
       <span>#{rank}</span>
     </Badge>
   );
@@ -116,26 +107,17 @@ export function StatusBadge({
   className?: string;
 }) {
   const statusConfig = {
-    online: { variant: 'green' as const, label: 'Online' },
-    offline: { variant: 'default' as const, label: 'Offline' },
-    pending: { variant: 'gold' as const, label: 'Pending' },
-    success: { variant: 'green' as const, label: 'Success' },
-    error: { variant: 'red' as const, label: 'Error' },
+    online: { variant: 'accent' as const, label: '[ONLINE]' },
+    offline: { variant: 'muted' as const, label: '[OFFLINE]' },
+    pending: { variant: 'default' as const, label: '[PENDING]' },
+    success: { variant: 'accent' as const, label: '[SUCCESS]' },
+    error: { variant: 'muted' as const, label: '[ERROR]' },
   };
 
   const { variant, label } = statusConfig[status];
 
   return (
     <Badge variant={variant} size={size} className={className}>
-      <span
-        className={cn(
-          'w-1.5 h-1.5 rounded-full mr-1.5',
-          variant === 'green' && 'bg-pixel-green',
-          variant === 'gold' && 'bg-pixel-gold',
-          variant === 'red' && 'bg-pixel-red',
-          variant === 'default' && 'bg-text-muted'
-        )}
-      />
       {label}
     </Badge>
   );

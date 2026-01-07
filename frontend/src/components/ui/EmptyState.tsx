@@ -39,18 +39,18 @@ export function EmptyState({
     >
       {/* Icon */}
       <div
-        className="text-4xl text-copper-dim mb-4 font-mono"
+        className="text-4xl text-gray-500 mb-4 font-mono"
         aria-hidden="true"
       >
         {icon}
       </div>
 
       {/* Title */}
-      <h3 className="text-lg font-semibold text-zinc-300 mb-2">{title}</h3>
+      <h3 className="text-lg font-semibold text-gray-300 mb-2">{title}</h3>
 
       {/* Description */}
       {description && (
-        <p className="text-sm text-zinc-500 max-w-sm mb-4">{description}</p>
+        <p className="text-sm text-gray-500 max-w-sm mb-4">{description}</p>
       )}
 
       {/* Action */}
@@ -91,22 +91,25 @@ export function NoResultsEmpty({ query }: { query?: string }) {
 export function NoHistoryEmpty() {
   return (
     <EmptyState
-      icon="[]"
-      title="No history yet"
-      description="Your distribution history will appear here"
+      icon="⛏️"
+      title="No rewards yet"
+      description="Your reward history will appear here"
     />
   );
 }
 
-export function NoBuybacksEmpty() {
+export function NoActivityEmpty() {
   return (
     <EmptyState
-      icon="$"
-      title="No buybacks yet"
-      description="Buybacks will appear here when executed"
+      icon="⛏️"
+      title="No activity yet"
+      description="Reward activity will appear here"
     />
   );
 }
+
+// Legacy alias
+export const NoBuybacksEmpty = NoActivityEmpty;
 
 export function ConnectWalletEmpty({ onConnect }: { onConnect?: () => void }) {
   return (

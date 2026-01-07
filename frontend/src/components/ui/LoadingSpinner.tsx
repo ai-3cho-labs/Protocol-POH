@@ -50,13 +50,13 @@ export function LoadingSpinner({
       <div className={cn('flex items-center gap-2', className)}>
         <span
           className={cn(
-            'inline-block rounded-full bg-copper animate-pulse',
+            'inline-block rounded-full bg-white animate-pulse',
             size === 'sm' && 'w-2 h-2',
             size === 'md' && 'w-3 h-3',
             size === 'lg' && 'w-4 h-4'
           )}
         />
-        {text && <span className="text-zinc-500 text-sm">{text}</span>}
+        {text && <span className="text-gray-500 text-sm">{text}</span>}
       </div>
     );
   }
@@ -71,13 +71,13 @@ export function LoadingSpinner({
       aria-label={text || 'Loading'}
     >
       <span
-        className={cn('font-mono text-copper', sizeClasses[size])}
+        className={cn('font-mono text-white', sizeClasses[size])}
         aria-hidden="true"
       >
         {frames[frame]}
       </span>
       {text && (
-        <span className="text-zinc-500 text-sm font-mono">{text}</span>
+        <span className="text-gray-500 text-sm font-mono">{text}</span>
       )}
     </div>
   );
@@ -90,7 +90,7 @@ export function LoadingPage({ text = 'Loading...' }: { text?: string }) {
   return (
     <div className="min-h-[50vh] flex flex-col items-center justify-center gap-4">
       <LoadingSpinner size="lg" />
-      <p className="text-zinc-500 font-mono text-sm">{text}</p>
+      <p className="text-gray-500 font-mono text-sm">{text}</p>
     </div>
   );
 }
@@ -100,7 +100,7 @@ export function LoadingPage({ text = 'Loading...' }: { text?: string }) {
  */
 export function LoadingInline({ text }: { text?: string }) {
   return (
-    <span className="inline-flex items-center gap-1 text-zinc-500">
+    <span className="inline-flex items-center gap-1 text-gray-500">
       <LoadingSpinner size="sm" variant="dots" />
       {text && <span className="text-sm">{text}</span>}
     </span>

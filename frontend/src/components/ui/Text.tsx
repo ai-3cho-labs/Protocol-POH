@@ -5,7 +5,7 @@ import { cn } from '@/lib/cn';
 
 export interface TextProps extends HTMLAttributes<HTMLSpanElement> {
   /** Text variant */
-  variant?: 'default' | 'copper' | 'green' | 'gold' | 'red' | 'blue' | 'muted';
+  variant?: 'default' | 'accent' | 'secondary' | 'muted';
   /** Text size */
   size?: 'xs' | 'sm' | 'base' | 'lg' | 'xl' | '2xl';
   /** Add glow effect */
@@ -17,7 +17,7 @@ export interface TextProps extends HTMLAttributes<HTMLSpanElement> {
 }
 
 /**
- * Text component with pixel art color palette
+ * Text component with monochrome palette
  */
 export const Text = forwardRef<HTMLSpanElement, TextProps>(
   (
@@ -46,18 +46,13 @@ export const Text = forwardRef<HTMLSpanElement, TextProps>(
           size === 'lg' && 'text-lg',
           size === 'xl' && 'text-xl',
           size === '2xl' && 'text-2xl',
-          // Color variants (using pixel palette)
+          // Color variants (monochrome)
           variant === 'default' && 'text-text-primary',
-          variant === 'copper' && 'text-copper',
-          variant === 'green' && 'text-pixel-green',
-          variant === 'gold' && 'text-pixel-gold',
-          variant === 'red' && 'text-pixel-red',
-          variant === 'blue' && 'text-pixel-blue',
+          variant === 'accent' && 'text-white',
+          variant === 'secondary' && 'text-text-secondary',
           variant === 'muted' && 'text-text-muted',
           // Glow effect
-          glow && variant === 'copper' && 'glow-copper',
-          glow && variant === 'green' && 'drop-shadow-[0_0_8px_#6abe30]',
-          glow && variant === 'gold' && 'drop-shadow-[0_0_8px_#fbf236]',
+          glow && 'glow-white',
           // Cursor blink
           cursor && 'cursor-blink',
           className

@@ -21,7 +21,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 /**
  * Button component
- * Pixel-styled with copper accents
+ * Monochrome terminal aesthetic
  */
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
@@ -49,7 +49,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           // Base styles
           'inline-flex items-center justify-center gap-2',
           'font-medium transition-all duration-200',
-          'focus:outline-none focus:ring-2 focus:ring-copper/50 focus:ring-offset-2 focus:ring-offset-bg-dark',
+          'focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-bg-dark',
           'disabled:opacity-50 disabled:cursor-not-allowed',
           // Size variants
           size === 'sm' && 'px-3 py-1.5 text-sm rounded-md',
@@ -57,28 +57,28 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           size === 'lg' && 'px-6 py-3 text-base rounded-lg',
           // Variant styles
           variant === 'primary' && [
-            'bg-copper text-white',
-            'hover:bg-copper-glow hover:shadow-copper-glow',
-            'active:bg-copper-dim',
+            'bg-white text-black',
+            'hover:bg-gray-200 hover:shadow-white-glow',
+            'active:bg-gray-300',
           ],
           variant === 'secondary' && [
             'bg-bg-card text-text-primary',
             'border border-border',
-            'hover:bg-bg-surface hover:border-copper-dim',
+            'hover:bg-bg-surface hover:border-gray-500',
           ],
           variant === 'outline' && [
-            'bg-transparent text-copper',
-            'border border-copper',
-            'hover:bg-copper/10',
+            'bg-transparent text-white',
+            'border border-gray-400',
+            'hover:bg-white/10',
           ],
           variant === 'ghost' && [
             'bg-transparent text-text-secondary',
             'hover:bg-bg-surface hover:text-text-primary',
           ],
           variant === 'danger' && [
-            'bg-pixel-red/20 text-pixel-red',
-            'border border-pixel-red/50',
-            'hover:bg-pixel-red/30',
+            'bg-gray-700/50 text-gray-300',
+            'border border-gray-600',
+            'hover:bg-gray-700',
           ],
           // Full width
           fullWidth && 'w-full',
