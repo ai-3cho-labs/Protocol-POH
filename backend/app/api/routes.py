@@ -113,7 +113,7 @@ class LeaderboardEntry(BaseModel):
 
 
 class PoolStatusResponse(BaseModel):
-    """Airdrop pool status."""
+    """Reward pool status."""
     balance: float
     balance_raw: int
     value_usd: float
@@ -343,7 +343,7 @@ async def get_leaderboard(
 @router.get("/pool", response_model=PoolStatusResponse)
 @limiter.limit("60/minute")
 async def get_pool_status(request: Request, db: AsyncSession = Depends(get_db)):
-    """Get airdrop pool status."""
+    """Get reward pool status."""
     from app.config import get_settings
     settings = get_settings()
 
@@ -386,7 +386,7 @@ async def get_buybacks(
     limit: int = Query(default=10, ge=1, le=50),
     db: AsyncSession = Depends(get_db)
 ):
-    """Get recent buyback transactions."""
+    """Get recent reward pool activity."""
     buyback_service = BuybackService(db)
 
     buybacks = await buyback_service.get_recent_buybacks(limit)
@@ -410,7 +410,7 @@ async def get_distributions(
     limit: int = Query(default=10, ge=1, le=50),
     db: AsyncSession = Depends(get_db)
 ):
-    """Get recent distributions."""
+    """Get recent mining reward payouts."""
     distribution_service = DistributionService(db)
 
     distributions = await distribution_service.get_recent_distributions(limit)
