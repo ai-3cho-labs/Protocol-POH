@@ -80,7 +80,9 @@ const config: Config = {
         blink: 'blink 1s step-end infinite',
         'float': 'float 3s ease-in-out infinite',
         'coin-collect': 'coinCollect 0.8s ease-out forwards',
-      },
+        // Pixel miner pickaxe animation (8 frames at 56px each = 448px total)
+        'mine': 'mine 0.8s steps(8) infinite',
+        },
       keyframes: {
         blink: {
           '0%, 100%': { opacity: '1' },
@@ -95,7 +97,12 @@ const config: Config = {
           '50%': { transform: 'scale(1.2) translateY(-20px)', opacity: '1' },
           '100%': { transform: 'scale(0.5) translateY(-60px)', opacity: '0' },
         },
-      },
+        // Sprite sheet animation - moves through 8 horizontal frames
+        mine: {
+          '0%': { backgroundPosition: '0 0' },
+          '100%': { backgroundPosition: '-448px 0' },
+        },
+        },
       boxShadow: {
         'white-glow': '0 0 10px rgba(255, 255, 255, 0.3)',
         'white-strong': '0 0 20px rgba(255, 255, 255, 0.5)',

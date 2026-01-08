@@ -16,7 +16,6 @@ from app.database import get_db
 from app.services.snapshot import SnapshotService
 from app.services.streak import StreakService
 from app.services.twab import TWABService
-from app.services.buyback import BuybackService
 from app.services.distribution import DistributionService
 from app.config import TIER_CONFIG, TOKEN_MULTIPLIER
 from app.utils.rate_limiter import limiter
@@ -123,15 +122,6 @@ class PoolStatusResponse(BaseModel):
     threshold_met: bool
     time_trigger_met: bool
     next_trigger: str  # 'threshold', 'time', or 'none'
-
-
-class BuybackItem(BaseModel):
-    """Buyback transaction."""
-    tx_signature: str
-    sol_amount: float
-    copper_amount: float
-    price_per_token: Optional[float]
-    executed_at: datetime
 
 
 class DistributionItem(BaseModel):
@@ -377,30 +367,6 @@ async def get_pool_status(request: Request, db: AsyncSession = Depends(get_db)):
         time_trigger_met=status.time_trigger_met,
         next_trigger=next_trigger
     )
-
-
-@router.get("/buybacks", response_model=list[BuybackItem])
-@limiter.limit("30/minute")
-async def get_buybacks(
-    request: Request,
-    limit: int = Query(default=10, ge=1, le=50),
-    db: AsyncSession = Depends(get_db)
-):
-    """Get recent reward pool activity."""
-    buyback_service = BuybackService(db)
-
-    buybacks = await buyback_service.get_recent_buybacks(limit)
-
-    return [
-        BuybackItem(
-            tx_signature=b.tx_signature,
-            sol_amount=float(b.sol_amount),
-            copper_amount=float(Decimal(b.copper_amount) / TOKEN_MULTIPLIER),
-            price_per_token=float(b.price_per_token) if b.price_per_token else None,
-            executed_at=b.executed_at
-        )
-        for b in buybacks
-    ]
 
 
 @router.get("/distributions", response_model=list[DistributionItem])

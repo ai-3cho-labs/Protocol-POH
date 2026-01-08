@@ -25,7 +25,7 @@ const SPRITE_CONFIG = {
   // Scale factor for rendering
   scale: 3,
   // Sprite sheet path
-  src: '/assets/mining-bg/sprites/walls_floors.png',
+  src: '/sprites/walls_and_floors/walls_floors.png',
   // Row offsets (y position in sprite sheet)
   rows: {
     purpleBlue: 0,    // Cave/mine tiles
@@ -48,7 +48,7 @@ const SPRITE_CONFIG = {
  * Track sprite configuration for mine_carts.png
  */
 const TRACK_CONFIG = {
-  src: '/assets/mining-bg/sprites/mine_carts.png',
+  src: '/sprites/decorations/mine_carts/mine_carts.png',
   // Track rail piece (horizontal straight)
   straightTrack: {
     x: 0,
