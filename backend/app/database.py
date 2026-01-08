@@ -68,16 +68,23 @@ def prepare_database_url(url: str) -> tuple[str, dict]:
 database_url, connect_args = prepare_database_url(settings.database_url)
 
 # Create async engine
-# Use NullPool for serverless (Neon), connection pool otherwise
-engine = create_async_engine(
-    database_url,
-    echo=settings.debug,
-    poolclass=NullPool if settings.is_production else AsyncAdaptedQueuePool,
-    pool_size=5 if not settings.is_production else None,
-    max_overflow=10 if not settings.is_production else None,
-    pool_pre_ping=True,  # Verify connections before use
-    connect_args=connect_args
-)
+# Use NullPool for serverless (Neon) - pool_size/max_overflow not compatible with NullPool
+engine_kwargs = {
+    "echo": settings.debug,
+    "connect_args": connect_args,
+}
+
+if settings.is_production:
+    # NullPool for serverless - no connection pooling
+    engine_kwargs["poolclass"] = NullPool
+else:
+    # Connection pooling for local development
+    engine_kwargs["poolclass"] = AsyncAdaptedQueuePool
+    engine_kwargs["pool_size"] = 5
+    engine_kwargs["max_overflow"] = 10
+    engine_kwargs["pool_pre_ping"] = True
+
+engine = create_async_engine(database_url, **engine_kwargs)
 
 # Session factory
 async_session_maker = async_sessionmaker(
