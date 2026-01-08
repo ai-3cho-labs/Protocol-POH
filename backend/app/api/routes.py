@@ -17,7 +17,9 @@ from app.services.snapshot import SnapshotService
 from app.services.streak import StreakService
 from app.services.twab import TWABService
 from app.services.distribution import DistributionService
-from app.config import TIER_CONFIG, TOKEN_MULTIPLIER
+from app.config import TIER_CONFIG, TOKEN_MULTIPLIER, get_settings
+
+settings = get_settings()
 from app.utils.rate_limiter import limiter
 
 router = APIRouter(prefix="/api", tags=["api"])
@@ -208,6 +210,27 @@ async def get_user_stats(
     """Get mining statistics for a specific wallet."""
     # Additional validation
     validate_wallet_address(wallet)
+
+    # Test mode: return mock user data
+    if settings.test_mode:
+        pool_balance = settings.test_pool_balance
+        pending = pool_balance * (settings.test_user_share_percent / 100)
+        return UserStatsResponse(
+            wallet=wallet,
+            balance=settings.test_user_balance,
+            balance_raw=int(settings.test_user_balance * TOKEN_MULTIPLIER),
+            twab=settings.test_user_twab,
+            twab_raw=int(settings.test_user_twab * TOKEN_MULTIPLIER),
+            tier=TierInfo(tier=4, name="Industrial", emoji="🏭", multiplier=settings.test_user_multiplier),
+            multiplier=settings.test_user_multiplier,
+            hash_power=settings.test_user_hash_power,
+            streak_hours=96.0,  # 4 days
+            streak_start=utc_now() - timedelta(hours=96),
+            next_tier=TierInfo(tier=5, name="Master Miner", emoji="👑", multiplier=3.5),
+            hours_to_next_tier=72.0,  # 3 days to next tier
+            rank=42,
+            pending_reward_estimate=pending
+        )
 
     streak_service = StreakService(db)
     twab_service = TWABService(db)

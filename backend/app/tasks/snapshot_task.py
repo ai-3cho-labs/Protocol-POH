@@ -12,6 +12,7 @@ from app.database import async_session_maker
 from app.services.snapshot import SnapshotService
 from app.services.streak import StreakService
 from app.utils.async_utils import run_async
+from app.websocket import emit_snapshot_taken
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,9 @@ async def _maybe_take_snapshot() -> dict:
         snapshot = await service.take_snapshot()
 
         if snapshot:
+            # Emit WebSocket event
+            await emit_snapshot_taken(snapshot.created_at)
+
             return {
                 "status": "success",
                 "snapshot_id": str(snapshot.id),
@@ -73,6 +77,9 @@ async def _force_snapshot() -> dict:
         snapshot = await service.take_snapshot()
 
         if snapshot:
+            # Emit WebSocket event
+            await emit_snapshot_taken(snapshot.created_at)
+
             return {
                 "status": "success",
                 "snapshot_id": str(snapshot.id),

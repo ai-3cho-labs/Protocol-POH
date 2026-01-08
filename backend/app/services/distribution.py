@@ -13,6 +13,7 @@ from dataclasses import dataclass
 
 from sqlalchemy import select, func, insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models import (
     Distribution, DistributionRecipient, SystemStats, ExcludedWallet
@@ -21,6 +22,7 @@ from app.services.twab import TWABService, HashPowerInfo
 from app.services.helius import get_helius_service
 from app.utils.http_client import get_http_client
 from app.config import get_settings, COPPER_DECIMALS, TOKEN_MULTIPLIER
+from app.websocket import emit_distribution_executed
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -89,6 +91,10 @@ class DistributionService:
         Returns:
             Raw token balance of airdrop pool wallet.
         """
+        # Test mode: return mock balance
+        if settings.test_mode:
+            return int(settings.test_pool_balance * TOKEN_MULTIPLIER)
+
         # Fetch from Helius
         try:
             accounts = await self.helius.get_token_accounts()
@@ -141,6 +147,10 @@ class DistributionService:
         Returns:
             Pool value in USD.
         """
+        # Test mode: return mock USD value
+        if settings.test_mode:
+            return Decimal(str(settings.test_pool_value_usd))
+
         balance = await self.get_pool_balance()
         price = await self.get_copper_price_usd()
 
@@ -175,7 +185,10 @@ class DistributionService:
 
         # Calculate time since last distribution
         hours_since = None
-        if last_dist:
+        if settings.test_mode:
+            # Test mode: use mock hours
+            hours_since = settings.test_hours_since_distribution
+        elif last_dist:
             delta = utc_now() - last_dist.executed_at
             hours_since = delta.total_seconds() / 3600
 
@@ -350,6 +363,25 @@ class DistributionService:
                 f"pool={plan.pool_amount}"
             )
 
+            # Emit WebSocket event (after commit)
+            top_5 = [
+                (r.wallet, r.amount, i + 1)
+                for i, r in enumerate(sorted(
+                    plan.recipients,
+                    key=lambda x: x.amount,
+                    reverse=True
+                )[:5])
+            ]
+            await emit_distribution_executed(
+                distribution_id=str(distribution.id),
+                pool_amount=plan.pool_amount,
+                pool_value_usd=float(plan.pool_value_usd),
+                recipient_count=plan.recipient_count,
+                trigger_type=plan.trigger_type,
+                top_recipients=top_5,
+                executed_at=distribution.executed_at,
+            )
+
             # TODO: Execute actual token transfers
             # This would use ZK compression for efficient batch transfers
             # For now, distribution is recorded but transfers are manual
@@ -398,6 +430,7 @@ class DistributionService:
         """
         result = await self.db.execute(
             select(DistributionRecipient)
+            .options(selectinload(DistributionRecipient.distribution))
             .where(DistributionRecipient.wallet == wallet)
             .order_by(DistributionRecipient.id.desc())
             .limit(limit)

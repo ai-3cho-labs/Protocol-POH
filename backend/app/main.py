@@ -17,6 +17,7 @@ from app.config import get_settings
 from app.database import init_db, close_db
 from app.utils.http_client import close_http_client
 from app.utils.rate_limiter import limiter
+from app.websocket import socket_app, setup_redis_adapter
 
 # Configure logging
 logging.basicConfig(
@@ -39,6 +40,10 @@ async def lifespan(app: FastAPI):
         logger.info("Database connected")
     else:
         logger.warning("No database URL configured, skipping DB init")
+
+    # Setup WebSocket Redis adapter
+    await setup_redis_adapter()
+    logger.info("WebSocket server initialized")
 
     logger.info("$COPPER Backend ready")
 
@@ -124,6 +129,9 @@ from app.api.webhook import router as webhook_router
 
 app.include_router(api_router)
 app.include_router(webhook_router)
+
+# Mount WebSocket at /ws
+app.mount("/ws", socket_app)
 
 
 if __name__ == "__main__":

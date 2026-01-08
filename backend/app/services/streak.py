@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import HoldStreak
 from app.config import TIER_CONFIG, TIER_THRESHOLDS
+from app.websocket import emit_tier_changed, emit_sell_detected
 
 logger = logging.getLogger(__name__)
 
@@ -186,6 +187,22 @@ class StreakService:
             f"tier {old_tier} → {new_tier}, "
             f"streak reset to {new_tier_min_hours}h"
         )
+
+        # Emit WebSocket events (after commit)
+        await emit_sell_detected(
+            wallet=wallet,
+            old_tier=old_tier,
+            new_tier=new_tier,
+        )
+        await emit_tier_changed(
+            wallet=wallet,
+            old_tier=old_tier,
+            new_tier=new_tier,
+            new_tier_name=TIER_CONFIG[new_tier]["name"],
+            new_multiplier=TIER_CONFIG[new_tier]["multiplier"],
+            is_upgrade=False,
+        )
+
         return streak
 
     def get_multiplier(self, tier: int) -> float:
@@ -296,6 +313,17 @@ class StreakService:
                 f"{old_tier} → {calculated_tier} "
                 f"(after {streak_hours:.1f}h)"
             )
+
+            # Emit WebSocket event (after commit)
+            await emit_tier_changed(
+                wallet=wallet,
+                old_tier=old_tier,
+                new_tier=calculated_tier,
+                new_tier_name=TIER_CONFIG[calculated_tier]["name"],
+                new_multiplier=TIER_CONFIG[calculated_tier]["multiplier"],
+                is_upgrade=True,
+            )
+
             return streak
 
         return None
