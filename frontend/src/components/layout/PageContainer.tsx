@@ -58,7 +58,7 @@ export function PageContainer({
         className={cn(
           'flex-1 relative z-10',
           // Desktop: Container with padding
-          'lg:container lg:mx-auto lg:px-6 lg:py-8',
+          'lg:container lg:mx-auto lg:px-6 lg:pt-12 lg:pb-8',
           // Mobile: Full width with bottom padding for nav
           'px-4 py-4',
           showMobileNav && 'pb-20 lg:pb-8',

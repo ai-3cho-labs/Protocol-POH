@@ -21,8 +21,8 @@ export function Header() {
   return (
     <header className="hidden lg:block border-b border-terminal-border bg-bg-dark/80 backdrop-blur-[4px] sticky top-0 z-40">
       <div className="container mx-auto px-6">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
+        <div className="relative flex items-center justify-between h-16">
+          {/* Logo - Left */}
           <Link
             href="/"
             className="flex items-center gap-2 group"
@@ -32,8 +32,8 @@ export function Header() {
             </span>
           </Link>
 
-          {/* Navigation */}
-          <nav className="flex items-center gap-1">
+          {/* Navigation - Centered */}
+          <nav className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1">
             {NAV_LINKS.map((link) => {
               const isActive = pathname === link.href;
               return (
@@ -54,7 +54,7 @@ export function Header() {
             })}
           </nav>
 
-          {/* Connect Button */}
+          {/* Connect Button - Right */}
           <ConnectButton size="sm" />
         </div>
       </div>

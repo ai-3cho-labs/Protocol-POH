@@ -307,3 +307,16 @@ export const ORE_TILES = {
   COPPER: oreIdx(2, 7),      // Row 2 (0-indexed), Col 7 (0-indexed) = 8th col, 3rd row
   COPPER_SMALL: oreIdx(3, 7),
 };
+
+// ============================================
+// MINING ORES WITH SHADOWS (for miner held ore)
+// mining_ores_with_shadows.png | 18 cols × 9 rows | 16px tiles
+// Same layout as mining_ores.png but with drop shadows
+// ============================================
+
+export const ORE_SHADOW_SPRITE = '/sprites/decorations/mining/ores/mining_ores_with_shadows.png';
+
+export const ORE_SHADOW_TILES = {
+  COPPER_NUGGET: { row: 2, col: 7, size: 16 },  // Same position as non-shadow version
+  COPPER_SMALL: { row: 3, col: 7, size: 16 },
+};
