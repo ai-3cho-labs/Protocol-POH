@@ -241,7 +241,7 @@ export function PixelMiner({
         offCtx.imageSmoothingEnabled = false;
 
         // Draw offset copies for outline
-        const offsets = [
+        const offsets: [number, number][] = [
           [-outlineOffset, 0], [outlineOffset, 0],
           [0, -outlineOffset], [0, outlineOffset],
           [-outlineOffset, -outlineOffset], [outlineOffset, -outlineOffset],

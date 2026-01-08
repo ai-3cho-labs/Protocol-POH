@@ -8,6 +8,14 @@ import { PixelMiner } from './PixelMiner';
 import { MineTilemap } from './MineTilemap';
 import { Skeleton } from '@/components/ui/Skeleton';
 
+// Animation delay classes for staggered entrance
+const animationDelays = [
+  'animate-fade-slide-in',
+  'animate-fade-slide-in [animation-delay:100ms]',
+  'animate-fade-slide-in [animation-delay:200ms]',
+  'animate-fade-slide-in [animation-delay:300ms]',
+];
+
 interface MinerDisplayProps {
   onViewDetails: () => void;
   className?: string;
@@ -123,21 +131,21 @@ export function MinerDisplay({ onViewDetails, className }: MinerDisplayProps) {
             </>
           ) : (
             <>
-              <div className={cardBaseStyles}>
+              <div className={cn(cardBaseStyles, animationDelays[0])}>
                 <StatBadge
                   label="Tier"
                   value={stats?.tier.emoji ?? '🪨'}
                   subtext={stats?.tier.name}
                 />
               </div>
-              <div className={cardBaseStyles}>
+              <div className={cn(cardBaseStyles, animationDelays[1])}>
                 <StatBadge
                   label="Balance"
                   value={formatCompactNumber(stats?.balance ?? 0)}
                   subtext="$CPU"
                 />
               </div>
-              <div className={glowCardStyles}>
+              <div className={cn(glowCardStyles, animationDelays[2])}>
                 <StatBadge
                   label="Hash Power"
                   value={formatCompactNumber(stats?.hashPower ?? 0)}
@@ -145,7 +153,7 @@ export function MinerDisplay({ onViewDetails, className }: MinerDisplayProps) {
                   glow
                 />
               </div>
-              <div className={glowCardStyles}>
+              <div className={cn(glowCardStyles, animationDelays[3])}>
                 <StatBadge
                   label="Pending"
                   value={`+${formatCompactNumber(stats?.pendingReward ?? 0)}`}

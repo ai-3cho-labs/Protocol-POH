@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { cn } from '@/lib/cn';
-import { BLUE_TILES, getTileRect, CART_TILES, getCartTileRect, ORE_TILES, getOreRect, type TileMap } from './tiles-config';
+import { BLUE_TILES, getTileRect, getCartTileRect, ORE_TILES, getOreRect, type TileMap } from './tiles-config';
 
 // ============================================
 // CONFIGURATION
@@ -15,14 +15,13 @@ const ORE_SPRITE_SRC = '/sprites/decorations/mining/ores/mining_ores.png';
 const W = BLUE_TILES.WALL_FLOOR;
 const F = BLUE_TILES.FLOOR.MAIN;
 const D = BLUE_TILES.DECOR;
-const P = BLUE_TILES.PIT;
 const WALLSHADOW = BLUE_TILES.WALLSHADOW;
 
-// Shorthand aliases - Track tiles
-const T = CART_TILES.STRAIGHT;
-const TC = CART_TILES.CORNER;
-const TE = CART_TILES.END;
-const CART = CART_TILES.CART;
+// Shorthand aliases - Track tiles (unused, available for future designs)
+// const T = CART_TILES.STRAIGHT;
+// const TC = CART_TILES.CORNER;
+// const TE = CART_TILES.END;
+// const CART = CART_TILES.CART;
 
 // Shorthand aliases - Ore tiles
 const ORE = ORE_TILES;
@@ -292,7 +291,14 @@ export function MineTilemap({
   }, [imagesLoaded, renderTilemap]);
 
   return (
-    <div className={cn('relative', className)} style={{ width, height }}>
+    <div
+      className={cn(
+        'relative',
+        'shadow-[0_4px_30px_rgba(255,255,255,0.12)]',
+        className
+      )}
+      style={{ width, height }}
+    >
       <canvas
         ref={canvasRef}
         width={width}

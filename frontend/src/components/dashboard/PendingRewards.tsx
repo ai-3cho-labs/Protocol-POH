@@ -83,7 +83,6 @@ export function PendingRewards({
             <div className="hidden lg:block">
               <AsciiProgressBar
                 value={pool.progressToThreshold}
-                variant="default"
               />
             </div>
             <div className="lg:hidden">

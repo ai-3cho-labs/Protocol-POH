@@ -94,7 +94,6 @@ export function TierProgress({
             <div className="hidden lg:block">
               <AsciiProgressBar
                 value={progress}
-                variant="default"
               />
             </div>
 

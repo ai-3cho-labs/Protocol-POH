@@ -82,8 +82,12 @@ export function MiniLeaderboard({
             />
           ))
         ) : (
-          <div className="text-center py-4 text-zinc-500 text-sm">
-            No miners yet
+          <div className="text-center py-6 text-zinc-500">
+            <div className="text-2xl mb-2">🏆</div>
+            <p className="text-sm">No miners yet</p>
+            <p className="text-xs text-zinc-600 mt-1">
+              Be the first to start mining
+            </p>
           </div>
         )}
 
