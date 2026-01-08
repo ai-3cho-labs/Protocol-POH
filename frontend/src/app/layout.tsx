@@ -3,13 +3,13 @@ import { Providers } from '@/components/providers/Providers';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: '$COPPER - Mine Rewards by Holding',
+  title: '$CPU - Mine Rewards by Holding',
   description:
     'Earn mining rewards funded by trading fees. Hold tokens, build streaks, get paid.',
   keywords: ['solana', 'memecoin', 'mining', 'crypto', 'rewards', 'defi'],
-  authors: [{ name: '$COPPER Team' }],
+  authors: [{ name: '$CPU Team' }],
   openGraph: {
-    title: '$COPPER - Mine Rewards by Holding',
+    title: '$CPU - Mine Rewards by Holding',
     description:
       'Earn mining rewards funded by trading fees. Hold tokens, build streaks, get paid.',
     type: 'website',
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: '$COPPER - Mine Rewards by Holding',
+    title: '$CPU - Mine Rewards by Holding',
     description:
       'Earn mining rewards funded by trading fees. Hold tokens, build streaks, get paid.',
   },

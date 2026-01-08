@@ -16,7 +16,7 @@ export default function DocsPage() {
             DOCUMENTATION
           </h1>
           <p className="text-sm text-zinc-500 mt-1">
-            Everything you need to know about $COPPER mining
+            Everything you need to know about $CPU mining
           </p>
         </div>
 
@@ -47,7 +47,7 @@ export default function DocsPage() {
         {/* Overview */}
         <Section id="overview" title="01. OVERVIEW">
           <p>
-            $COPPER is a Solana memecoin that simulates crypto mining through holding.
+            $CPU is a Solana memecoin where you mine rewards through holding.
             Instead of running hardware, you mine rewards by simply holding tokens
             in your wallet.
           </p>
@@ -64,7 +64,7 @@ export default function DocsPage() {
         <Section id="how-it-works" title="02. HOW IT WORKS">
           <ol className="space-y-4 list-decimal list-inside">
             <li>
-              <strong className="text-zinc-200">Buy & Hold</strong> - Purchase $COPPER
+              <strong className="text-zinc-200">Buy & Hold</strong> - Purchase $CPU
               and hold it in your wallet. No staking required.
             </li>
             <li>
@@ -136,10 +136,10 @@ Example:
             {`Your Reward = (Your Hash Power / Total Hash Power) × Pool Amount
 
 Example:
-- Pool: 100,000 $COPPER
+- Pool: 100,000 $CPU
 - Your HP: 5,000
 - Total HP: 100,000
-- Your Reward: (5,000 / 100,000) × 100,000 = 5,000 $COPPER`}
+- Your Reward: (5,000 / 100,000) × 100,000 = 5,000 $CPU`}
           </CodeBlock>
           <p>
             Rewards are automatically sent to your wallet and compound into
@@ -160,7 +160,7 @@ Example:
               adjust based on your new balance.
             </FAQ>
             <FAQ question="Are transfers counted as sells?">
-              No. Only DEX swaps where you sell $COPPER for SOL or USDC are
+              No. Only DEX swaps where you sell $CPU for SOL or USDC are
               detected as sells. Wallet-to-wallet transfers are ignored.
             </FAQ>
             <FAQ question="How often are snapshots taken?">

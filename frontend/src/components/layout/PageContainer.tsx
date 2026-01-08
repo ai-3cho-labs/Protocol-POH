@@ -2,7 +2,6 @@
 
 import { cn } from '@/lib/cn';
 import { Header } from './Header';
-import { Footer } from './Footer';
 import { MobileNav } from './MobileNav';
 
 export interface PageContainerProps {
@@ -10,8 +9,6 @@ export interface PageContainerProps {
   children: React.ReactNode;
   /** Show header */
   showHeader?: boolean;
-  /** Show footer */
-  showFooter?: boolean;
   /** Show mobile nav */
   showMobileNav?: boolean;
   /** Max width constraint */
@@ -29,7 +26,6 @@ export interface PageContainerProps {
 export function PageContainer({
   children,
   showHeader = true,
-  showFooter = true,
   showMobileNav = true,
   maxWidth = 'xl',
   className,
@@ -75,9 +71,6 @@ export function PageContainer({
       >
         {children}
       </main>
-
-      {/* Desktop Footer */}
-      {showFooter && <Footer />}
 
       {/* Mobile Bottom Navigation */}
       {showMobileNav && <MobileNav />}

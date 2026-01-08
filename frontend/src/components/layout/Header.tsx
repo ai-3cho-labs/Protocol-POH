@@ -28,10 +28,7 @@ export function Header() {
             className="flex items-center gap-2 group"
           >
             <span className="text-2xl font-bold text-white glow-white group-hover:text-gray-200 transition-colors">
-              $COPPER
-            </span>
-            <span className="text-xs text-gray-400 font-mono">
-              [MINING]
+              $CPU
             </span>
           </Link>
 
@@ -77,7 +74,7 @@ export function MinimalHeader() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
             <span className="text-2xl font-bold text-white glow-white">
-              $COPPER
+              $CPU
             </span>
           </Link>
 
