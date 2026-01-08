@@ -15,3 +15,6 @@ export { TierExplainer } from './TierExplainer';
 export type { TierExplainerProps } from './TierExplainer';
 
 export { WebGLBackground } from './WebGLBackground';
+
+export { Footer } from './Footer';
+export type { FooterProps } from './Footer';

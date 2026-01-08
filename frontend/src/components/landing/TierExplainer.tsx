@@ -23,12 +23,12 @@ export function TierExplainer({ highlightTier, className }: TierExplainerProps) 
       <div className="max-w-4xl mx-auto px-4">
         {/* Section Header */}
         <div className="text-center mb-10">
-          <h2 className="text-2xl lg:text-3xl font-bold text-text-primary mb-4">
+          <h2 className="text-2xl lg:text-3xl font-bold text-text-primary mb-4 tracking-tight">
             TIER PROGRESSION
           </h2>
-          <p className="text-text-secondary max-w-lg mx-auto">
-            Hold longer, earn more. Each tier unlocks higher multipliers for your
-            mining rewards.
+          <p className="text-body text-text-secondary max-w-lg mx-auto">
+            Hold longer, earn more. Each tier unlocks higher reward multipliers.
+            Selling drops you one tier, so diamond hands wins.
           </p>
         </div>
 
@@ -160,10 +160,10 @@ export function TierExplainer({ highlightTier, className }: TierExplainerProps) 
 
         {/* Bottom Note */}
         <div className="mt-8 text-center">
-          <p className="text-sm text-text-muted">
-            [!] Selling resets your streak by one tier. Diamond Hands (30+ days) earn{' '}
-            <span className="text-white font-semibold glow-white">5x</span>{' '}
-            rewards!
+          <p className="text-body-sm text-text-muted">
+            Selling resets your streak by one tier level.{' '}
+            <span className="text-white font-semibold glow-white">Diamond Hands</span>{' '}
+            who hold 30+ days earn the maximum 5x multiplier.
           </p>
         </div>
       </div>

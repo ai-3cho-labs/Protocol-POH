@@ -10,22 +10,19 @@ export interface HowItWorksProps {
 
 const STEPS = [
   {
-    number: '01',
     icon: 'chest' as const,
     title: 'Hold $CPU',
-    description: 'Buy and hold tokens. Your TWAB determines mining power.',
+    description: 'Buy tokens and hold them in your wallet. Your average balance over time determines your mining power.',
   },
   {
-    number: '02',
     icon: 'lightning' as const,
-    title: 'Earn Hash Power',
-    description: 'Hold without selling. Longer streaks unlock up to 5x multiplier.',
+    title: 'Build Your Streak',
+    description: 'The longer you hold without selling, the higher your tier. Diamond Hands (30+ days) earn 5x rewards.',
   },
   {
-    number: '03',
     icon: 'coin' as const,
-    title: 'Receive Rewards',
-    description: 'Trading fees fill the pool. Rewards paid when pool hits $250 or 24h.',
+    title: 'Collect Rewards',
+    description: 'Trading fees fill the pool. When it hits $250 or 24 hours pass, rewards drop to all miners automatically.',
   },
 ];
 
@@ -38,18 +35,18 @@ export function HowItWorks({ className }: HowItWorksProps) {
       <div className="max-w-5xl mx-auto px-4">
         {/* Section Header */}
         <div className="text-center mb-8">
-          <h2 className="text-xl lg:text-2xl font-bold text-text-primary mb-2">
-            HOW IT WORKS
+          <h2 className="text-heading-1 font-bold text-text-primary mb-2 tracking-tight">
+            HOW THE MINE WORKS
           </h2>
-          <p className="text-sm text-text-secondary max-w-md mx-auto">
-            Mining rewards without hardware. Your tokens work for you 24/7.
+          <p className="text-body-sm text-text-secondary max-w-md mx-auto">
+            Passive mining rewards, zero hardware. Your tokens work 24/7.
           </p>
         </div>
 
         {/* Steps Grid */}
         <div className="grid md:grid-cols-3 gap-4 lg:gap-6">
           {STEPS.map((step) => (
-            <StepCard key={step.number} step={step} />
+            <StepCard key={step.title} step={step} />
           ))}
         </div>
 
@@ -80,32 +77,19 @@ function StepCard({
   step: (typeof STEPS)[0];
 }) {
   return (
-    <Card className="relative p-4">
-      {/* Step number badge */}
-      <div
-        className={cn(
-          'absolute -top-2 left-3',
-          'px-1.5 py-0.5 text-xs font-bold rounded',
-          'bg-white text-bg-dark'
-        )}
-      >
-        {step.number}
+    <Card className="p-4">
+      {/* Icon */}
+      <div className="mb-3">
+        <PixelIcon name={step.icon} size="lg" variant="default" />
       </div>
 
-      <div className="pt-2">
-        {/* Icon */}
-        <div className="mb-2">
-          <PixelIcon name={step.icon} size="lg" variant="default" />
-        </div>
+      {/* Title */}
+      <h3 className="text-heading-3 font-semibold text-text-primary mb-2">
+        {step.title}
+      </h3>
 
-        {/* Title */}
-        <h3 className="text-base font-semibold text-text-primary mb-1">
-          {step.title}
-        </h3>
-
-        {/* Description */}
-        <p className="text-xs text-text-secondary">{step.description}</p>
-      </div>
+      {/* Description */}
+      <p className="text-body-sm text-text-secondary">{step.description}</p>
     </Card>
   );
 }

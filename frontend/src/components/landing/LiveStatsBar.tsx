@@ -3,7 +3,7 @@
 import { cn } from '@/lib/cn';
 import { formatCompactNumber, formatUSD } from '@/lib/utils';
 import { Skeleton } from '@/components/ui';
-import { useCountdown } from '@/hooks/useCountdown';
+import { useCountdown, useAnimatedNumber } from '@/hooks/useCountdown';
 
 export interface LiveStatsBarProps {
   /** Total holders */
@@ -21,7 +21,7 @@ export interface LiveStatsBarProps {
 }
 
 /**
- * LiveStatsBar - Real-time ticker of global stats
+ * LiveStatsBar - Real-time ticker of global stats with count-up animation
  */
 export function LiveStatsBar({
   holders,
@@ -32,6 +32,11 @@ export function LiveStatsBar({
   className,
 }: LiveStatsBarProps) {
   const countdown = useCountdown(hoursUntilNext);
+
+  // Animated number values for smooth count-up effect
+  const animatedHolders = useAnimatedNumber(holders, 800);
+  const animatedVolume = useAnimatedNumber(volume24h, 800);
+  const animatedPool = useAnimatedNumber(poolValueUsd, 800);
 
   if (isLoading) {
     return <LiveStatsBarSkeleton className={className} />;
@@ -53,22 +58,22 @@ export function LiveStatsBar({
         <div className="hidden lg:flex items-center justify-center gap-8 font-mono text-sm">
           <StatItem
             label="MINERS"
-            value={formatCompactNumber(holders)}
+            value={formatCompactNumber(Math.round(animatedHolders))}
           />
           <Divider />
           <StatItem
             label="24H VOLUME"
-            value={formatUSD(volume24h, true)}
+            value={formatUSD(animatedVolume, true)}
           />
           <Divider />
           <StatItem
             label="POOL"
-            value={formatUSD(poolValueUsd)}
+            value={formatUSD(animatedPool)}
             highlight={poolValueUsd >= 250}
           />
           <Divider />
           <StatItem
-            label="NEXT DROP"
+            label="NEXT PAYOUT"
             value={countdown.formatted}
             highlight={countdown.isComplete}
           />
@@ -76,11 +81,11 @@ export function LiveStatsBar({
 
         {/* Mobile Layout - 2x2 Grid */}
         <div className="lg:hidden grid grid-cols-4 gap-2">
-          <MobileStatItem label="Miners" value={formatCompactNumber(holders)} />
-          <MobileStatItem label="Volume" value={formatUSD(volume24h, true)} />
+          <MobileStatItem label="Miners" value={formatCompactNumber(Math.round(animatedHolders))} />
+          <MobileStatItem label="Volume" value={formatUSD(animatedVolume, true)} />
           <MobileStatItem
             label="Pool"
-            value={formatUSD(poolValueUsd)}
+            value={formatUSD(animatedPool)}
             highlight={poolValueUsd >= 250}
           />
           <MobileStatItem
@@ -109,10 +114,10 @@ function StatItem({
 }) {
   return (
     <div>
-      <div className="text-xs text-gray-500">{label}</div>
+      <div className="text-caption text-gray-500 uppercase tracking-wider">{label}</div>
       <div
         className={cn(
-          'tabular-nums',
+          'font-terminal text-lg tabular-nums',
           highlight ? 'text-white glow-white' : 'text-gray-200'
         )}
       >

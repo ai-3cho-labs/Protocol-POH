@@ -1,7 +1,7 @@
 'use client';
 
 import { PageContainer } from '@/components/layout/PageContainer';
-import { Hero, LiveStatsBar, HowItWorks, WebGLBackground } from '@/components/landing';
+import { Hero, LiveStatsBar, HowItWorks, TierExplainer, Footer, WebGLBackground } from '@/components/landing';
 import { useGlobalStats, usePoolStatus } from '@/hooks/api';
 
 export default function HomePage() {
@@ -37,6 +37,12 @@ export default function HomePage() {
 
       {/* How It Works */}
       <HowItWorks />
+
+      {/* Tier System */}
+      <TierExplainer />
+
+      {/* Footer */}
+      <Footer />
     </PageContainer>
   );
 }
