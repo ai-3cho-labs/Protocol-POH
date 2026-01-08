@@ -95,7 +95,7 @@ export function MiningCard({
                 PENDING REWARD
               </span>
               <span className="text-sm font-medium text-white glow-white lg:font-mono">
-                +{formatCompactNumber(data.pendingReward)} $COPPER
+                +{formatCompactNumber(data.pendingReward)} $CPU
               </span>
             </div>
           </div>

@@ -140,3 +140,46 @@ export function useAnimatedNumber(
 
   return displayValue;
 }
+
+/**
+ * Hook for a continuously ticking counter based on earning rate
+ * Creates the effect of watching rewards accumulate in real-time
+ * @param baseValue - The base value from API (resyncs when this changes)
+ * @param ratePerHour - The rate of increase per hour
+ * @param updateInterval - How often to update the display in ms (default 100ms)
+ */
+export function useTickingCounter(
+  baseValue: number,
+  ratePerHour: number | null,
+  updateInterval: number = 100
+): number {
+  const [displayValue, setDisplayValue] = useState(baseValue);
+  const baseValueRef = useRef(baseValue);
+  const lastSyncTimeRef = useRef(Date.now());
+
+  // Resync when base value changes (new API data)
+  useEffect(() => {
+    baseValueRef.current = baseValue;
+    lastSyncTimeRef.current = Date.now();
+    setDisplayValue(baseValue);
+  }, [baseValue]);
+
+  // Tick up continuously based on rate
+  useEffect(() => {
+    if (ratePerHour === null || ratePerHour <= 0) {
+      return;
+    }
+
+    const ratePerMs = ratePerHour / 3600000; // Convert to per millisecond
+
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - lastSyncTimeRef.current;
+      const increment = elapsed * ratePerMs;
+      setDisplayValue(baseValueRef.current + increment);
+    }, updateInterval);
+
+    return () => clearInterval(interval);
+  }, [ratePerHour, updateInterval]);
+
+  return displayValue;
+}

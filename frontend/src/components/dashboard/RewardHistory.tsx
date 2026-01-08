@@ -143,7 +143,7 @@ function RewardRow({ item }: { item: RewardHistoryItem }) {
       <div className="lg:hidden">
         <div className="flex items-center justify-between">
           <span className="text-white glow-white font-medium">
-            +{formatCompactNumber(item.amount)} $COPPER
+            +{formatCompactNumber(item.amount)} $CPU
           </span>
           <span className="text-xs text-zinc-500">{item.timeAgo}</span>
         </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { formatUSD, formatCompactNumber } from '@/lib/utils';
+import { formatUSD, formatCompactNumber, calculateEarningRate, formatEarningRate } from '@/lib/utils';
 import type { PoolInfo } from '@/types/models';
 import { PAYOUT_THRESHOLD_USD } from '@/types/models';
 import {
@@ -9,7 +9,7 @@ import {
   AsciiProgressBar,
   Skeleton,
 } from '@/components/ui';
-import { useCountdown, useAnimatedNumber } from '@/hooks/useCountdown';
+import { useCountdown, useTickingCounter } from '@/hooks/useCountdown';
 
 export interface PendingRewardsProps {
   /** Estimated pending reward (COPPER tokens) */
@@ -34,7 +34,8 @@ export function PendingRewards({
   compact = false,
   className,
 }: PendingRewardsProps) {
-  const animatedReward = useAnimatedNumber(pendingReward, 300);
+  const earningRate = calculateEarningRate(pendingReward, pool?.hoursSinceLast ?? null);
+  const tickingReward = useTickingCounter(pendingReward, earningRate);
   const countdown = useCountdown(pool?.hoursUntilTrigger ?? null);
 
   if (isLoading) {
@@ -61,9 +62,14 @@ export function PendingRewards({
             YOUR ESTIMATED REWARD
           </div>
           <div className="text-3xl sm:text-4xl lg:text-4xl font-bold text-white glow-white lg:font-mono tabular-nums">
-            +{formatCompactNumber(Math.floor(animatedReward))}
+            +{formatCompactNumber(Math.floor(tickingReward))}
           </div>
-          <div className="text-sm text-zinc-500 mt-1">$COPPER</div>
+          <div className="text-sm text-zinc-500 mt-1">$CPU</div>
+          {earningRate !== null && (
+            <div className="text-sm text-amber-400/80 mt-2 lg:font-mono">
+              {formatEarningRate(earningRate)}
+            </div>
+          )}
         </div>
 
         {/* Pool Progress */}
@@ -166,13 +172,21 @@ function PendingRewardsCompact({
   countdown: ReturnType<typeof useCountdown>;
   className?: string;
 }) {
+  const earningRate = calculateEarningRate(pendingReward, pool?.hoursSinceLast ?? null);
+  const tickingReward = useTickingCounter(pendingReward, earningRate);
+
   return (
     <TerminalCard className={className}>
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-xs text-zinc-500">Pending</div>
+          <div className="text-xs text-zinc-500 flex items-center gap-2">
+            <span>Pending</span>
+            {earningRate !== null && (
+              <span className="text-amber-400/70">{formatEarningRate(earningRate)}</span>
+            )}
+          </div>
           <div className="text-lg font-bold text-white glow-white tabular-nums">
-            +{formatCompactNumber(pendingReward)}
+            +{formatCompactNumber(Math.floor(tickingReward))}
           </div>
         </div>
         <div className="text-right">

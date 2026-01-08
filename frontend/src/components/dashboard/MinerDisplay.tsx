@@ -2,7 +2,8 @@
 
 import { useWalletAddress } from '@/hooks/useWallet';
 import { useUserStats, usePoolStatus } from '@/hooks/api';
-import { formatCompactNumber, formatMultiplier } from '@/lib/utils';
+import { useTickingCounter } from '@/hooks/useCountdown';
+import { formatCompactNumber, formatMultiplier, calculateEarningRate, formatEarningRate } from '@/lib/utils';
 import { cn } from '@/lib/cn';
 import { PixelMiner } from './PixelMiner';
 import { MineTilemap } from './MineTilemap';
@@ -122,6 +123,9 @@ export function MinerDisplay({ onViewDetails, className }: MinerDisplayProps) {
   const { data: pool, isLoading: poolLoading } = usePoolStatus();
 
   const isLoading = statsLoading || poolLoading;
+  const earningRate = calculateEarningRate(stats?.pendingReward ?? 0, pool?.hoursSinceLast ?? null);
+  const tickingReward = useTickingCounter(stats?.pendingReward ?? 0, earningRate);
+  const rateSubtext = earningRate !== null ? formatEarningRate(earningRate) : '$CPU';
 
   return (
     <div
@@ -181,8 +185,8 @@ export function MinerDisplay({ onViewDetails, className }: MinerDisplayProps) {
               <div className={cn(glowCardStyles, animationDelays[3])}>
                 <StatBadge
                   label="Pending"
-                  value={`+${formatCompactNumber(stats?.pendingReward ?? 0)}`}
-                  subtext="$CPU"
+                  value={`+${formatCompactNumber(Math.floor(tickingReward))}`}
+                  subtext={rateSubtext}
                   glow
                 />
               </div>
@@ -249,8 +253,8 @@ export function MinerDisplay({ onViewDetails, className }: MinerDisplayProps) {
               <div className={cn(mobileGlowCardStyles, animationDelays[3])}>
                 <StatBadge
                   label="Pending"
-                  value={`+${formatCompactNumber(stats?.pendingReward ?? 0)}`}
-                  subtext="$CPU"
+                  value={`+${formatCompactNumber(Math.floor(tickingReward))}`}
+                  subtext={rateSubtext}
                   glow
                 />
               </div>

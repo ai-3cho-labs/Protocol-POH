@@ -157,7 +157,7 @@ function HistoryRow({ item }: { item: DistributionHistoryItem }) {
         <span className="text-sm font-medium text-white glow-white lg:font-mono tabular-nums">
           +{formatCompactNumber(item.amount_received)}
         </span>
-        <span className="text-xs text-zinc-500 ml-1">$COPPER</span>
+        <span className="text-xs text-zinc-500 ml-1">$CPU</span>
       </div>
 
       {/* Hash Power - Desktop */}
