@@ -3,7 +3,6 @@
  */
 
 export { Header, MinimalHeader } from './Header';
-export { Footer, SimpleFooter } from './Footer';
 export { MobileNav, MobileNavSpacer } from './MobileNav';
 export {
   PageContainer,

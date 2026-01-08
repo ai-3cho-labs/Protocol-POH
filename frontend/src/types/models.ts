@@ -138,22 +138,6 @@ export interface LeaderboardUser {
 // Transaction Models
 // ===========================================
 
-/** Reward activity with formatted data */
-export interface FormattedRewardActivity {
-  /** Transaction signature */
-  txSignature: string;
-  /** SOL amount */
-  solAmount: number;
-  /** COPPER amount */
-  copperAmount: number;
-  /** Price per token */
-  pricePerToken: number | null;
-  /** Execution timestamp */
-  executedAt: Date;
-  /** Relative time (e.g., "2 min ago") */
-  timeAgo: string;
-}
-
 /** Payout with formatted data */
 export interface FormattedPayout {
   /** Payout ID */
@@ -174,6 +158,5 @@ export interface FormattedPayout {
   timeAgo: string;
 }
 
-// Legacy type aliases for backwards compatibility
-export type FormattedBuyback = FormattedRewardActivity;
+// Legacy type alias for backwards compatibility
 export type FormattedDistribution = FormattedPayout;

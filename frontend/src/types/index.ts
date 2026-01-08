@@ -12,7 +12,6 @@ export type {
   DistributionHistoryItem,
   LeaderboardEntry,
   PoolStatusResponse,
-  BuybackItem,
   DistributionItem,
   ApiError,
   PaginationParams,
@@ -26,7 +25,6 @@ export type {
   PoolInfo,
   TierId,
   LeaderboardUser,
-  FormattedBuyback,
   FormattedDistribution,
 } from './models';
 

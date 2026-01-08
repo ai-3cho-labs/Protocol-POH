@@ -134,20 +134,6 @@ export interface PoolStatusResponse {
   next_trigger: 'threshold' | 'time' | 'none';
 }
 
-/** GET /api/buybacks - Buyback transaction */
-export interface BuybackItem {
-  /** Solana transaction signature */
-  tx_signature: string;
-  /** SOL amount used for buyback */
-  sol_amount: number;
-  /** COPPER tokens purchased (human-readable) */
-  copper_amount: number;
-  /** Price per token at execution (SOL/COPPER) */
-  price_per_token: number | null;
-  /** When buyback occurred (ISO string) */
-  executed_at: string;
-}
-
 /** GET /api/distributions - Distribution record */
 export interface DistributionItem {
   /** UUID of distribution */
