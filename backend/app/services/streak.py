@@ -205,7 +205,7 @@ class StreakService:
 
         return streak
 
-    def get_multiplier(self, tier: int) -> float:
+    def _get_multiplier(self, tier: int) -> float:
         """
         Get multiplier for a tier.
 
@@ -232,37 +232,9 @@ class StreakService:
         streak = await self.get_streak(wallet)
         if not streak:
             return 1.0
-        return self.get_multiplier(streak.current_tier)
+        return self._get_multiplier(streak.current_tier)
 
-    def get_tier_name(self, tier: int) -> str:
-        """
-        Get name for a tier.
-
-        Args:
-            tier: Tier number (1-6).
-
-        Returns:
-            Tier name.
-        """
-        if tier < 1 or tier > 6:
-            tier = 1
-        return TIER_CONFIG[tier]["name"]
-
-    def get_tier_emoji(self, tier: int) -> str:
-        """
-        Get emoji for a tier.
-
-        Args:
-            tier: Tier number (1-6).
-
-        Returns:
-            Tier emoji.
-        """
-        if tier < 1 or tier > 6:
-            tier = 1
-        return TIER_CONFIG[tier]["emoji"]
-
-    def calculate_tier_from_hours(self, hours: float) -> int:
+    def _calculate_tier_from_hours(self, hours: float) -> int:
         """
         Calculate tier based on streak hours.
 
@@ -299,7 +271,7 @@ class StreakService:
         streak_hours = (now - streak.streak_start).total_seconds() / 3600
 
         # Calculate what tier should be
-        calculated_tier = self.calculate_tier_from_hours(streak_hours)
+        calculated_tier = self._calculate_tier_from_hours(streak_hours)
 
         # Only upgrade, never downgrade (downgrades happen via sells)
         if calculated_tier > streak.current_tier:

@@ -10,7 +10,7 @@ from decimal import Decimal
 from typing import Optional, Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, Request
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.services.snapshot import SnapshotService

@@ -6,7 +6,6 @@ Ensures proper connection pool management and cleanup.
 """
 
 import logging
-from contextlib import asynccontextmanager
 from typing import Optional
 
 import httpx
@@ -73,21 +72,3 @@ def get_http_client() -> httpx.AsyncClient:
 async def close_http_client():
     """Close the shared HTTP client. Call on app shutdown."""
     await _http_manager.close()
-
-
-@asynccontextmanager
-async def http_client_context():
-    """
-    Context manager for temporary HTTP client.
-
-    Use when you need a client that's guaranteed to close,
-    not the shared singleton.
-    """
-    client = httpx.AsyncClient(
-        timeout=httpx.Timeout(30.0, connect=10.0),
-        follow_redirects=True
-    )
-    try:
-        yield client
-    finally:
-        await client.aclose()
