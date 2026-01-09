@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { cn } from '@/lib/cn';
-import { BLUE_TILES, getTileRect, getCartTileRect, ORE_TILES, getOreRect, type TileMap } from './tiles-config';
+import { BLUE_TILES, getTileRect, getCartTileRect, ORE_TILES, getOreRect, DOOR_TILES, getDoorRect, LAMP_TILES, getLampRect, type TileMap } from './tiles-config';
 
 // ============================================
 // CONFIGURATION
@@ -10,6 +10,8 @@ import { BLUE_TILES, getTileRect, getCartTileRect, ORE_TILES, getOreRect, type T
 
 const TILE_SIZE = 16;
 const ORE_SPRITE_SRC = '/sprites/decorations/mining/ores/mining_ores.png';
+const DOOR_SPRITE_SRC = '/sprites/decorations/doors/mine_doors.png';
+const LAMP_SPRITE_SRC = '/sprites/decorations/props/mine_lamps.png';
 
 // Shorthand aliases - Floor tiles
 const W = BLUE_TILES.WALL_FLOOR;
@@ -25,6 +27,12 @@ const WALLSHADOW = BLUE_TILES.WALLSHADOW;
 
 // Shorthand aliases - Ore tiles
 const ORE = ORE_TILES;
+
+// Shorthand aliases - Door tiles
+const DOOR = DOOR_TILES;
+
+// Shorthand aliases - Lamp tiles
+const LAMP = LAMP_TILES;
 
 const _ = null; // Empty/transparent
 
@@ -75,6 +83,26 @@ const ORE_LAYER: TileMap = [
   [_,    _,    _,    _,    _,    _],
 ];
 
+// Door layer: mine doors from separate sprite sheet (6x6)
+const DOOR_LAYER: TileMap = [
+  [_,    _,    _,    _,    _,    _],
+  [_,    _,    DOOR.OPEN,    _,    _,    _],
+  [_,    _,    _,    _,    _,    _],
+  [_,    _,    _,    _,    _,    _],
+  [_,    _,    _,    _,    _,    _],
+  [_,    _,    _,    _,    _,    _],
+];
+
+// Lamp layer: mine lamps from separate sprite sheet (6x6)
+const LAMP_LAYER: TileMap = [
+  [_,    _,    _,    _,    _,    _],
+  [_,    _,    _,    LAMP.SMALL_BLUE,    _,    _],
+  [_,    _,    _,    _,    _,    _],
+  [_,    _,    _,    _,    _,    _],
+  [_,    _,    _,    _,    _,    _],
+  [_,    _,    _,    _,    _,    _],
+];
+
 const MAP_COLS = FLOOR_LAYER[0]?.length ?? 16;
 const MAP_ROWS = FLOOR_LAYER.length;
 
@@ -118,6 +146,8 @@ export function MineTilemap({
   const imageRef = useRef<HTMLImageElement | null>(null);
   const trackImageRef = useRef<HTMLImageElement | null>(null);
   const oreImageRef = useRef<HTMLImageElement | null>(null);
+  const doorImageRef = useRef<HTMLImageElement | null>(null);
+  const lampImageRef = useRef<HTMLImageElement | null>(null);
 
   const tileScaled = TILE_SIZE * scale;
   const width = MAP_COLS * tileScaled;
@@ -128,7 +158,9 @@ export function MineTilemap({
     const img = imageRef.current;
     const trackImg = trackImageRef.current;
     const oreImg = oreImageRef.current;
-    if (!canvas || !img || !trackImg || !oreImg || !imagesLoaded) return;
+    const doorImg = doorImageRef.current;
+    const lampImg = lampImageRef.current;
+    if (!canvas || !img || !trackImg || !oreImg || !doorImg || !lampImg || !imagesLoaded) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -207,6 +239,40 @@ export function MineTilemap({
       }
     }
 
+    // Draw door layer (from separate sprite sheet)
+    for (let row = 0; row < MAP_ROWS; row++) {
+      for (let col = 0; col < MAP_COLS; col++) {
+        const tileIndex = DOOR_LAYER[row]?.[col];
+
+        if (tileIndex !== null && tileIndex !== undefined) {
+          const rect = getDoorRect(tileIndex);
+          ctx.drawImage(
+            doorImg,
+            rect.x, rect.y, rect.w, rect.h,
+            col * tileScaled, row * tileScaled,
+            tileScaled, tileScaled
+          );
+        }
+      }
+    }
+
+    // Draw lamp layer (from separate sprite sheet)
+    for (let row = 0; row < MAP_ROWS; row++) {
+      for (let col = 0; col < MAP_COLS; col++) {
+        const tileIndex = LAMP_LAYER[row]?.[col];
+
+        if (tileIndex !== null && tileIndex !== undefined) {
+          const rect = getLampRect(tileIndex);
+          ctx.drawImage(
+            lampImg,
+            rect.x, rect.y, rect.w, rect.h,
+            col * tileScaled, row * tileScaled,
+            tileScaled, tileScaled
+          );
+        }
+      }
+    }
+
     // Add glow effects for ore (orange/copper glow)
     const orePositions = [
       ...findTilePositions(DECOR_LAYER, GLOW_ORE_TILES),
@@ -249,7 +315,7 @@ export function MineTilemap({
   // Load sprite sheets
   useEffect(() => {
     let loadedCount = 0;
-    const totalImages = 3;
+    const totalImages = 5;
 
     const checkAllLoaded = () => {
       loadedCount++;
@@ -276,10 +342,24 @@ export function MineTilemap({
     oreImg.src = ORE_SPRITE_SRC;
     oreImageRef.current = oreImg;
 
+    // Load door tiles
+    const doorImg = new Image();
+    doorImg.onload = checkAllLoaded;
+    doorImg.src = DOOR_SPRITE_SRC;
+    doorImageRef.current = doorImg;
+
+    // Load lamp tiles
+    const lampImg = new Image();
+    lampImg.onload = checkAllLoaded;
+    lampImg.src = LAMP_SPRITE_SRC;
+    lampImageRef.current = lampImg;
+
     return () => {
       img.onload = null;
       trackImg.onload = null;
       oreImg.onload = null;
+      doorImg.onload = null;
+      lampImg.onload = null;
     };
   }, []);
 

@@ -320,3 +320,60 @@ export const ORE_SHADOW_TILES = {
   COPPER_NUGGET: { row: 2, col: 7, size: 16 },  // Same position as non-shadow version
   COPPER_SMALL: { row: 3, col: 7, size: 16 },
 };
+
+// ============================================
+// MINE DOORS (decoration)
+// mine_doors.png | 9 cols × 5 rows | 16px tiles
+// ============================================
+
+const DOOR_COLS = 9;
+
+export const doorIdx = (row: number, col: number) => row * DOOR_COLS + col;
+
+export const getDoorRect = (index: number) => ({
+  x: (index % DOOR_COLS) * TILE_SIZE,
+  y: Math.floor(index / DOOR_COLS) * TILE_SIZE,
+  w: TILE_SIZE,
+  h: TILE_SIZE,
+});
+
+export const DOOR_TILES = {
+  // Row 1 (indices 9-17)
+  OPEN: 10,
+  BROKEN: 12,
+  CLOSED: 14,
+  FRAMED: 16,
+  // Row 3 (indices 27-35)
+  CHEST_BROWN: 32,
+  CHEST_GRAY: 34,
+};
+
+// ============================================
+// MINE LAMPS (decoration)
+// mine_lamps.png | 6 cols × 5 rows | 16px tiles
+// ============================================
+
+const LAMP_COLS = 6;
+
+export const getLampRect = (index: number) => ({
+  x: (index % LAMP_COLS) * TILE_SIZE,
+  y: Math.floor(index / LAMP_COLS) * TILE_SIZE,
+  w: TILE_SIZE,
+  h: TILE_SIZE,
+});
+
+export const LAMP_TILES = {
+  // Hanging lamps (2 tiles tall: top + bottom)
+  HANGING_1_TOP: 7,
+  HANGING_1_BOT: 13,
+  HANGING_2_TOP: 8,
+  HANGING_2_BOT: 14,
+  HANGING_3_TOP: 9,
+  HANGING_3_BOT: 15,
+  HANGING_4_TOP: 10,
+  HANGING_4_BOT: 16,
+  // Small lamps (1 tile)
+  SMALL_BLUE: 25,
+  SMALL_BROWN: 26,
+  SMALL_RED: 27,
+};
