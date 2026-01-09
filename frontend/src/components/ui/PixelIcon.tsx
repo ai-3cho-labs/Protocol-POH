@@ -95,33 +95,3 @@ function getIconPath(name: PixelIconProps['name']) {
       return null;
   }
 }
-
-/**
- * Animated pixel coin for reward feedback
- * Monochrome design
- */
-export function PixelCoin({
-  size = 'md',
-  className,
-}: {
-  size?: 'sm' | 'md' | 'lg';
-  className?: string;
-}) {
-  const sizeClass = {
-    sm: 'w-4 h-4',
-    md: 'w-6 h-6',
-    lg: 'w-8 h-8',
-  }[size];
-
-  return (
-    <div
-      className={cn(
-        sizeClass,
-        'rounded-full bg-gradient-to-br from-white via-gray-300 to-gray-500',
-        'shadow-[0_0_8px_rgba(255,255,255,0.3)]',
-        'animate-float',
-        className
-      )}
-    />
-  );
-}

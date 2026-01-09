@@ -6,6 +6,8 @@ Handles incoming webhooks from Helius for sell detection.
 
 import hmac
 import logging
+import re
+import time
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -14,6 +16,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.utils.rate_limiter import limiter
 from app.services.helius import get_helius_service
 from app.services.streak import StreakService
 from app.config import get_settings
@@ -22,6 +25,12 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 router = APIRouter(prefix="/api/webhook", tags=["webhook"])
+
+# Solana wallet address validation: 32-44 base58 characters
+WALLET_REGEX = re.compile(r'^[1-9A-HJ-NP-Za-km-z]{32,44}$')
+
+# Maximum age for webhook timestamps (5 minutes) to prevent replay attacks
+WEBHOOK_MAX_AGE_SECONDS = 300
 
 
 class WebhookResponse(BaseModel):
@@ -53,7 +62,55 @@ def verify_webhook_auth(
     return hmac.compare_digest(auth_header, secret)
 
 
+def validate_webhook_timestamp(timestamp: Optional[int], require_timestamp: bool = True) -> bool:
+    """
+    Validate webhook timestamp to prevent replay attacks.
+
+    Args:
+        timestamp: Unix timestamp from webhook payload.
+        require_timestamp: If True, reject requests without timestamp (default: True for security).
+
+    Returns:
+        True if timestamp is within acceptable range.
+    """
+    if timestamp is None:
+        if require_timestamp:
+            logger.warning("Webhook rejected: missing timestamp (replay protection enabled)")
+            return False
+        else:
+            # Only allow missing timestamps in development/testing
+            logger.warning("Webhook received without timestamp - replay protection disabled")
+            return True
+
+    current_time = int(time.time())
+    age = abs(current_time - timestamp)
+
+    if age > WEBHOOK_MAX_AGE_SECONDS:
+        logger.warning(
+            f"Webhook timestamp too old: {age}s (max: {WEBHOOK_MAX_AGE_SECONDS}s)"
+        )
+        return False
+
+    return True
+
+
+def validate_wallet_address(wallet: str) -> bool:
+    """
+    Validate Solana wallet address format.
+
+    Args:
+        wallet: Wallet address to validate.
+
+    Returns:
+        True if valid Solana address format.
+    """
+    if not wallet:
+        return False
+    return bool(WALLET_REGEX.match(wallet))
+
+
 @router.post("/helius", response_model=WebhookResponse)
+@limiter.limit("100/minute")
 async def helius_webhook(
     request: Request,
     db: AsyncSession = Depends(get_db),
@@ -102,10 +159,23 @@ async def helius_webhook(
             detail="Batch too large. Maximum 100 transactions per request."
         )
 
+    # Validate webhook timestamp from first transaction (if available)
+    # Helius includes timestamp in transaction metadata
+    # In production, require timestamps to prevent replay attacks
+    if transactions:
+        first_tx = transactions[0]
+        tx_timestamp = first_tx.get("timestamp") or first_tx.get("blockTime")
+        if not validate_webhook_timestamp(tx_timestamp, require_timestamp=settings.is_production):
+            raise HTTPException(
+                status_code=400,
+                detail="Webhook timestamp missing or too old. Possible replay attack."
+            )
+
     helius = get_helius_service()
     streak_service = StreakService(db)
     processed = 0
     errors = 0
+    skipped_invalid_wallet = 0
 
     for tx in transactions:
         try:
@@ -113,8 +183,13 @@ async def helius_webhook(
             parsed = helius.parse_webhook_transaction(tx)
 
             if parsed and parsed.is_sell:
-                # Process sell - drop tier
+                # Validate wallet address format before processing
                 wallet = parsed.source_wallet
+                if not validate_wallet_address(wallet):
+                    logger.warning(f"Invalid wallet address in webhook: {wallet[:20] if wallet else 'None'}...")
+                    skipped_invalid_wallet += 1
+                    continue
+
                 logger.info(
                     f"Sell detected: wallet={wallet[:8]}..., "
                     f"tx={parsed.signature[:16]}..., "
@@ -134,11 +209,17 @@ async def helius_webhook(
             errors += 1
             continue
 
+    # Build response message with details
+    details = []
+    if errors:
+        details.append(f"{errors} errors")
+    if skipped_invalid_wallet:
+        details.append(f"{skipped_invalid_wallet} invalid wallets")
+    detail_str = f" ({', '.join(details)})" if details else ""
+
     return WebhookResponse(
         success=True,
-        message=f"Processed {processed} sell transactions" + (
-            f" ({errors} errors)" if errors else ""
-        ),
+        message=f"Processed {processed} sell transactions{detail_str}",
         processed=processed
     )
 

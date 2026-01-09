@@ -99,19 +99,6 @@ export const TIER_CONFIG: Record<TierId, { name: string; emoji: string; multipli
   6: { name: 'Diamond Hands', emoji: '💎', multiplier: 5.0, minHours: 720 },
 };
 
-/** Get tier by ID */
-export function getTierById(id: TierId) {
-  return TIER_CONFIG[id];
-}
-
-/** Get all tiers as an array */
-export function getAllTiers() {
-  return Object.entries(TIER_CONFIG).map(([id, config]) => ({
-    tier: parseInt(id) as TierId,
-    ...config,
-  }));
-}
-
 // ===========================================
 // Leaderboard Models
 // ===========================================

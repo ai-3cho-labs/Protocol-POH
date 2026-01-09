@@ -6,29 +6,79 @@ Background tasks for processing creator rewards and executing buybacks.
 
 import logging
 from decimal import Decimal
+from typing import Optional
 
 from app.tasks.celery_app import celery_app
 from app.database import async_session_maker
 from app.services.buyback import BuybackService, process_pending_rewards
 from app.utils.async_utils import run_async
+from app.config import get_settings
 
 logger = logging.getLogger(__name__)
+settings = get_settings()
+
+# Idempotency key TTL (1 hour) - prevents reprocessing within this window
+IDEMPOTENCY_TTL_SECONDS = 3600
 
 
-@celery_app.task(name="app.tasks.buyback_task.process_creator_rewards")
-def process_creator_rewards() -> dict:
+async def _check_idempotency(task_id: str) -> bool:
+    """
+    Check if this task has already been processed (idempotency).
+
+    Uses Redis to track processed task IDs to prevent double-processing
+    on Celery retries.
+
+    Returns:
+        True if task should proceed, False if already processed.
+    """
+    if not settings.redis_url:
+        # Without Redis, we can't guarantee idempotency - proceed with caution
+        logger.warning("Redis not configured - idempotency check skipped")
+        return True
+
+    try:
+        import redis.asyncio as redis
+        client = redis.from_url(settings.redis_url)
+        key = f"buyback:processed:{task_id}"
+
+        # Try to set the key with NX (only if not exists)
+        was_set = await client.set(key, "1", nx=True, ex=IDEMPOTENCY_TTL_SECONDS)
+        await client.aclose()
+
+        if not was_set:
+            logger.info(f"Task {task_id} already processed (idempotency check)")
+            return False
+        return True
+
+    except Exception as e:
+        logger.warning(f"Idempotency check failed: {e} - proceeding with task")
+        return True
+
+
+@celery_app.task(bind=True, name="app.tasks.buyback_task.process_creator_rewards")
+def process_creator_rewards(self) -> dict:
     """
     Process pending creator rewards.
 
     Executes 80/20 split:
     - 80% → Jupiter swap SOL → COPPER → Airdrop pool
     - 20% → Team wallet
+
+    Uses idempotency check to prevent double-processing on retries.
     """
-    return run_async(_process_creator_rewards())
+    return run_async(_process_creator_rewards(self.request.id))
 
 
-async def _process_creator_rewards() -> dict:
+async def _process_creator_rewards(task_id: Optional[str] = None) -> dict:
     """Async implementation of process_creator_rewards."""
+    # Idempotency check to prevent double-processing on retries
+    if task_id and not await _check_idempotency(task_id):
+        return {
+            "status": "skipped",
+            "reason": "already_processed",
+            "task_id": task_id
+        }
+
     async with async_session_maker() as db:
         service = BuybackService(db)
 

@@ -74,6 +74,11 @@ class Settings(BaseSettings):
     # Snapshot Settings
     snapshot_probability: float = 0.4  # 40% chance per hour
 
+    # Jupiter Swap Settings
+    # Slippage in basis points (100 = 1%, 50 = 0.5%)
+    # Lower slippage protects against MEV sandwich attacks but may cause swap failures
+    jupiter_slippage_bps: int = 50  # 0.5% slippage (default, configurable via env)
+
     # Monitoring
     sentry_dsn: str = ""
 

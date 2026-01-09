@@ -11,7 +11,7 @@ from typing import Optional
 from dataclasses import dataclass
 
 from app.utils.http_client import get_http_client
-from app.config import get_settings, SOL_MINT, USDC_MINT
+from app.config import get_settings, SOL_MINT, USDC_MINT, TOKEN_MULTIPLIER, LAMPORTS_PER_SOL
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -183,27 +183,34 @@ class HeliusService:
 
         Detects if transaction is a sell (COPPER → SOL/USDC swap).
 
+        A sell is when the fee payer (transaction initiator):
+        - SENDS COPPER out (to a DEX or liquidity pool)
+        - RECEIVES SOL or USDC in return
+
+        A buy (SOL → COPPER) is NOT a sell and returns None.
+
         Args:
             payload: Raw webhook payload from Helius.
 
         Returns:
-            ParsedTransaction if valid swap, None otherwise.
+            ParsedTransaction if valid sell swap, None otherwise.
         """
         try:
             # Helius enhanced transaction format
             tx_type = payload.get("type", "")
             signature = payload.get("signature", "")
 
-            # Get source wallet (fee payer is usually the initiator)
+            # Get source wallet (fee payer is the user initiating the transaction)
             fee_payer = payload.get("feePayer", "")
+            if not fee_payer:
+                return None
 
             # Check token transfers
             token_transfers = payload.get("tokenTransfers", [])
 
-            # Look for COPPER being sold
+            # Look for the fee payer SENDING COPPER out (selling)
             copper_out = None
             sol_or_usdc_in = None
-            source_wallet = fee_payer
 
             for transfer in token_transfers:
                 mint = transfer.get("mint", "")
@@ -211,43 +218,44 @@ class HeliusService:
                 to_user = transfer.get("toUserAccount", "")
                 amount = transfer.get("tokenAmount", 0)
 
-                # COPPER being sent out (sold)
-                if mint == self.token_mint and from_user:
-                    # Use Decimal for precision
+                # COPPER being sent OUT by the fee payer (user selling)
+                if mint == self.token_mint and from_user == fee_payer:
                     copper_out = {
                         "wallet": from_user,
-                        "amount": int(Decimal(str(amount)) * Decimal("1e6"))
+                        "amount": int(Decimal(str(amount)) * Decimal(str(TOKEN_MULTIPLIER)))
                     }
-                    source_wallet = from_user
 
-                # SOL or USDC being received
-                if mint in [SOL_MINT, USDC_MINT] and to_user:
-                    multiplier = Decimal("1e9") if mint == SOL_MINT else Decimal("1e6")
+                # SOL or USDC being received BY the fee payer
+                # SOL uses 9 decimals (1e9), USDC uses 6 decimals (1e6)
+                if mint in [SOL_MINT, USDC_MINT] and to_user == fee_payer:
+                    multiplier = Decimal(str(LAMPORTS_PER_SOL)) if mint == SOL_MINT else Decimal("1e6")
                     sol_or_usdc_in = {
                         "mint": mint,
                         "amount": int(Decimal(str(amount)) * multiplier)
                     }
 
-            # Check native SOL transfers too
+            # Check native SOL transfers to the fee payer
             native_transfers = payload.get("nativeTransfers", [])
             for transfer in native_transfers:
                 to_user = transfer.get("toUserAccount", "")
                 amount = transfer.get("amount", 0)
 
-                if to_user and copper_out and to_user == copper_out["wallet"]:
+                # SOL being received BY the fee payer (the seller)
+                if to_user == fee_payer and copper_out:
                     sol_or_usdc_in = {
                         "mint": SOL_MINT,
                         "amount": int(amount)
                     }
 
-            # Determine if this is a sell
+            # Determine if this is a sell:
+            # Fee payer sent COPPER out AND received SOL/USDC back
             is_sell = bool(copper_out and sol_or_usdc_in)
 
             if is_sell:
                 return ParsedTransaction(
                     signature=signature,
                     tx_type=tx_type or "SWAP",
-                    source_wallet=source_wallet,
+                    source_wallet=fee_payer,
                     token_in=sol_or_usdc_in["mint"] if sol_or_usdc_in else None,
                     token_out=self.token_mint,
                     amount_in=sol_or_usdc_in["amount"] if sol_or_usdc_in else None,

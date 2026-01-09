@@ -248,7 +248,14 @@ class TestSPLTokenTransfer:
         to_address = str(Keypair().pubkey())
         token_mint = str(Keypair().pubkey())
 
-        # Mock blockhash response
+        # Mock ATA check - doesn't exist (called FIRST)
+        ata_response = MagicMock()
+        ata_response.json.return_value = {
+            "result": {"value": None}  # ATA doesn't exist
+        }
+        ata_response.raise_for_status = MagicMock()
+
+        # Mock blockhash response (called SECOND via get_recent_blockhash)
         blockhash_response = MagicMock()
         blockhash_response.json.return_value = {
             "result": {
@@ -259,14 +266,7 @@ class TestSPLTokenTransfer:
         }
         blockhash_response.raise_for_status = MagicMock()
 
-        # Mock ATA check - doesn't exist
-        ata_response = MagicMock()
-        ata_response.json.return_value = {
-            "result": {"value": None}  # ATA doesn't exist
-        }
-        ata_response.raise_for_status = MagicMock()
-
-        # Mock send response
+        # Mock send response (called THIRD)
         send_response = MagicMock()
         send_response.json.return_value = {
             "result": "5TBxTokenTransferSig"
@@ -274,8 +274,9 @@ class TestSPLTokenTransfer:
         send_response.raise_for_status = MagicMock()
 
         mock_client = MagicMock()
+        # Order: 1) ATA check, 2) blockhash, 3) send transaction
         mock_client.post = AsyncMock(
-            side_effect=[blockhash_response, ata_response, send_response]
+            side_effect=[ata_response, blockhash_response, send_response]
         )
 
         with patch("app.utils.solana_tx.get_http_client", return_value=mock_client):
@@ -301,28 +302,29 @@ class TestSPLTokenTransfer:
         to_address = str(Keypair().pubkey())
         token_mint = str(Keypair().pubkey())
 
-        # Mock blockhash
-        blockhash_response = MagicMock()
-        blockhash_response.json.return_value = {
-            "result": {"value": {"blockhash": "4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM"}}
-        }
-        blockhash_response.raise_for_status = MagicMock()
-
-        # Mock ATA check - exists
+        # Mock ATA check - exists (called FIRST)
         ata_response = MagicMock()
         ata_response.json.return_value = {
             "result": {"value": {"data": "somedata"}}  # ATA exists
         }
         ata_response.raise_for_status = MagicMock()
 
-        # Mock send
+        # Mock blockhash (called SECOND via get_recent_blockhash)
+        blockhash_response = MagicMock()
+        blockhash_response.json.return_value = {
+            "result": {"value": {"blockhash": "4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM"}}
+        }
+        blockhash_response.raise_for_status = MagicMock()
+
+        # Mock send (called THIRD)
         send_response = MagicMock()
         send_response.json.return_value = {"result": "5TBxSig123"}
         send_response.raise_for_status = MagicMock()
 
         mock_client = MagicMock()
+        # Order: 1) ATA check, 2) blockhash, 3) send transaction
         mock_client.post = AsyncMock(
-            side_effect=[blockhash_response, ata_response, send_response]
+            side_effect=[ata_response, blockhash_response, send_response]
         )
 
         with patch("app.utils.solana_tx.get_http_client", return_value=mock_client):

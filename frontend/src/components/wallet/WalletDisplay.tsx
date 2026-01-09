@@ -125,25 +125,3 @@ export function WalletDisplay({
     </div>
   );
 }
-
-/**
- * Full wallet address display
- */
-export function WalletAddressFull({ className }: { className?: string }) {
-  const { address, connected } = useWallet();
-
-  if (!connected || !address) {
-    return null;
-  }
-
-  return (
-    <code
-      className={cn(
-        'font-mono text-xs text-zinc-400 break-all',
-        className
-      )}
-    >
-      {address}
-    </code>
-  );
-}

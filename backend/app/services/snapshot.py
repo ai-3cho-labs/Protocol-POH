@@ -6,7 +6,7 @@ Target: 3-6 snapshots per day via 40% hourly probability.
 """
 
 import logging
-import random
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
@@ -41,11 +41,16 @@ class SnapshotService:
         Uses configurable probability (default 40%) to achieve
         approximately 3-6 snapshots per day.
 
+        Uses cryptographic RNG (secrets module) for unpredictable timing
+        that cannot be gamed by observing patterns.
+
         Returns:
             True if snapshot should be taken, False otherwise.
         """
         probability = settings.snapshot_probability
-        roll = random.random()
+        # Use cryptographic RNG for unpredictable snapshot timing
+        rng = secrets.SystemRandom()
+        roll = rng.random()
         result = roll < probability
 
         logger.info(

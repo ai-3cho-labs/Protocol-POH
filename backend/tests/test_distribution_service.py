@@ -242,3 +242,111 @@ class TestDistributionEdgeCases:
                         with patch.object(service.twab_service, "calculate_all_hash_powers", return_value=[]):
                             plan = await service.calculate_distribution()
                             assert plan is None
+
+
+class TestTransferReconciliation:
+    """Tests for transfer reconciliation (failed transfer handling)."""
+
+    @pytest.mark.asyncio
+    async def test_failed_transfers_record_zero_amount(self, db_session, mock_settings):
+        """Test that failed transfers record amount_received=0."""
+        from app.models import DistributionRecipient
+        from sqlalchemy import select
+
+        # Patch both get_settings and the module-level settings
+        with patch("app.services.distribution.get_settings", return_value=mock_settings):
+            with patch("app.services.distribution.settings", mock_settings):
+                service = DistributionService(db_session)
+
+                plan = DistributionPlan(
+                    pool_amount=1_000_000_000,
+                    pool_value_usd=Decimal("100"),
+                    total_hashpower=Decimal("500000000"),
+                    recipient_count=2,
+                    trigger_type="threshold",
+                    recipients=[
+                        RecipientShare(
+                            wallet="Wallet1111111111111111111111111111111111111",
+                            twab=100_000_000,
+                            multiplier=2.0,
+                            hash_power=Decimal("200000000"),
+                            share_percentage=Decimal("60"),
+                            amount=600_000_000
+                        ),
+                        RecipientShare(
+                            wallet="Wallet2222222222222222222222222222222222222",
+                            twab=50_000_000,
+                            multiplier=2.0,
+                            hash_power=Decimal("100000000"),
+                            share_percentage=Decimal("40"),
+                            amount=400_000_000
+                        ),
+                    ]
+                )
+
+                # Mock token transfers - first succeeds, second fails
+                transfer_results = {
+                    "Wallet1111111111111111111111111111111111111": "TxSig111111111111111111111111111111111111111111111111111111111111111",
+                    "Wallet2222222222222222222222222222222222222": None  # Failed transfer
+                }
+
+                with patch.object(service, "_execute_token_transfers", return_value=transfer_results):
+                    distribution = await service.execute_distribution(plan)
+
+                    assert distribution is not None
+
+                    # Query the recipients
+                    result = await db_session.execute(
+                        select(DistributionRecipient)
+                        .where(DistributionRecipient.distribution_id == distribution.id)
+                    )
+                    recipients = list(result.scalars().all())
+
+                    # Find the successful and failed transfers
+                    successful = next(r for r in recipients if r.wallet == "Wallet1111111111111111111111111111111111111")
+                    failed = next(r for r in recipients if r.wallet == "Wallet2222222222222222222222222222222222222")
+
+                    # Successful transfer should have amount_received set
+                    assert successful.amount_received == 600_000_000
+                    assert successful.tx_signature is not None
+
+                    # Failed transfer should have amount_received=0
+                    assert failed.amount_received == 0
+                    assert failed.tx_signature is None
+
+    @pytest.mark.asyncio
+    async def test_get_failed_transfers(self, db_session, mock_settings):
+        """Test retrieving failed transfers for reconciliation."""
+        with patch("app.services.distribution.get_settings", return_value=mock_settings):
+            service = DistributionService(db_session)
+
+            plan = DistributionPlan(
+                pool_amount=1_000_000_000,
+                pool_value_usd=Decimal("100"),
+                total_hashpower=Decimal("500000000"),
+                recipient_count=1,
+                trigger_type="threshold",
+                recipients=[
+                    RecipientShare(
+                        wallet="FailedWallet11111111111111111111111111111",
+                        twab=100_000_000,
+                        multiplier=2.0,
+                        hash_power=Decimal("200000000"),
+                        share_percentage=Decimal("100"),
+                        amount=1_000_000_000
+                    ),
+                ]
+            )
+
+            # Mock all transfers failing
+            with patch.object(service, "_execute_token_transfers", return_value={}):
+                distribution = await service.execute_distribution(plan)
+
+                assert distribution is not None
+
+                # Get failed transfers
+                failed = await service.get_failed_transfers()
+
+                assert len(failed) >= 1
+                failed_wallets = [f.wallet for f in failed]
+                assert "FailedWallet11111111111111111111111111111" in failed_wallets

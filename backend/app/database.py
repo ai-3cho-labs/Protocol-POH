@@ -19,12 +19,16 @@ settings = get_settings()
 
 def prepare_database_url(url: str) -> tuple[str, dict]:
     """
-    Prepare database URL for asyncpg.
+    Prepare database URL for the appropriate async driver.
 
-    Converts postgres:// to postgresql+asyncpg:// and handles SSL properly.
-    asyncpg doesn't accept sslmode as a query param - needs ssl context.
+    For PostgreSQL: Converts postgres:// to postgresql+asyncpg:// and handles SSL.
+    For SQLite: Returns URL as-is with empty connect_args.
     """
-    # Convert to asyncpg driver
+    # Handle SQLite URLs - return as-is (no special processing needed)
+    if url.startswith("sqlite"):
+        return url, {}
+
+    # Convert PostgreSQL to asyncpg driver
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql+asyncpg://", 1)
     elif url.startswith("postgresql://"):
@@ -55,10 +59,12 @@ def prepare_database_url(url: str) -> tuple[str, dict]:
     }
 
     if needs_ssl:
-        # Create SSL context for asyncpg
+        # Create SSL context for asyncpg with proper certificate verification
         ssl_context = ssl.create_default_context()
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
+        # SECURITY: Enable certificate verification to prevent MITM attacks
+        # Neon PostgreSQL uses valid certificates that should be verified
+        ssl_context.check_hostname = True
+        ssl_context.verify_mode = ssl.CERT_REQUIRED
         connect_args["ssl"] = ssl_context
 
     return clean_url, connect_args
@@ -67,18 +73,27 @@ def prepare_database_url(url: str) -> tuple[str, dict]:
 # Prepare database URL and connection args
 database_url, connect_args = prepare_database_url(settings.database_url)
 
+# Check if using SQLite
+is_sqlite = database_url.startswith("sqlite")
+
 # Create async engine
 # Use NullPool for serverless (Neon) - pool_size/max_overflow not compatible with NullPool
 engine_kwargs = {
     "echo": settings.debug,
-    "connect_args": connect_args,
 }
 
-if settings.is_production:
-    # NullPool for serverless - no connection pooling
+if is_sqlite:
+    # SQLite-specific configuration
+    from sqlalchemy.pool import StaticPool
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+    engine_kwargs["poolclass"] = StaticPool
+elif settings.is_production:
+    # NullPool for serverless PostgreSQL - no connection pooling
+    engine_kwargs["connect_args"] = connect_args
     engine_kwargs["poolclass"] = NullPool
 else:
-    # Connection pooling for local development
+    # Connection pooling for local PostgreSQL development
+    engine_kwargs["connect_args"] = connect_args
     engine_kwargs["poolclass"] = AsyncAdaptedQueuePool
     engine_kwargs["pool_size"] = 5
     engine_kwargs["max_overflow"] = 10

@@ -63,54 +63,6 @@ export function EmptyState({
   );
 }
 
-/**
- * Preset empty states for common scenarios
- */
-export function NoDataEmpty() {
-  return (
-    <EmptyState
-      icon="()"
-      title="No data yet"
-      description="Check back later for updates"
-    />
-  );
-}
-
-export function NoResultsEmpty({ query }: { query?: string }) {
-  return (
-    <EmptyState
-      icon="?"
-      title="No results found"
-      description={
-        query ? `No results for "${query}"` : 'Try adjusting your search'
-      }
-    />
-  );
-}
-
-export function NoHistoryEmpty() {
-  return (
-    <EmptyState
-      icon="⛏️"
-      title="No rewards yet"
-      description="Your reward history will appear here"
-    />
-  );
-}
-
-export function NoActivityEmpty() {
-  return (
-    <EmptyState
-      icon="⛏️"
-      title="No activity yet"
-      description="Reward activity will appear here"
-    />
-  );
-}
-
-// Legacy alias
-export const NoBuybacksEmpty = NoActivityEmpty;
-
 export function ConnectWalletEmpty({ onConnect }: { onConnect?: () => void }) {
   return (
     <EmptyState

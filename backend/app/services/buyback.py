@@ -28,8 +28,27 @@ def utc_now() -> datetime:
     """Get current UTC time (timezone-aware)."""
     return datetime.now(timezone.utc)
 
+
 JUPITER_QUOTE_API = "https://quote-api.jup.ag/v6/quote"
 JUPITER_SWAP_API = "https://quote-api.jup.ag/v6/swap"
+# Jupiter quotes expire after ~60s, use 50s to be safe
+JUPITER_QUOTE_MAX_AGE_SECONDS = 50
+
+
+@dataclass
+class JupiterQuote:
+    """Jupiter swap quote with timestamp for freshness tracking."""
+    data: dict
+    fetched_at: datetime
+
+    def is_fresh(self) -> bool:
+        """Check if the quote is still within the valid time window."""
+        age = (utc_now() - self.fetched_at).total_seconds()
+        return age < JUPITER_QUOTE_MAX_AGE_SECONDS
+
+    def age_seconds(self) -> float:
+        """Get the age of the quote in seconds."""
+        return (utc_now() - self.fetched_at).total_seconds()
 
 
 @dataclass
@@ -113,34 +132,35 @@ class BuybackService:
     async def get_jupiter_quote(
         self,
         sol_amount_lamports: int
-    ) -> Optional[dict]:
+    ) -> Optional[JupiterQuote]:
         """
-        Get swap quote from Jupiter.
+        Get swap quote from Jupiter with timestamp for freshness tracking.
 
         Args:
             sol_amount_lamports: Amount of SOL in lamports.
 
         Returns:
-            Jupiter quote response, or None if error.
+            JupiterQuote with data and timestamp, or None if error.
         """
         if not self.token_mint:
             logger.error("Token mint not configured")
             return None
 
         try:
+            fetch_time = utc_now()
             response = await self.client.get(
                 JUPITER_QUOTE_API,
                 params={
                     "inputMint": SOL_MINT,
                     "outputMint": self.token_mint,
                     "amount": str(sol_amount_lamports),
-                    "slippageBps": 100,  # 1% slippage
+                    "slippageBps": settings.jupiter_slippage_bps,  # Configurable slippage (default 0.5%)
                     "onlyDirectRoutes": False,
                     "asLegacyTransaction": False
                 }
             )
             response.raise_for_status()
-            return response.json()
+            return JupiterQuote(data=response.json(), fetched_at=fetch_time)
 
         except Exception as e:
             logger.error(f"Error getting Jupiter quote: {e}")
@@ -153,6 +173,9 @@ class BuybackService:
     ) -> BuybackResult:
         """
         Execute a Jupiter swap (SOL → COPPER).
+
+        Includes quote freshness validation - will re-fetch the quote if
+        it has expired (older than JUPITER_QUOTE_MAX_AGE_SECONDS).
 
         Args:
             sol_amount: Amount of SOL to swap.
@@ -173,7 +196,7 @@ class BuybackService:
 
         lamports = int(sol_amount * LAMPORTS_PER_SOL)
 
-        # Get quote
+        # Get initial quote
         quote = await self.get_jupiter_quote(lamports)
         if not quote:
             return BuybackResult(
@@ -191,11 +214,28 @@ class BuybackService:
             keypair = keypair_from_base58(wallet_private_key)
             user_public_key = str(keypair.pubkey())
 
+            # Check quote freshness before submitting swap
+            # Re-fetch if stale to avoid expired quote errors
+            if not quote.is_fresh():
+                logger.info(
+                    f"Quote is stale ({quote.age_seconds():.1f}s old), re-fetching before swap"
+                )
+                quote = await self.get_jupiter_quote(lamports)
+                if not quote:
+                    return BuybackResult(
+                        success=False,
+                        tx_signature=None,
+                        sol_spent=Decimal(0),
+                        copper_received=0,
+                        price_per_token=None,
+                        error="Failed to re-fetch Jupiter quote after expiration"
+                    )
+
             # Get swap transaction from Jupiter
             swap_response = await self.client.post(
                 JUPITER_SWAP_API,
                 json={
-                    "quoteResponse": quote,
+                    "quoteResponse": quote.data,
                     "userPublicKey": user_public_key,
                     "wrapAndUnwrapSol": True,
                     "dynamicComputeUnitLimit": True,
@@ -239,7 +279,7 @@ class BuybackService:
                 logger.warning(f"Transaction sent but not confirmed: {tx_result.signature}")
 
             # Calculate results from quote
-            out_amount = int(quote.get("outAmount", 0))
+            out_amount = int(quote.data.get("outAmount", 0))
             price_per_token = None
             if out_amount > 0:
                 price_per_token = sol_amount / Decimal(out_amount)
@@ -258,7 +298,8 @@ class BuybackService:
             )
 
         except Exception as e:
-            logger.error(f"Error executing swap: {e}", exc_info=True)
+            # SECURITY: Do not use exc_info=True to avoid exposing private key bytes in stack traces
+            logger.error(f"Error executing swap: {type(e).__name__}: {e}")
             return BuybackResult(
                 success=False,
                 tx_signature=None,
@@ -331,9 +372,12 @@ class BuybackService:
         amount_sol: Decimal,
         source: str,
         tx_signature: Optional[str] = None
-    ) -> CreatorReward:
+    ) -> Optional[CreatorReward]:
         """
-        Record an incoming creator reward.
+        Record an incoming creator reward with idempotency check.
+
+        If tx_signature is provided and already exists, returns the existing
+        record to prevent duplicate processing from webhook retries.
 
         Args:
             amount_sol: Amount of SOL received.
@@ -341,8 +385,19 @@ class BuybackService:
             tx_signature: Transaction signature.
 
         Returns:
-            Created CreatorReward record.
+            Created or existing CreatorReward record, or None if duplicate.
         """
+        # Idempotency check: if tx_signature exists, return existing record
+        if tx_signature:
+            result = await self.db.execute(
+                select(CreatorReward)
+                .where(CreatorReward.tx_signature == tx_signature)
+            )
+            existing = result.scalar_one_or_none()
+            if existing:
+                logger.info(f"Creator reward already exists for tx {tx_signature}, skipping duplicate")
+                return existing
+
         reward = CreatorReward(
             amount_sol=amount_sol,
             source=source,
@@ -352,7 +407,7 @@ class BuybackService:
         self.db.add(reward)
         await self.db.commit()
 
-        logger.info(f"Recorded creator reward: {amount_sol} SOL from {source}")
+        logger.info(f"Recorded creator reward: {amount_sol} SOL from {source} (tx: {tx_signature})")
         return reward
 
     async def get_recent_buybacks(self, limit: int = 10) -> list[Buyback]:
@@ -392,15 +447,18 @@ class BuybackService:
         )
 
     async def _update_system_stats(self, sol_amount: Decimal):
-        """Update system stats with buyback amount."""
-        result = await self.db.execute(
-            select(SystemStats).where(SystemStats.id == 1)
-        )
-        stats = result.scalar_one_or_none()
+        """Update system stats with buyback amount using atomic UPDATE."""
+        from sqlalchemy import update
 
-        if stats:
-            stats.total_buybacks = (stats.total_buybacks or Decimal(0)) + sol_amount
-            stats.updated_at = utc_now()
+        # Use atomic UPDATE to prevent lost updates under concurrency
+        await self.db.execute(
+            update(SystemStats)
+            .where(SystemStats.id == 1)
+            .values(
+                total_buybacks=func.coalesce(SystemStats.total_buybacks, 0) + sol_amount,
+                updated_at=utc_now()
+            )
+        )
 
 
 async def transfer_to_team_wallet(

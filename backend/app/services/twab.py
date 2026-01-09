@@ -28,6 +28,19 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def ensure_utc(dt: datetime) -> datetime:
+    """
+    Ensure datetime is timezone-aware UTC.
+
+    Handles both naive and aware datetimes from databases that may not
+    preserve timezone information consistently.
+    """
+    if dt.tzinfo is None:
+        # Naive datetime - assume it was stored as UTC
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
 @dataclass
 class HashPowerInfo:
     """Complete hash power breakdown for a wallet."""
@@ -82,41 +95,55 @@ class TWABService:
         Compute TWAB from balance snapshots.
 
         TWAB = Σ(balance_i × duration_i) / total_duration
-        Uses trapezoidal integration between snapshots.
+
+        Uses FORWARD-FILL interpolation: each balance is valid from its
+        snapshot time until the next snapshot (or end of period). This is
+        fairer than trapezoidal interpolation which penalizes new holders
+        by up to 50%.
+
+        For the period BEFORE the first snapshot, we assume zero balance
+        (holder hadn't bought yet). This ensures new holders get credit
+        for exactly the time they've held, not more.
         """
         if not balances:
             return 0
+
+        # Ensure start/end are timezone-aware for comparison
+        start = ensure_utc(start)
+        end = ensure_utc(end)
 
         total_duration = (end - start).total_seconds()
         if total_duration <= 0:
             return 0
 
-        # Handle single balance point
+        # Handle single balance point - applies from snapshot time to end
         if len(balances) == 1:
-            return balances[0][1]
+            timestamp, balance = balances[0]
+            timestamp = ensure_utc(timestamp)
+            # Only count time from snapshot to end (when they actually held)
+            seg_start = max(timestamp, start)
+            seg_end = end
+            duration = (seg_end - seg_start).total_seconds()
+            if duration <= 0:
+                return 0
+            # Weight by fraction of period they held
+            return int(Decimal(balance) * Decimal(duration) / Decimal(total_duration))
 
         weighted_sum = Decimal(0)
 
+        # Forward-fill: each balance covers from its timestamp to the next
         for i in range(len(balances)):
             timestamp, balance = balances[i]
+            timestamp = ensure_utc(timestamp)
 
-            # Determine time segment
-            if i == 0:
-                seg_start = start
-                if len(balances) > 1:
-                    next_time = balances[i + 1][0]
-                    seg_end = timestamp + (next_time - timestamp) / 2
-                else:
-                    seg_end = end
-            elif i == len(balances) - 1:
-                prev_time = balances[i - 1][0]
-                seg_start = prev_time + (timestamp - prev_time) / 2
-                seg_end = end
+            # Segment starts at this snapshot's timestamp
+            seg_start = timestamp
+
+            # Segment ends at next snapshot's timestamp, or end of period
+            if i < len(balances) - 1:
+                seg_end = ensure_utc(balances[i + 1][0])
             else:
-                prev_time = balances[i - 1][0]
-                next_time = balances[i + 1][0]
-                seg_start = prev_time + (timestamp - prev_time) / 2
-                seg_end = timestamp + (next_time - timestamp) / 2
+                seg_end = end
 
             # Clamp to period boundaries
             seg_start = max(seg_start, start)
@@ -176,9 +203,11 @@ class TWABService:
         limit: Optional[int] = None
     ) -> list[HashPowerInfo]:
         """
-        Calculate hash power for all eligible wallets using BATCH queries.
+        Calculate hash power for all eligible wallets using ATOMIC batch query.
 
-        OPTIMIZED: Uses 2 queries total instead of O(n) queries.
+        OPTIMIZED: Uses single JOIN query to prevent sell-timing gaming.
+        Previously used 2 separate queries, creating a race window where
+        a sell between queries could result in inconsistent tier data.
 
         Args:
             start: Start of period.
@@ -189,35 +218,41 @@ class TWABService:
         Returns:
             List of HashPowerInfo sorted by hash power descending.
         """
-        # BATCH QUERY 1: Get ALL balances for ALL wallets in one query
+        # ATOMIC QUERY: Get ALL balances WITH tiers in single query
+        # This prevents sell-timing gaming where a sell between separate
+        # balance/tier queries could manipulate the distribution denominator.
+        # Using LEFT OUTER JOIN so wallets without streaks still get included.
         result = await self.db.execute(
-            select(Balance.wallet, Snapshot.timestamp, Balance.balance)
+            select(
+                Balance.wallet,
+                Snapshot.timestamp,
+                Balance.balance,
+                HoldStreak.current_tier
+            )
             .join(Snapshot, Balance.snapshot_id == Snapshot.id)
+            .outerjoin(HoldStreak, Balance.wallet == HoldStreak.wallet)
             .where(and_(
                 Snapshot.timestamp >= start,
                 Snapshot.timestamp <= end
             ))
             .order_by(Balance.wallet, Snapshot.timestamp.asc())
         )
-        all_balances = result.fetchall()
+        all_data = result.fetchall()
 
-        if not all_balances:
+        if not all_data:
             return []
 
-        # Group balances by wallet
+        # Group balances by wallet, also capture tier (same for all rows per wallet)
         wallet_balances: dict[str, list[tuple[datetime, int]]] = defaultdict(list)
-        for wallet, timestamp, balance in all_balances:
+        wallet_tiers: dict[str, int] = {}
+
+        for wallet, timestamp, balance, tier in all_data:
             wallet_balances[wallet].append((timestamp, balance))
+            # Tier is the same for all rows of a wallet, just capture first occurrence
+            if wallet not in wallet_tiers:
+                wallet_tiers[wallet] = tier if tier is not None else 1
 
-        logger.info(f"Batch TWAB: {len(wallet_balances)} wallets, {len(all_balances)} balance records")
-
-        # BATCH QUERY 2: Get ALL streaks in one query
-        wallets_list = list(wallet_balances.keys())
-        result = await self.db.execute(
-            select(HoldStreak.wallet, HoldStreak.current_tier)
-            .where(HoldStreak.wallet.in_(wallets_list))
-        )
-        wallet_tiers = {row[0]: row[1] for row in result.fetchall()}
+        logger.info(f"Batch TWAB: {len(wallet_balances)} wallets, {len(all_data)} balance records")
 
         # Calculate hash powers (CPU-bound, no DB)
         hash_powers = []
@@ -229,7 +264,7 @@ class TWABService:
             if twab < min_balance:
                 continue
 
-            # Get tier/multiplier
+            # Get tier/multiplier (already snapshotted atomically with balances)
             tier = wallet_tiers.get(wallet, 1)
             multiplier = TIER_CONFIG[tier]["multiplier"]
             tier_name = TIER_CONFIG[tier]["name"]

@@ -350,8 +350,12 @@ class TestExcludedWalletPersistence:
 
         assert timestamped is not None
         assert timestamped.added_at is not None
+        # Ensure added_at is timezone-aware for comparison (SQLite may return naive)
+        added_at = timestamped.added_at
+        if added_at.tzinfo is None:
+            added_at = added_at.replace(tzinfo=timezone.utc)
         # Timestamp should be between before and after
-        assert before <= timestamped.added_at <= after
+        assert before <= added_at <= after
 
 
 class TestDistributionExclusion:

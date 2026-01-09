@@ -111,7 +111,7 @@ async def lifespan(app: FastAPI):
         if not settings.copper_token_mint:
             logger.error("CRITICAL: Token mint not configured")
 
-        # Validate wallet private keys are configured (without logging values)
+        # Validate wallet private keys are configured and valid Base58
         wallet_keys = [
             ("CREATOR_WALLET", settings.creator_wallet_private_key),
             ("BUYBACK_WALLET", settings.buyback_wallet_private_key),
@@ -123,7 +123,18 @@ async def lifespan(app: FastAPI):
             elif len(key) < 80 or len(key) > 90:
                 logger.error(f"CRITICAL: {name}_PRIVATE_KEY invalid length (expected ~88 chars)")
             else:
-                logger.info(f"{name} private key configured (length: {len(key)})")
+                # Validate Base58 decoding without exposing key material
+                try:
+                    import base58
+                    decoded = base58.b58decode(key)
+                    if len(decoded) != 64:
+                        logger.error(
+                            f"CRITICAL: {name}_PRIVATE_KEY invalid - decoded to {len(decoded)} bytes (expected 64)"
+                        )
+                    else:
+                        logger.info(f"{name} private key validated (Base58, 64 bytes)")
+                except Exception as e:
+                    logger.error(f"CRITICAL: {name}_PRIVATE_KEY invalid Base58 encoding: {type(e).__name__}")
 
         # Prevent test mode in production
         if settings.test_mode:

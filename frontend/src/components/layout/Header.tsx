@@ -61,27 +61,3 @@ export function Header() {
     </header>
   );
 }
-
-/**
- * Minimal header (for landing page)
- * Monochrome with frosted glass
- */
-export function MinimalHeader() {
-  return (
-    <header className="hidden lg:block absolute top-0 left-0 right-0 z-40 backdrop-blur-[4px] bg-bg-dark/50">
-      <div className="container mx-auto px-6">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
-            <span className="text-2xl font-bold text-white glow-white">
-              $CPU
-            </span>
-          </Link>
-
-          {/* Connect Button */}
-          <ConnectButton size="sm" />
-        </div>
-      </div>
-    </header>
-  );
-}

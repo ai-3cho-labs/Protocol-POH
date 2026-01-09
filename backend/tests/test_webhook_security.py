@@ -1,105 +1,76 @@
 """
 $COPPER Webhook Security Tests
 
-Tests for webhook HMAC verification, payload validation, and attack prevention.
+Tests for webhook authorization verification, payload validation, and attack prevention.
 """
 
-import hmac
-import hashlib
 import json
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import patch, MagicMock
 
-from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
-from app.api.webhook import verify_webhook_signature
+from app.api.webhook import verify_webhook_auth
 
 
-class TestHMACSignatureVerification:
-    """Tests for HMAC signature verification."""
+class TestAuthorizationVerification:
+    """Tests for Authorization header verification."""
 
-    def test_valid_signature_passes(self):
-        """Test that valid HMAC signature passes verification."""
+    def test_valid_auth_passes(self):
+        """Test that valid authorization passes verification."""
         secret = "test-webhook-secret-12345"
-        payload = b'{"type": "SWAP", "signature": "abc123"}'
+        auth_header = "test-webhook-secret-12345"
 
-        # Generate valid signature
-        signature = hmac.new(
-            secret.encode(),
-            payload,
-            hashlib.sha256
-        ).hexdigest()
-
-        result = verify_webhook_signature(payload, signature, secret)
+        result = verify_webhook_auth(auth_header, secret)
         assert result is True
 
-    def test_invalid_signature_fails(self):
-        """Test that invalid signature is rejected."""
+    def test_invalid_auth_fails(self):
+        """Test that invalid authorization is rejected."""
         secret = "test-webhook-secret-12345"
-        payload = b'{"type": "SWAP", "signature": "abc123"}'
+        auth_header = "wrong-secret"
 
-        # Use wrong signature
-        result = verify_webhook_signature(payload, "invalid-signature", secret)
+        result = verify_webhook_auth(auth_header, secret)
         assert result is False
 
-    def test_missing_signature_fails(self):
-        """Test that missing signature is rejected."""
+    def test_missing_auth_fails(self):
+        """Test that missing authorization is rejected."""
         secret = "test-webhook-secret-12345"
-        payload = b'{"type": "SWAP"}'
 
-        result = verify_webhook_signature(payload, None, secret)
+        result = verify_webhook_auth(None, secret)
         assert result is False
 
-    def test_empty_signature_fails(self):
-        """Test that empty signature is rejected."""
+    def test_empty_auth_fails(self):
+        """Test that empty authorization is rejected."""
         secret = "test-webhook-secret-12345"
-        payload = b'{"type": "SWAP"}'
 
-        result = verify_webhook_signature(payload, "", secret)
+        result = verify_webhook_auth("", secret)
         assert result is False
 
     def test_missing_secret_fails(self):
-        """Test that missing secret is rejected."""
-        payload = b'{"type": "SWAP"}'
-        signature = "some-signature"
+        """Test that missing secret causes rejection."""
+        auth_header = "some-auth-value"
 
-        result = verify_webhook_signature(payload, signature, "")
-        assert result is False
-
-    def test_modified_payload_fails(self):
-        """Test that modified payload fails signature verification."""
-        secret = "test-webhook-secret-12345"
-        original_payload = b'{"type": "SWAP", "amount": 100}'
-
-        # Generate signature for original
-        signature = hmac.new(
-            secret.encode(),
-            original_payload,
-            hashlib.sha256
-        ).hexdigest()
-
-        # Try to verify with modified payload
-        modified_payload = b'{"type": "SWAP", "amount": 999999}'
-        result = verify_webhook_signature(modified_payload, signature, secret)
+        result = verify_webhook_auth(auth_header, "")
         assert result is False
 
     def test_timing_attack_resistant(self):
-        """Test that signature comparison uses constant-time comparison."""
-        # The verify_webhook_signature function should use hmac.compare_digest
+        """Test that comparison uses constant-time algorithm."""
+        # The verify_webhook_auth function uses hmac.compare_digest
         # which is resistant to timing attacks
         secret = "test-webhook-secret-12345"
-        payload = b'{"type": "SWAP"}'
 
-        # Generate valid signature
-        valid_sig = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
+        # Near-match should behave same as total mismatch (constant time)
+        assert verify_webhook_auth(secret, secret) is True
+        assert verify_webhook_auth(secret[:-1] + "x", secret) is False
+        assert verify_webhook_auth("completely-different", secret) is False
 
-        # The function should complete in similar time for near-matches vs total mismatches
-        # This is hard to test directly, but we verify compare_digest is used by code review
-        # Here we just verify the function works correctly
-        assert verify_webhook_signature(payload, valid_sig, secret) is True
-        assert verify_webhook_signature(payload, valid_sig[:-1] + "x", secret) is False
+    def test_compare_digest_used(self):
+        """Verify constant-time comparison is used (code inspection test)."""
+        import inspect
+
+        source = inspect.getsource(verify_webhook_auth)
+        assert "compare_digest" in source, "Must use hmac.compare_digest for timing attack resistance"
 
 
 @pytest.mark.asyncio
@@ -119,13 +90,13 @@ class TestWebhookEndpoint:
                 response = await client.post(
                     "/api/webhook/helius",
                     json={"type": "SWAP"},
-                    headers={"x-helius-signature": "fake-sig"}
+                    headers={"Authorization": "test-secret"}
                 )
                 assert response.status_code == 503
                 assert "not configured" in response.json()["detail"].lower()
 
-    async def test_rejects_missing_signature_header(self):
-        """Test endpoint returns 401 when signature header missing."""
+    async def test_rejects_missing_authorization_header(self):
+        """Test endpoint returns 401 when Authorization header missing."""
         mock_settings = MagicMock()
         mock_settings.helius_webhook_secret = "test-secret"
 
@@ -137,13 +108,13 @@ class TestWebhookEndpoint:
                 response = await client.post(
                     "/api/webhook/helius",
                     json={"type": "SWAP"}
-                    # No x-helius-signature header
+                    # No Authorization header
                 )
                 assert response.status_code == 401
-                assert "Invalid signature" in response.json()["detail"]
+                assert "Invalid authorization" in response.json()["detail"]
 
-    async def test_rejects_invalid_signature(self):
-        """Test endpoint returns 401 for invalid signature."""
+    async def test_rejects_invalid_authorization(self):
+        """Test endpoint returns 401 for invalid authorization."""
         mock_settings = MagicMock()
         mock_settings.helius_webhook_secret = "test-secret"
 
@@ -155,18 +126,14 @@ class TestWebhookEndpoint:
                 response = await client.post(
                     "/api/webhook/helius",
                     json={"type": "SWAP"},
-                    headers={"x-helius-signature": "invalid-signature"}
+                    headers={"Authorization": "wrong-secret"}
                 )
                 assert response.status_code == 401
 
     async def test_rejects_invalid_json(self):
         """Test endpoint returns 400 for malformed JSON."""
-        secret = "test-secret"
-        payload = b"not valid json {"
-        signature = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
-
         mock_settings = MagicMock()
-        mock_settings.helius_webhook_secret = secret
+        mock_settings.helius_webhook_secret = "test-secret"
 
         with patch("app.api.webhook.settings", mock_settings):
             async with AsyncClient(
@@ -175,9 +142,9 @@ class TestWebhookEndpoint:
             ) as client:
                 response = await client.post(
                     "/api/webhook/helius",
-                    content=payload,
+                    content=b"not valid json {",
                     headers={
-                        "x-helius-signature": signature,
+                        "Authorization": "test-secret",
                         "content-type": "application/json"
                     }
                 )
@@ -186,14 +153,11 @@ class TestWebhookEndpoint:
 
     async def test_rejects_oversized_batch(self):
         """Test endpoint returns 400 for batches over 100 transactions."""
-        secret = "test-secret"
+        mock_settings = MagicMock()
+        mock_settings.helius_webhook_secret = "test-secret"
+
         # Create 101 transactions
         large_batch = [{"type": "SWAP", "signature": f"tx{i}"} for i in range(101)]
-        payload = json.dumps(large_batch).encode()
-        signature = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
-
-        mock_settings = MagicMock()
-        mock_settings.helius_webhook_secret = secret
 
         with patch("app.api.webhook.settings", mock_settings):
             async with AsyncClient(
@@ -202,29 +166,16 @@ class TestWebhookEndpoint:
             ) as client:
                 response = await client.post(
                     "/api/webhook/helius",
-                    content=payload,
-                    headers={
-                        "x-helius-signature": signature,
-                        "content-type": "application/json"
-                    }
+                    json=large_batch,
+                    headers={"Authorization": "test-secret"}
                 )
                 assert response.status_code == 400
                 assert "Batch too large" in response.json()["detail"]
 
     async def test_accepts_valid_request(self):
-        """Test endpoint accepts properly signed valid request."""
-        secret = "test-secret"
-        payload_data = {
-            "type": "SWAP",
-            "signature": "abc123",
-            "feePayer": "TestWallet11111111111111111111111111111111",
-            "tokenTransfers": []
-        }
-        payload = json.dumps(payload_data).encode()
-        signature = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
-
+        """Test endpoint accepts properly authorized valid request."""
         mock_settings = MagicMock()
-        mock_settings.helius_webhook_secret = secret
+        mock_settings.helius_webhook_secret = "test-secret"
         mock_settings.copper_token_mint = "TestMint111111111111111111111111111111111"
 
         mock_helius = MagicMock()
@@ -239,11 +190,13 @@ class TestWebhookEndpoint:
                     ) as client:
                         response = await client.post(
                             "/api/webhook/helius",
-                            content=payload,
-                            headers={
-                                "x-helius-signature": signature,
-                                "content-type": "application/json"
-                            }
+                            json={
+                                "type": "SWAP",
+                                "signature": "abc123",
+                                "feePayer": "TestWallet11111111111111111111111111111111",
+                                "tokenTransfers": []
+                            },
+                            headers={"Authorization": "test-secret"}
                         )
                         # May fail due to DB dependency, but should pass auth
                         # Status 200 or 500 (DB error) but NOT 401/400
@@ -280,41 +233,27 @@ class TestWebhookPayloadValidation:
 class TestAttackPrevention:
     """Tests for specific attack vector prevention."""
 
-    def test_prevents_signature_bypass_with_null(self):
-        """Test that null/None signature cannot bypass verification."""
+    def test_prevents_auth_bypass_with_null(self):
+        """Test that null/None authorization cannot bypass verification."""
         secret = "test-secret"
-        payload = b'{"type": "SWAP"}'
 
         # Try various null-like values
-        assert verify_webhook_signature(payload, None, secret) is False
-        assert verify_webhook_signature(payload, "", secret) is False
+        assert verify_webhook_auth(None, secret) is False
+        assert verify_webhook_auth("", secret) is False
 
-    def test_prevents_secret_extraction_via_timing(self):
-        """Verify constant-time comparison is used (code inspection test)."""
-        # This test documents that hmac.compare_digest is used
-        # which provides timing-attack resistance
-        import inspect
-        from app.api.webhook import verify_webhook_signature
+    def test_case_sensitive_auth(self):
+        """Test that authorization comparison is case-sensitive."""
+        secret = "Test-Secret-ABC"
 
-        source = inspect.getsource(verify_webhook_signature)
-        assert "compare_digest" in source, "Must use hmac.compare_digest for timing attack resistance"
+        assert verify_webhook_auth("Test-Secret-ABC", secret) is True
+        assert verify_webhook_auth("test-secret-abc", secret) is False
+        assert verify_webhook_auth("TEST-SECRET-ABC", secret) is False
 
-    def test_large_payload_handling(self):
-        """Test that very large payloads don't crash the system."""
+    def test_whitespace_handling(self):
+        """Test that whitespace in auth values is handled correctly."""
         secret = "test-secret"
-        # 1MB payload
-        large_payload = b'{"data": "' + b'x' * (1024 * 1024) + b'"}'
-        signature = hmac.new(secret.encode(), large_payload, hashlib.sha256).hexdigest()
 
-        # Should compute signature without crashing
-        result = verify_webhook_signature(large_payload, signature, secret)
-        assert result is True
-
-    def test_unicode_payload_handling(self):
-        """Test that unicode payloads are handled correctly."""
-        secret = "test-secret"
-        unicode_payload = '{"wallet": "テスト", "amount": 100}'.encode('utf-8')
-        signature = hmac.new(secret.encode(), unicode_payload, hashlib.sha256).hexdigest()
-
-        result = verify_webhook_signature(unicode_payload, signature, secret)
-        assert result is True
+        # Whitespace should NOT be stripped - exact match required
+        assert verify_webhook_auth(" test-secret", secret) is False
+        assert verify_webhook_auth("test-secret ", secret) is False
+        assert verify_webhook_auth(" test-secret ", secret) is False

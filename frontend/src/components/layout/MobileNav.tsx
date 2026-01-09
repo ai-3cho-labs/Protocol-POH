@@ -86,10 +86,3 @@ export function MobileNav() {
     </nav>
   );
 }
-
-/**
- * Safe area spacing component for content above mobile nav
- */
-export function MobileNavSpacer() {
-  return <div className="lg:hidden h-16" aria-hidden />;
-}

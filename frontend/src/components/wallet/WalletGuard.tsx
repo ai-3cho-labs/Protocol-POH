@@ -104,19 +104,3 @@ function WalletNotConnected() {
     </div>
   );
 }
-
-/**
- * Higher-order component version of WalletGuard
- */
-export function withWalletGuard<P extends object>(
-  Component: React.ComponentType<P>,
-  guardProps?: Omit<WalletGuardProps, 'children'>
-) {
-  return function GuardedComponent(props: P) {
-    return (
-      <WalletGuard {...guardProps}>
-        <Component {...props} />
-      </WalletGuard>
-    );
-  };
-}

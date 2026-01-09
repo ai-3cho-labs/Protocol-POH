@@ -5,7 +5,7 @@ All database models for the mining rewards system.
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional, List
 
@@ -19,6 +19,11 @@ from sqlalchemy.dialects.postgresql import UUID
 from app.database import Base
 
 
+def utc_now() -> datetime:
+    """Get current UTC time (timezone-aware). Replaces deprecated datetime.utcnow()."""
+    return datetime.now(timezone.utc)
+
+
 class Snapshot(Base):
     """Balance snapshot metadata."""
     __tablename__ = "snapshots"
@@ -27,12 +32,12 @@ class Snapshot(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     timestamp: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=datetime.utcnow
+        DateTime(timezone=True), nullable=False, default=utc_now
     )
     total_holders: Mapped[int] = mapped_column(Integer, nullable=False)
     total_supply: Mapped[int] = mapped_column(BigInteger, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow
+        DateTime(timezone=True), default=utc_now
     )
 
     # Relationships
@@ -79,7 +84,7 @@ class HoldStreak(Base):
         DateTime(timezone=True), nullable=True
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
     )
 
     __table_args__ = (
@@ -108,7 +113,7 @@ class CreatorReward(Base):
     )
     processed: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow
+        DateTime(timezone=True), default=utc_now
     )
 
     __table_args__ = (
@@ -118,6 +123,14 @@ class CreatorReward(Base):
         ),
         Index("idx_creator_rewards_processed", "processed", postgresql_where="processed = FALSE"),
         Index("idx_creator_rewards_received", "received_at"),
+        # Partial unique index on tx_signature (excludes NULL values)
+        # Prevents duplicate transactions from webhook retries
+        Index(
+            "idx_creator_rewards_tx_signature_unique",
+            "tx_signature",
+            unique=True,
+            postgresql_where="tx_signature IS NOT NULL"
+        ),
     )
 
 
@@ -138,7 +151,7 @@ class Buyback(Base):
         DateTime(timezone=True), nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow
+        DateTime(timezone=True), default=utc_now
     )
 
     __table_args__ = (
@@ -166,7 +179,7 @@ class Distribution(Base):
         DateTime(timezone=True), nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow
+        DateTime(timezone=True), default=utc_now
     )
 
     # Relationships
@@ -223,7 +236,7 @@ class ExcludedWallet(Base):
     wallet: Mapped[str] = mapped_column(String(44), primary_key=True)
     reason: Mapped[str] = mapped_column(String(100), nullable=False)
     added_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow
+        DateTime(timezone=True), default=utc_now
     )
 
 
@@ -243,7 +256,7 @@ class SystemStats(Base):
         DateTime(timezone=True), nullable=True
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
     )
 
     __table_args__ = (
@@ -267,7 +280,7 @@ class DistributionLock(Base):
     )
     locked_by: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
     )
 
     __table_args__ = (

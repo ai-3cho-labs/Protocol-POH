@@ -75,7 +75,9 @@ class TestJupiterIntegration:
                 quote = await service.get_jupiter_quote(1_000_000_000)
 
                 assert quote is not None
-                assert quote["inAmount"] == "1000000000"
+                # quote is now a JupiterQuote object with data and timestamp
+                assert quote.data["inAmount"] == "1000000000"
+                assert quote.is_fresh()  # Should be fresh when just fetched
 
     @pytest.mark.asyncio
     async def test_get_jupiter_quote_no_mint(self, mock_settings):
@@ -151,6 +153,37 @@ class TestBuybackResult:
         assert result.error == "Transaction failed"
 
 
+class TestJupiterQuoteFreshness:
+    """Tests for Jupiter quote freshness tracking."""
+
+    def test_fresh_quote(self):
+        """Test that a new quote is fresh."""
+        from app.services.buyback import JupiterQuote, utc_now
+
+        quote = JupiterQuote(
+            data={"inAmount": "1000", "outAmount": "2000"},
+            fetched_at=utc_now()
+        )
+
+        assert quote.is_fresh() is True
+        assert quote.age_seconds() < 1
+
+    def test_stale_quote(self):
+        """Test that an old quote is stale."""
+        from app.services.buyback import JupiterQuote, JUPITER_QUOTE_MAX_AGE_SECONDS, utc_now
+        from datetime import timedelta
+
+        # Create a quote that's older than the max age
+        old_time = utc_now() - timedelta(seconds=JUPITER_QUOTE_MAX_AGE_SECONDS + 10)
+        quote = JupiterQuote(
+            data={"inAmount": "1000", "outAmount": "2000"},
+            fetched_at=old_time
+        )
+
+        assert quote.is_fresh() is False
+        assert quote.age_seconds() > JUPITER_QUOTE_MAX_AGE_SECONDS
+
+
 class TestCreatorRewardRecording:
     """Tests for creator reward recording."""
 
@@ -170,6 +203,34 @@ class TestCreatorRewardRecording:
             assert reward.amount_sol == Decimal("0.5")
             assert reward.source == "pumpfun"
             assert reward.processed is False
+
+    @pytest.mark.asyncio
+    async def test_creator_reward_idempotency(self, db_session, mock_settings):
+        """Test that duplicate tx_signatures are handled idempotently."""
+        with patch("app.services.buyback.get_settings", return_value=mock_settings):
+            service = BuybackService(db_session)
+            tx_sig = "DupeSig111111111111111111111111111111111111111111111111111111111111"
+
+            # Record first reward
+            reward1 = await service.record_creator_reward(
+                amount_sol=Decimal("0.5"),
+                source="pumpfun",
+                tx_signature=tx_sig
+            )
+
+            # Try to record duplicate - should return existing record
+            reward2 = await service.record_creator_reward(
+                amount_sol=Decimal("0.5"),
+                source="pumpfun",
+                tx_signature=tx_sig
+            )
+
+            assert reward1.id == reward2.id  # Same record returned
+
+            # Verify only one reward exists with this signature
+            rewards = await service.get_unprocessed_rewards()
+            matching = [r for r in rewards if r.tx_signature == tx_sig]
+            assert len(matching) == 1
 
     @pytest.mark.asyncio
     async def test_get_unprocessed_rewards(self, db_session, mock_settings):

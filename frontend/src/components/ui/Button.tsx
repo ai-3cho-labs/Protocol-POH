@@ -105,33 +105,3 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 );
 
 Button.displayName = 'Button';
-
-/**
- * Icon-only button
- */
-export const IconButton = forwardRef<
-  HTMLButtonElement,
-  Omit<ButtonProps, 'leftIcon' | 'rightIcon' | 'children'> & {
-    icon: React.ReactNode;
-    'aria-label': string;
-  }
->(({ className, icon, size = 'md', ...props }, ref) => {
-  return (
-    <Button
-      ref={ref}
-      className={cn(
-        // Make it square
-        size === 'sm' && 'px-1.5',
-        size === 'md' && 'px-2',
-        size === 'lg' && 'px-3',
-        className
-      )}
-      size={size}
-      {...props}
-    >
-      {icon}
-    </Button>
-  );
-});
-
-IconButton.displayName = 'IconButton';

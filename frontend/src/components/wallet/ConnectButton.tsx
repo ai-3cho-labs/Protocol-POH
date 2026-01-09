@@ -105,24 +105,3 @@ export function ConnectButton({
     </Button>
   );
 }
-
-/**
- * Simple connect button (no wallet info shown)
- */
-export function SimpleConnectButton({
-  size = 'md',
-  className,
-  children = 'Connect Wallet',
-}: {
-  size?: 'sm' | 'md' | 'lg';
-  className?: string;
-  children?: React.ReactNode;
-}) {
-  const { setVisible } = useWalletModal();
-
-  return (
-    <Button size={size} className={className} onClick={() => setVisible(true)}>
-      {children}
-    </Button>
-  );
-}

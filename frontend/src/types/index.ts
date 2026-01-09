@@ -32,6 +32,4 @@ export {
   DISTRIBUTION_THRESHOLD_USD,
   DISTRIBUTION_MAX_HOURS,
   TIER_CONFIG,
-  getTierById,
-  getAllTiers,
 } from './models';
