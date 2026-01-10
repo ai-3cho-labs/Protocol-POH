@@ -5,6 +5,7 @@ Manages shared HTTP client lifecycle for all services.
 Ensures proper connection pool management and cleanup.
 """
 
+import asyncio
 import logging
 from typing import Optional
 
@@ -19,19 +20,39 @@ class HTTPClientManager:
 
     Provides a shared httpx.AsyncClient that is properly initialized
     and closed with the application lifecycle.
+
+    Includes event loop detection to recreate client if the loop changes,
+    preventing PoolTimeout errors from orphaned connections.
     """
 
     _instance: Optional["HTTPClientManager"] = None
     _client: Optional[httpx.AsyncClient] = None
+    _loop_id: Optional[int] = None
 
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
+    def _get_current_loop_id(self) -> Optional[int]:
+        """Get the current event loop's ID, or None if no loop."""
+        try:
+            loop = asyncio.get_event_loop()
+            return id(loop) if loop and not loop.is_closed() else None
+        except RuntimeError:
+            return None
+
     @property
     def client(self) -> httpx.AsyncClient:
         """Get the shared HTTP client."""
+        current_loop_id = self._get_current_loop_id()
+
+        # Recreate client if loop changed (safety check)
+        if self._client is not None and self._loop_id != current_loop_id:
+            logger.warning("Event loop changed, recreating HTTP client")
+            # Don't await close - old loop may be dead
+            self._client = None
+
         if self._client is None or self._client.is_closed:
             self._client = httpx.AsyncClient(
                 timeout=httpx.Timeout(30.0, connect=10.0),
@@ -42,6 +63,7 @@ class HTTPClientManager:
                 ),
                 follow_redirects=True
             )
+            self._loop_id = current_loop_id
             logger.info("HTTP client initialized")
         return self._client
 
