@@ -1,7 +1,8 @@
 """
-$COPPER Price Cache
+$GOLD Price Cache
 
-Provides cached and resilient price fetching for COPPER token.
+Provides cached and resilient price fetching for GOLD token.
+Used for calculating distribution thresholds and pool value.
 Falls back to cached values when API is unavailable.
 """
 
@@ -37,9 +38,9 @@ class CachedPrice:
 _price_cache: dict[str, CachedPrice] = {}
 
 
-async def get_copper_price_usd(use_fallback: bool = True) -> Decimal:
+async def get_gold_price_usd(use_fallback: bool = True) -> Decimal:
     """
-    Get COPPER price in USD with caching and fallback.
+    Get GOLD price in USD with caching and fallback.
 
     Tries Jupiter first, falls back to Birdeye, then to cached value.
 
@@ -49,9 +50,9 @@ async def get_copper_price_usd(use_fallback: bool = True) -> Decimal:
     Returns:
         Price per token in USD, or Decimal(0) if unavailable.
     """
-    token_mint = settings.copper_token_mint
+    token_mint = settings.gold_token_mint
     if not token_mint:
-        logger.warning("Token mint not configured, cannot fetch price")
+        logger.warning("GOLD token mint not configured, cannot fetch price")
         return Decimal(0)
 
     cache_key = f"price:{token_mint}"
@@ -153,12 +154,12 @@ def get_cached_price(token_mint: Optional[str] = None) -> Optional[CachedPrice]:
     Get the current cached price without fetching.
 
     Args:
-        token_mint: Token mint address. Defaults to COPPER_TOKEN_MINT.
+        token_mint: Token mint address. Defaults to GOLD_TOKEN_MINT.
 
     Returns:
         CachedPrice if available, None otherwise.
     """
-    mint = token_mint or settings.copper_token_mint
+    mint = token_mint or settings.gold_token_mint
     if not mint:
         return None
 
@@ -180,10 +181,10 @@ async def warm_price_cache() -> bool:
     Returns:
         True if cache was warmed successfully.
     """
-    price = await get_copper_price_usd(use_fallback=False)
+    price = await get_gold_price_usd(use_fallback=False)
     if price > 0:
-        logger.info(f"Price cache warmed: ${price}")
+        logger.info(f"GOLD price cache warmed: ${price}")
         return True
     else:
-        logger.warning("Failed to warm price cache")
+        logger.warning("Failed to warm GOLD price cache")
         return False

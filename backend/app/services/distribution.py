@@ -1,7 +1,7 @@
 """
-$COPPER Distribution Service
+$GOLD Distribution Service
 
-Handles airdrop distribution to holders based on Hash Power.
+Handles GOLD token distribution to CPU holders based on Hash Power.
 Triggers: Pool reaches $250 USD OR 24 hours since last distribution.
 """
 
@@ -23,8 +23,8 @@ from app.services.twab import TWABService, HashPowerInfo
 from app.services.helius import get_helius_service
 from app.utils.http_client import get_http_client
 from app.utils.solana_tx import send_spl_token_transfer, confirm_transaction
-from app.utils.price_cache import get_copper_price_usd as get_cached_copper_price
-from app.config import get_settings, COPPER_DECIMALS, TOKEN_MULTIPLIER
+from app.utils.price_cache import get_gold_price_usd as get_cached_gold_price
+from app.config import get_settings, GOLD_DECIMALS, GOLD_MULTIPLIER, TOKEN_MULTIPLIER
 from app.websocket import emit_distribution_executed
 
 logger = logging.getLogger(__name__)
@@ -133,25 +133,25 @@ class DistributionService:
             logger.error(f"Error deriving airdrop pool address: {e}")
             return None
 
-    async def get_copper_price_usd(self) -> Decimal:
+    async def get_gold_price_usd(self) -> Decimal:
         """
-        Get current COPPER price in USD.
+        Get current GOLD price in USD.
 
         Uses cached price with fallback to multiple price feeds.
 
         Returns:
             Price per token in USD.
         """
-        if not settings.copper_token_mint:
+        if not settings.gold_token_mint:
             return Decimal(0)
 
         try:
             # Use cached price with fallback support
-            price = await get_cached_copper_price(use_fallback=True)
+            price = await get_cached_gold_price(use_fallback=True)
             return price
 
         except Exception as e:
-            logger.error(f"Error fetching COPPER price: {e}")
+            logger.error(f"Error fetching GOLD price: {e}")
             return Decimal(0)
 
     async def get_pool_value_usd(self) -> Decimal:
@@ -166,10 +166,10 @@ class DistributionService:
             return Decimal(str(settings.test_pool_value_usd))
 
         balance = await self.get_pool_balance()
-        price = await self.get_copper_price_usd()
+        price = await self.get_gold_price_usd()
 
-        # Convert raw balance to token amount
-        tokens = Decimal(balance) / TOKEN_MULTIPLIER
+        # Convert raw balance to token amount (GOLD pool uses GOLD_MULTIPLIER)
+        tokens = Decimal(balance) / GOLD_MULTIPLIER
         return tokens * price
 
     async def get_last_distribution(self) -> Optional[Distribution]:
@@ -277,8 +277,8 @@ class DistributionService:
         else:
             start = end - timedelta(hours=24)
 
-        # Get minimum balance threshold (convert USD to tokens)
-        price = await self.get_copper_price_usd()
+        # Get minimum balance threshold (convert USD to CPU tokens)
+        price = await self.get_gold_price_usd()
         min_balance_tokens = 0
         if price > 0:
             min_balance_tokens = int(
@@ -385,13 +385,13 @@ class DistributionService:
             self.db.add(distribution)
             await self.db.flush()
 
-            # Execute token transfers and collect results
+            # Execute GOLD token transfers and collect results
             transfer_results = {}
-            if settings.airdrop_pool_private_key and settings.copper_token_mint:
+            if settings.airdrop_pool_private_key and settings.gold_token_mint:
                 transfer_results = await self._execute_token_transfers(plan.recipients)
             else:
                 logger.warning(
-                    "Token transfers skipped: missing airdrop_pool_private_key or copper_token_mint"
+                    "Token transfers skipped: missing airdrop_pool_private_key or gold_token_mint"
                 )
 
             # BULK INSERT: Create all recipient records at once
@@ -480,11 +480,11 @@ class DistributionService:
         import asyncio
 
         results: dict[str, Optional[str]] = {}
-        token_mint = settings.copper_token_mint
+        token_mint = settings.gold_token_mint  # Distribute GOLD tokens
         private_key = settings.airdrop_pool_private_key
 
         if not token_mint or not private_key:
-            logger.error("Cannot execute transfers: missing token_mint or private_key")
+            logger.error("Cannot execute transfers: missing gold_token_mint or private_key")
             return results
 
         async def transfer_to_recipient(recipient: RecipientShare) -> tuple[str, Optional[str]]:
@@ -666,15 +666,15 @@ class DistributionService:
             logger.warning(f"Transfer already succeeded for {recipient.wallet}")
             return True
 
-        if not settings.airdrop_pool_private_key or not settings.copper_token_mint:
-            logger.error("Cannot retry transfer: missing airdrop_pool_private_key or copper_token_mint")
+        if not settings.airdrop_pool_private_key or not settings.gold_token_mint:
+            logger.error("Cannot retry transfer: missing airdrop_pool_private_key or gold_token_mint")
             return False
 
         try:
             result = await send_spl_token_transfer(
                 from_private_key=settings.airdrop_pool_private_key,
                 to_address=recipient.wallet,
-                token_mint=settings.copper_token_mint,
+                token_mint=settings.gold_token_mint,  # Distribute GOLD tokens
                 amount=planned_amount
             )
 

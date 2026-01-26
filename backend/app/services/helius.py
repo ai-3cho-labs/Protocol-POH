@@ -1,7 +1,8 @@
 """
-$COPPER Helius Service
+CPU/GOLD Helius Service
 
-Interacts with Helius API for token holder data and webhooks.
+Interacts with Helius API for CPU token holder data and webhooks.
+CPU = Token users hold (determines mining eligibility)
 """
 
 import logging
@@ -41,7 +42,7 @@ class ParsedTransaction:
     token_out: Optional[str] = None
     amount_in: Optional[int] = None
     amount_out: Optional[int] = None
-    is_sell: bool = False  # True if COPPER sold for SOL/USDC
+    is_sell: bool = False  # True if CPU sold for SOL/USDC
 
 
 class HeliusService:
@@ -49,7 +50,8 @@ class HeliusService:
 
     def __init__(self):
         self.api_key = settings.helius_api_key
-        self.token_mint = settings.copper_token_mint
+        # CPU token is what users hold (for snapshots/eligibility)
+        self.token_mint = settings.cpu_token_mint
 
     @property
     def client(self):
@@ -63,7 +65,7 @@ class HeliusService:
         Uses DAS API getTokenAccounts for efficient holder fetching.
 
         Args:
-            mint: Token mint address. Defaults to COPPER_TOKEN_MINT.
+            mint: Token mint address. Defaults to CPU_TOKEN_MINT.
 
         Returns:
             List of TokenAccount with wallet addresses and balances.
@@ -140,7 +142,7 @@ class HeliusService:
         Get total token supply.
 
         Args:
-            mint: Token mint address. Defaults to COPPER_TOKEN_MINT.
+            mint: Token mint address. Defaults to CPU_TOKEN_MINT.
 
         Returns:
             Total supply in raw token amount.
@@ -181,13 +183,13 @@ class HeliusService:
         """
         Parse incoming Helius webhook transaction.
 
-        Detects if transaction is a sell (COPPER → SOL/USDC swap).
+        Detects if transaction is a sell (CPU → SOL/USDC swap).
 
         A sell is when the fee payer (transaction initiator):
-        - SENDS COPPER out (to a DEX or liquidity pool)
+        - SENDS CPU out (to a DEX or liquidity pool)
         - RECEIVES SOL or USDC in return
 
-        A buy (SOL → COPPER) is NOT a sell and returns None.
+        A buy (SOL → CPU) is NOT a sell and returns None.
 
         Args:
             payload: Raw webhook payload from Helius.
@@ -208,8 +210,8 @@ class HeliusService:
             # Check token transfers
             token_transfers = payload.get("tokenTransfers", [])
 
-            # Look for the fee payer SENDING COPPER out (selling)
-            copper_out = None
+            # Look for the fee payer SENDING CPU out (selling)
+            cpu_out = None
             sol_or_usdc_in = None
 
             for transfer in token_transfers:
@@ -218,9 +220,9 @@ class HeliusService:
                 to_user = transfer.get("toUserAccount", "")
                 amount = transfer.get("tokenAmount", 0)
 
-                # COPPER being sent OUT by the fee payer (user selling)
+                # CPU being sent OUT by the fee payer (user selling)
                 if mint == self.token_mint and from_user == fee_payer:
-                    copper_out = {
+                    cpu_out = {
                         "wallet": from_user,
                         "amount": int(Decimal(str(amount)) * Decimal(str(TOKEN_MULTIPLIER)))
                     }
@@ -241,15 +243,15 @@ class HeliusService:
                 amount = transfer.get("amount", 0)
 
                 # SOL being received BY the fee payer (the seller)
-                if to_user == fee_payer and copper_out:
+                if to_user == fee_payer and cpu_out:
                     sol_or_usdc_in = {
                         "mint": SOL_MINT,
                         "amount": int(amount)
                     }
 
             # Determine if this is a sell:
-            # Fee payer sent COPPER out AND received SOL/USDC back
-            is_sell = bool(copper_out and sol_or_usdc_in)
+            # Fee payer sent CPU out AND received SOL/USDC back
+            is_sell = bool(cpu_out and sol_or_usdc_in)
 
             if is_sell:
                 return ParsedTransaction(
@@ -259,7 +261,7 @@ class HeliusService:
                     token_in=sol_or_usdc_in["mint"] if sol_or_usdc_in else None,
                     token_out=self.token_mint,
                     amount_in=sol_or_usdc_in["amount"] if sol_or_usdc_in else None,
-                    amount_out=copper_out["amount"] if copper_out else None,
+                    amount_out=cpu_out["amount"] if cpu_out else None,
                     is_sell=True
                 )
 

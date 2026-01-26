@@ -1,7 +1,8 @@
 """
-$COPPER Backend API
+CPU Mining Backend API
 
 FastAPI application entry point.
+CPU = Token users hold, GOLD = Token distributed as rewards.
 """
 
 import logging
@@ -98,7 +99,7 @@ else:
 async def lifespan(app: FastAPI):
     """Application lifespan handler."""
     # Startup
-    logger.info("$COPPER Backend initializing...")
+    logger.info("CPU Mining Backend initializing...")
 
     # Validate configuration
     if settings.is_production:
@@ -108,8 +109,10 @@ async def lifespan(app: FastAPI):
             logger.warning("Sentry DSN not configured for production")
         if not settings.helius_api_key:
             logger.error("CRITICAL: Helius API key not configured")
-        if not settings.copper_token_mint:
-            logger.error("CRITICAL: Token mint not configured")
+        if not settings.cpu_token_mint:
+            logger.error("CRITICAL: CPU token mint not configured")
+        if not settings.gold_token_mint:
+            logger.error("CRITICAL: GOLD token mint not configured")
 
         # Validate wallet private keys are configured and valid Base58
         wallet_keys = [
@@ -158,12 +161,12 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Failed to warm price cache: {e}")
 
-    logger.info("$COPPER Backend ready")
+    logger.info("CPU Mining Backend ready")
 
     yield
 
     # Shutdown
-    logger.info("$COPPER Backend shutting down...")
+    logger.info("CPU Mining Backend shutting down...")
 
     # Close HTTP client
     await close_http_client()
@@ -176,8 +179,8 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app
 app = FastAPI(
-    title="$COPPER Mining API",
-    description="Backend API for the $COPPER mining dashboard",
+    title="CPU Mining API",
+    description="Backend API for the CPU mining dashboard (Hold CPU → Mine $GOLD)",
     version="0.1.0",
     lifespan=lifespan,
     docs_url="/docs" if not settings.is_production else None,
@@ -230,7 +233,7 @@ async def health_check(request: Request):
 async def root():
     """Root endpoint."""
     return {
-        "message": "Welcome to the $COPPER Mining API",
+        "message": "Welcome to the CPU Mining API (Hold CPU → Mine $GOLD)",
         "docs": "/docs",
         "health": "/api/health"
     }

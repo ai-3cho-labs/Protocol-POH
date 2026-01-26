@@ -1,7 +1,8 @@
 """
-$COPPER Snapshot Service
+CPU Snapshot Service
 
-Handles balance snapshot collection with RNG-based timing.
+Handles balance snapshot collection for CPU token holders.
+Snapshots CPU holdings to determine mining eligibility and hash power.
 Target: 3-6 snapshots per day via 40% hourly probability.
 """
 
