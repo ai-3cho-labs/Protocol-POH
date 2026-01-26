@@ -1,9 +1,10 @@
 """
-$COPPER Buyback Service
+$GOLD Buyback Service
 
 Processes creator rewards and executes Jupiter swaps.
-80% → Buybacks (SOL → COPPER) → Airdrop Pool
-20% → Team Operations
+40% → Buybacks (SOL → GOLD) → Airdrop Pool
+40% → Algo Bot (trading operations)
+20% → Team Operations (maintenance)
 """
 
 import logging
@@ -64,18 +65,20 @@ class BuybackResult:
 
 @dataclass
 class RewardSplit:
-    """80/20 split of creator rewards."""
+    """40/40/20 split of creator rewards."""
     total_sol: Decimal
-    buyback_sol: Decimal  # 80%
-    team_sol: Decimal  # 20%
+    buyback_sol: Decimal  # 40% → Reward pool
+    algo_bot_sol: Decimal  # 40% → Algo bot
+    team_sol: Decimal  # 20% → Maintenance
 
 
 class BuybackService:
-    """Service for processing buybacks from creator rewards."""
+    """Service for processing buybacks from creator rewards (SOL → GOLD)."""
 
     def __init__(self, db: AsyncSession):
         self.db = db
-        self.token_mint = settings.copper_token_mint
+        # Buybacks swap SOL for GOLD tokens to fund the reward pool
+        self.token_mint = settings.gold_token_mint
 
     @property
     def client(self):
@@ -112,20 +115,22 @@ class BuybackService:
 
     def calculate_split(self, total_sol: Decimal) -> RewardSplit:
         """
-        Calculate 80/20 split of rewards.
+        Calculate 40/40/20 split of rewards.
 
         Args:
             total_sol: Total SOL to split.
 
         Returns:
-            RewardSplit with buyback and team amounts.
+            RewardSplit with buyback, algo bot, and team amounts.
         """
-        buyback_sol = total_sol * Decimal("0.8")
-        team_sol = total_sol * Decimal("0.2")
+        buyback_sol = total_sol * Decimal("0.4")  # 40% → Reward pool
+        algo_bot_sol = total_sol * Decimal("0.4")  # 40% → Algo bot
+        team_sol = total_sol * Decimal("0.2")  # 20% → Maintenance
 
         return RewardSplit(
             total_sol=total_sol,
             buyback_sol=buyback_sol,
+            algo_bot_sol=algo_bot_sol,
             team_sol=team_sol
         )
 
@@ -172,7 +177,7 @@ class BuybackService:
         wallet_private_key: str
     ) -> BuybackResult:
         """
-        Execute a Jupiter swap (SOL → COPPER).
+        Execute a Jupiter swap (SOL → GOLD).
 
         Includes quote freshness validation - will re-fetch the quote if
         it has expired (older than JUPITER_QUOTE_MAX_AGE_SECONDS).
@@ -286,7 +291,7 @@ class BuybackService:
 
             logger.info(
                 f"Swap executed: {tx_result.signature}, "
-                f"{sol_amount} SOL → {out_amount} COPPER"
+                f"{sol_amount} SOL → {out_amount} GOLD"
             )
 
             return BuybackResult(
@@ -313,7 +318,7 @@ class BuybackService:
         self,
         tx_signature: str,
         sol_amount: Decimal,
-        copper_amount: int,
+        gold_amount: int,
         price_per_token: Optional[Decimal] = None
     ) -> Buyback:
         """
@@ -322,8 +327,8 @@ class BuybackService:
         Args:
             tx_signature: Solana transaction signature.
             sol_amount: SOL spent.
-            copper_amount: COPPER received.
-            price_per_token: Price per COPPER token in SOL.
+            gold_amount: GOLD received.
+            price_per_token: Price per GOLD token in SOL.
 
         Returns:
             Created Buyback record.
@@ -331,7 +336,7 @@ class BuybackService:
         buyback = Buyback(
             tx_signature=tx_signature,
             sol_amount=sol_amount,
-            copper_amount=copper_amount,
+            gold_amount=gold_amount,
             price_per_token=price_per_token,
             executed_at=utc_now()
         )
@@ -344,7 +349,7 @@ class BuybackService:
 
         logger.info(
             f"Recorded buyback: {tx_signature}, "
-            f"{sol_amount} SOL → {copper_amount} COPPER"
+            f"{sol_amount} SOL → {gold_amount} GOLD"
         )
         return buyback
 
@@ -437,7 +442,7 @@ class BuybackService:
         result = await self.db.execute(
             select(
                 func.sum(Buyback.sol_amount),
-                func.sum(Buyback.copper_amount)
+                func.sum(Buyback.gold_amount)
             )
         )
         row = result.one()
@@ -506,8 +511,9 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
     Process all pending creator rewards.
 
     Main entry point for the buyback task.
-    - 80% goes to Jupiter swap (SOL → COPPER) for airdrop pool
-    - 20% goes to team wallet for operations
+    - 40% goes to Jupiter swap (SOL → GOLD) for airdrop pool
+    - 40% goes to algo bot wallet for trading operations
+    - 20% goes to team wallet for maintenance
 
     Args:
         db: Database session.
@@ -530,10 +536,11 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
         f"Processing {len(rewards)} rewards: "
         f"total={split.total_sol} SOL, "
         f"buyback={split.buyback_sol} SOL, "
+        f"algo_bot={split.algo_bot_sol} SOL, "
         f"team={split.team_sol} SOL"
     )
 
-    # Execute buyback (80%)
+    # Execute buyback (40% → reward pool)
     result = await service.execute_swap(
         split.buyback_sol,
         settings.creator_wallet_private_key
@@ -553,7 +560,22 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
     else:
         logger.error(f"Buyback failed: {result.error}")
 
-    # Transfer 20% to team wallet
+    # Transfer 40% to algo bot wallet
+    algo_bot_tx = None
+    if settings.algo_bot_wallet_public_key and settings.creator_wallet_private_key:
+        algo_bot_tx = await transfer_to_team_wallet(
+            amount_sol=split.algo_bot_sol,
+            from_private_key=settings.creator_wallet_private_key,
+            to_address=settings.algo_bot_wallet_public_key
+        )
+        if algo_bot_tx:
+            logger.info(f"Algo bot wallet transfer: {algo_bot_tx}")
+        else:
+            logger.warning("Algo bot wallet transfer failed or skipped")
+    else:
+        logger.warning("Algo bot wallet transfer skipped: missing configuration")
+
+    # Transfer 20% to team wallet (maintenance)
     team_tx = None
     if settings.team_wallet_public_key and settings.creator_wallet_private_key:
         team_tx = await transfer_to_team_wallet(
@@ -569,7 +591,7 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
         logger.warning("Team wallet transfer skipped: missing configuration")
 
     # Mark rewards as processed if at least one operation succeeded
-    if buyback_success or team_tx:
+    if buyback_success or algo_bot_tx or team_tx:
         reward_ids = [r.id for r in rewards]
         await service.mark_rewards_processed(reward_ids)
         logger.info(f"Marked {len(reward_ids)} rewards as processed")

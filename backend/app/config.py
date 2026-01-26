@@ -1,5 +1,8 @@
 """
-$COPPER Backend Configuration
+CPU + GOLD Dual-Token Backend Configuration
+
+CPU = Token users hold (determines mining eligibility & hash power)
+GOLD = Token distributed as rewards
 
 Loads settings from environment variables with sensible defaults.
 """
@@ -57,10 +60,15 @@ class Settings(BaseSettings):
     buyback_wallet_private_key: str = ""
     airdrop_pool_private_key: str = ""
     team_wallet_public_key: str = ""
+    algo_bot_wallet_public_key: str = ""
 
-    # Token
-    copper_token_mint: str = ""
-    copper_token_decimals: int = 9  # Standard SPL token decimals
+    # Token Configuration (Dual-Token Model)
+    # CPU = Token users hold (determines mining eligibility & hash power)
+    # GOLD = Token distributed as rewards
+    cpu_token_mint: str = ""
+    cpu_token_decimals: int = 9  # Standard SPL token decimals
+    gold_token_mint: str = ""
+    gold_token_decimals: int = 9  # Standard SPL token decimals
 
     # Celery
     celery_broker_url: str = ""
@@ -162,7 +170,11 @@ SOL_MINT = "So11111111111111111111111111111111111111112"
 USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 LAMPORTS_PER_SOL = 1_000_000_000
 
-# Token decimals - use settings value (can be overridden via COPPER_TOKEN_DECIMALS env var)
+# Token decimals - use settings value
 # Standard SPL token = 9 decimals, but some tokens (like USDC) use 6
-COPPER_DECIMALS = get_settings().copper_token_decimals
-TOKEN_MULTIPLIER = 10 ** COPPER_DECIMALS
+# CPU token is what users hold (for eligibility/hash power calculation)
+# GOLD token is what gets distributed as rewards
+CPU_DECIMALS = get_settings().cpu_token_decimals
+GOLD_DECIMALS = get_settings().gold_token_decimals
+TOKEN_MULTIPLIER = 10 ** CPU_DECIMALS
+GOLD_MULTIPLIER = 10 ** GOLD_DECIMALS

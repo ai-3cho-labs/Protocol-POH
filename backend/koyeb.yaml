@@ -1,86 +1,38 @@
-# $COPPER Backend - Koyeb Deployment Configuration
-# Deploy via: koyeb app init copper-backend --config koyeb.yaml
+# Koyeb deployment configuration
+# Deploy 3 services: api, worker, beat
+# Use Koyeb dashboard to create services with these Dockerfiles
 
-name: copper-backend
-services:
-  # FastAPI Backend Service
-  - name: api
-    git:
-      repository: github.com/YOUR_USERNAME/copper
-      branch: main
-      workdir: backend
-      dockerfile: Dockerfile
-    instance_types:
-      - type: nano
-    scaling:
-      min: 1
-      max: 2
-    ports:
-      - port: 8000
-        protocol: http
-    routes:
-      - path: /
-        port: 8000
-    health_checks:
-      - type: http
-        path: /api/health
-        port: 8000
-        interval_seconds: 30
-        timeout_seconds: 10
-    env:
-      - key: ENVIRONMENT
-        value: production
-      - key: DATABASE_URL
-        secret: database-url
-      - key: REDIS_URL
-        secret: redis-url
-      - key: HELIUS_API_KEY
-        secret: helius-api-key
-      - key: COPPER_TOKEN_MINT
-        secret: copper-token-mint
-      - key: CORS_ORIGINS
-        value: https://your-domain.pages.dev,https://copper.app
+# ===========================================
+# Service 1: API (web)
+# ===========================================
+# Dockerfile: Dockerfile.api
+# Port: 8000
+# Health check: /api/health
 
-  # Celery Worker Service
-  - name: worker
-    git:
-      repository: github.com/YOUR_USERNAME/copper
-      branch: main
-      workdir: backend
-      dockerfile: Dockerfile.worker
-    instance_types:
-      - type: nano
-    scaling:
-      min: 1
-      max: 1
-    env:
-      - key: ENVIRONMENT
-        value: production
-      - key: DATABASE_URL
-        secret: database-url
-      - key: REDIS_URL
-        secret: redis-url
-      - key: HELIUS_API_KEY
-        secret: helius-api-key
-      - key: COPPER_TOKEN_MINT
-        secret: copper-token-mint
+# ===========================================
+# Service 2: Worker (worker)
+# ===========================================
+# Dockerfile: Dockerfile.worker
+# No port exposed
 
-  # Celery Beat Scheduler (for periodic tasks)
-  - name: scheduler
-    git:
-      repository: github.com/YOUR_USERNAME/copper
-      branch: main
-      workdir: backend
-      dockerfile: Dockerfile.beat
-    instance_types:
-      - type: nano
-    scaling:
-      min: 1
-      max: 1
-    env:
-      - key: ENVIRONMENT
-        value: production
-      - key: DATABASE_URL
-        secret: database-url
-      - key: REDIS_URL
-        secret: redis-url
+# ===========================================
+# Service 3: Beat (worker)
+# ===========================================
+# Dockerfile: Dockerfile.beat
+# No port exposed
+
+# ===========================================
+# Required Secrets (add via Koyeb Secrets Manager)
+# ===========================================
+# DATABASE_URL
+# REDIS_URL
+# HELIUS_API_KEY
+# HELIUS_WEBHOOK_SECRET
+# SOLANA_RPC_URL
+# CREATOR_WALLET_PRIVATE_KEY
+# AIRDROP_POOL_PRIVATE_KEY
+# TEAM_WALLET_PUBLIC_KEY
+# ALGO_BOT_WALLET_PUBLIC_KEY
+# CPU_TOKEN_MINT
+# GOLD_TOKEN_MINT
+# SENTRY_DSN (optional)
