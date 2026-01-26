@@ -12,7 +12,7 @@ import {
 import { useCountdown, useTickingCounter } from '@/hooks/useCountdown';
 
 export interface PendingRewardsProps {
-  /** Estimated pending reward (COPPER tokens) */
+  /** Estimated pending reward (GOLD tokens) */
   pendingReward: number;
   /** Pool information */
   pool: PoolInfo | null;
@@ -64,7 +64,7 @@ export function PendingRewards({
           <div className="text-3xl sm:text-4xl lg:text-4xl font-bold text-white glow-white lg:font-mono tabular-nums">
             +{formatCompactNumber(Math.floor(tickingReward))}
           </div>
-          <div className="text-sm text-zinc-500 mt-1">$CPU</div>
+          <div className="text-sm text-zinc-500 mt-1">$GOLD</div>
           {earningRate !== null && (
             <div className="text-sm text-amber-400/80 mt-2 lg:font-mono">
               {formatEarningRate(earningRate)}

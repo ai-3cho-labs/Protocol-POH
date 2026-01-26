@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { cn } from '@/lib/cn';
 import {
   formatCompactNumber,
-  formatCOPPER,
+  formatGOLD,
   formatPercent,
 } from '@/lib/utils';
 import { TerminalCard, Skeleton } from '@/components/ui';
@@ -95,7 +95,7 @@ export function RewardHistory({
                     Total Mined
                   </span>
                   <span className="font-medium text-white glow-white lg:font-mono">
-                    {formatCOPPER(totalReceived, true)}
+                    {formatGOLD(totalReceived)} $GOLD
                   </span>
                 </div>
               </div>
@@ -106,7 +106,7 @@ export function RewardHistory({
             <div className="text-2xl mb-2">⛏️</div>
             <p className="text-sm">No rewards yet</p>
             <p className="text-xs text-zinc-600 mt-1">
-              Hold tokens to earn mining rewards
+              Hold CPU tokens to earn $GOLD rewards
             </p>
           </div>
         )}
@@ -143,7 +143,7 @@ function RewardRow({ item }: { item: RewardHistoryItem }) {
       <div className="lg:hidden">
         <div className="flex items-center justify-between">
           <span className="text-white glow-white font-medium">
-            +{formatCompactNumber(item.amount)} $CPU
+            +{formatCompactNumber(item.amount)} $GOLD
           </span>
           <span className="text-xs text-zinc-500">{item.timeAgo}</span>
         </div>

@@ -125,7 +125,7 @@ export function MinerDisplay({ onViewDetails, className }: MinerDisplayProps) {
   const isLoading = statsLoading || poolLoading;
   const earningRate = calculateEarningRate(stats?.pendingReward ?? 0, pool?.hoursSinceLast ?? null);
   const tickingReward = useTickingCounter(stats?.pendingReward ?? 0, earningRate);
-  const rateSubtext = earningRate !== null ? formatEarningRate(earningRate) : '$CPU';
+  const rateSubtext = earningRate !== null ? formatEarningRate(earningRate) : '$GOLD';
 
   return (
     <div
@@ -171,7 +171,7 @@ export function MinerDisplay({ onViewDetails, className }: MinerDisplayProps) {
                 <StatBadge
                   label="Balance"
                   value={formatCompactNumber(stats?.balance ?? 0)}
-                  subtext="$CPU"
+                  subtext="CPU"
                 />
               </div>
               <div className={cn(glowCardStyles, animationDelays[2])}>
@@ -232,7 +232,7 @@ export function MinerDisplay({ onViewDetails, className }: MinerDisplayProps) {
                 <StatBadge
                   label="Balance"
                   value={formatCompactNumber(stats?.balance ?? 0)}
-                  subtext="$CPU"
+                  subtext="CPU"
                 />
               </div>
               <div className={cn(mobileGlowCardStyles, animationDelays[1])}>

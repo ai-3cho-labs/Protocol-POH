@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/cn';
 import {
-  formatCOPPER,
+  formatCPU,
   formatCompactNumber,
   formatMultiplier,
 } from '@/lib/utils';
@@ -65,7 +65,7 @@ export function MiningCard({
             <TierBadge tier={data.tier} showMultiplier size="sm" />
           </div>
           <div className="text-2xl lg:text-3xl font-bold text-zinc-100 lg:font-mono lg:text-white tabular-nums">
-            {formatCOPPER(data.balance, true)}
+            {formatCPU(data.balance)} CPU
           </div>
         </div>
 
@@ -95,7 +95,7 @@ export function MiningCard({
                 PENDING REWARD
               </span>
               <span className="text-sm font-medium text-white glow-white lg:font-mono">
-                +{formatCompactNumber(data.pendingReward)} $CPU
+                +{formatCompactNumber(data.pendingReward)} $GOLD
               </span>
             </div>
           </div>
@@ -122,7 +122,7 @@ function MiningCardCompact({
           <div className="text-2xl">{data.tier.emoji}</div>
           <div>
             <div className="font-medium text-zinc-100">
-              {formatCOPPER(data.balance, true)}
+              {formatCPU(data.balance)} CPU
             </div>
             <div className="text-xs text-zinc-500">
               HP: {formatCompactNumber(data.hashPower)}
