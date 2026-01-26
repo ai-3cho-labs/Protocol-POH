@@ -6,6 +6,7 @@ Requires Redis in production for proper multi-worker rate limiting.
 """
 
 import logging
+from fastapi import Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -13,6 +14,22 @@ from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+
+
+def get_wallet_key(request: Request) -> str:
+    """
+    Rate limit key combining IP and wallet address.
+
+    This provides stricter per-wallet rate limiting to prevent
+    abuse targeting specific wallet endpoints.
+    """
+    ip = get_remote_address(request)
+    # Extract wallet from path if present
+    wallet = request.path_params.get("wallet", "")
+    if wallet:
+        # Truncate wallet for key to save space
+        return f"{ip}:{wallet[:8]}"
+    return ip
 
 
 def _get_storage_uri() -> str | None:
@@ -84,6 +101,31 @@ def _create_limiter() -> Limiter:
 
 # Create shared limiter instance
 limiter = _create_limiter()
+
+
+def _create_wallet_limiter() -> Limiter:
+    """
+    Create a stricter rate limiter for wallet-specific endpoints.
+
+    Uses combined IP + wallet key for more granular limiting.
+    """
+    try:
+        storage_uri = _get_storage_uri()
+    except ValueError:
+        if settings.is_production:
+            raise
+        storage_uri = None
+
+    return Limiter(
+        key_func=get_wallet_key,
+        storage_uri=storage_uri,
+        default_limits=["10/minute"],  # Stricter limit for wallet queries
+        strategy="fixed-window"
+    )
+
+
+# Stricter limiter for wallet-specific endpoints
+wallet_limiter = _create_wallet_limiter()
 
 
 def validate_rate_limiter_config() -> bool:

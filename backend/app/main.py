@@ -42,6 +42,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.config import get_settings
+from app.core.security_headers import SecurityHeadersMiddleware
 from app.database import init_db, close_db
 from app.utils.http_client import close_http_client
 from app.utils.rate_limiter import limiter, validate_rate_limiter_config
@@ -144,6 +145,14 @@ async def lifespan(app: FastAPI):
             logger.error("CRITICAL: TEST_MODE is enabled in production!")
             raise ValueError("TEST_MODE cannot be enabled in production")
 
+        # Validate CORS configuration
+        if not settings.cors_origins or settings.cors_origins == "http://localhost:3000":
+            logger.warning("CORS_ORIGINS should be set to production domains")
+
+        # Validate API key configuration
+        if not settings.api_keys_list:
+            logger.warning("No API keys configured - endpoints will allow unauthenticated access")
+
     if settings.database_url:
         await init_db()
         logger.info("Database connected")
@@ -200,9 +209,12 @@ app.add_middleware(
     allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],  # Only methods we use
-    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID", "X-API-Key"],
     max_age=600,  # Cache preflight for 10 minutes
 )
+
+# Add security headers middleware
+app.add_middleware(SecurityHeadersMiddleware)
 
 
 # Global exception handler
@@ -242,9 +254,11 @@ async def root():
 # Import and include routers
 from app.api.routes import router as api_router
 from app.api.webhook import router as webhook_router
+from app.api.proxy import router as proxy_router
 
 app.include_router(api_router)
 app.include_router(webhook_router)
+app.include_router(proxy_router)
 
 # Mount WebSocket at /ws
 app.mount("/ws", socket_app)

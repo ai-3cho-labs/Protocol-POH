@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     api_port: int = 8000
     cors_origins: str = "http://localhost:3000"
 
+    # API Key Authentication
+    api_keys: str = ""  # Comma-separated valid API keys
+    api_key_header_name: str = "X-API-Key"
+
     # Database (Neon PostgreSQL)
     database_url: str = ""
 
@@ -101,8 +105,19 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins_list(self) -> List[str]:
-        """Parse CORS origins from comma-separated string."""
-        return [origin.strip() for origin in self.cors_origins.split(",")]
+        """Parse and validate CORS origins."""
+        origins = [origin.strip() for origin in self.cors_origins.split(",")]
+        # In production, reject wildcard
+        if self.is_production and "*" in origins:
+            raise ValueError("Wildcard CORS origin not allowed in production")
+        return origins
+
+    @property
+    def api_keys_list(self) -> List[str]:
+        """Parse API keys from comma-separated string."""
+        if not self.api_keys:
+            return []
+        return [k.strip() for k in self.api_keys.split(",") if k.strip()]
 
     @property
     def is_production(self) -> bool:
