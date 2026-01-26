@@ -3,23 +3,23 @@ import { Providers } from '@/components/providers/Providers';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: '$CPU - Mine Rewards by Holding',
+  title: 'CPU - Hold CPU, Mine $GOLD',
   description:
-    'Earn mining rewards funded by trading fees. Hold tokens, build streaks, get paid.',
-  keywords: ['solana', 'memecoin', 'mining', 'crypto', 'rewards', 'defi'],
-  authors: [{ name: '$CPU Team' }],
+    'Hold CPU tokens to mine $GOLD rewards. Trading fees fund the pool. Build streaks, get paid.',
+  keywords: ['solana', 'memecoin', 'mining', 'crypto', 'rewards', 'defi', 'cpu', 'gold'],
+  authors: [{ name: 'CPU Team' }],
   openGraph: {
-    title: '$CPU - Mine Rewards by Holding',
+    title: 'CPU - Hold CPU, Mine $GOLD',
     description:
-      'Earn mining rewards funded by trading fees. Hold tokens, build streaks, get paid.',
+      'Hold CPU tokens to mine $GOLD rewards. Trading fees fund the pool. Build streaks, get paid.',
     type: 'website',
     locale: 'en_US',
   },
   twitter: {
     card: 'summary_large_image',
-    title: '$CPU - Mine Rewards by Holding',
+    title: 'CPU - Hold CPU, Mine $GOLD',
     description:
-      'Earn mining rewards funded by trading fees. Hold tokens, build streaks, get paid.',
+      'Hold CPU tokens to mine $GOLD rewards. Trading fees fund the pool. Build streaks, get paid.',
   },
   robots: {
     index: true,

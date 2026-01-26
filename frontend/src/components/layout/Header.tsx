@@ -28,7 +28,7 @@ export function Header() {
             className="flex items-center gap-2 group"
           >
             <span className="text-2xl font-bold text-white glow-white group-hover:text-gray-200 transition-colors">
-              $CPU
+              CPU
             </span>
           </Link>
 

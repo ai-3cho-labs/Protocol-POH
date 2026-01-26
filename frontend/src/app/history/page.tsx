@@ -13,7 +13,7 @@ import {
 import { useUserHistory } from '@/hooks/api';
 import {
   formatCompactNumber,
-  formatCOPPER,
+  formatGOLD,
   formatTimeAgo,
   formatDateTime,
 } from '@/lib/utils';
@@ -73,7 +73,7 @@ function HistoryContent() {
               TOTAL RECEIVED
             </div>
             <div className="text-xl lg:text-2xl font-bold text-white glow-white lg:font-mono tabular-nums">
-              {formatCOPPER(totalReceived, true)}
+              {formatGOLD(totalReceived)} $GOLD
             </div>
           </div>
         </TerminalCard>
@@ -113,7 +113,7 @@ function HistoryContent() {
               <div className="text-2xl mb-2">⛏️</div>
               <p>No rewards yet</p>
               <p className="text-xs text-zinc-600 mt-1">
-                Hold tokens to earn mining rewards
+                Hold CPU tokens to earn $GOLD rewards
               </p>
             </div>
           )}
@@ -157,7 +157,7 @@ function HistoryRow({ item }: { item: DistributionHistoryItem }) {
         <span className="text-sm font-medium text-white glow-white lg:font-mono tabular-nums">
           +{formatCompactNumber(item.amount_received)}
         </span>
-        <span className="text-xs text-zinc-500 ml-1">$CPU</span>
+        <span className="text-xs text-zinc-500 ml-1">$GOLD</span>
       </div>
 
       {/* Hash Power - Desktop */}

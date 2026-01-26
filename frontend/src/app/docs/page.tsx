@@ -16,7 +16,7 @@ export default function DocsPage() {
             DOCUMENTATION
           </h1>
           <p className="text-sm text-zinc-500 mt-1">
-            Everything you need to know about $CPU mining
+            Everything you need to know about CPU → $GOLD mining
           </p>
         </div>
 
@@ -41,19 +41,22 @@ export default function DocsPage() {
             <TOCLink href="#faq" number="06">
               FAQ
             </TOCLink>
+            <TOCLink href="#roadmap" number="07">
+              Roadmap
+            </TOCLink>
           </nav>
         </TerminalCard>
 
         {/* Overview */}
         <Section id="overview" title="01. OVERVIEW">
           <p>
-            $CPU is a Solana memecoin where you mine rewards through holding.
-            Instead of running hardware, you mine rewards by simply holding tokens
+            CPU is a Solana token where you mine $GOLD rewards through holding.
+            Instead of running hardware, you mine $GOLD by simply holding CPU tokens
             in your wallet.
           </p>
           <p>
-            Trading volume generates fees, which fund the reward pool. Rewards are
-            paid out to holders based on their &quot;Hash Power&quot;.
+            Trading volume generates fees, which fund the $GOLD reward pool. Rewards are
+            paid out to CPU holders based on their &quot;Hash Power&quot;.
           </p>
           <Highlight>
             Hash Power = TWAB × Streak Multiplier
@@ -64,8 +67,8 @@ export default function DocsPage() {
         <Section id="how-it-works" title="02. HOW IT WORKS">
           <ol className="space-y-4 list-decimal list-inside">
             <li>
-              <strong className="text-zinc-200">Buy & Hold</strong> - Purchase $CPU
-              and hold it in your wallet. No staking required.
+              <strong className="text-zinc-200">Buy & Hold CPU</strong> - Purchase CPU
+              tokens and hold them in your wallet. No staking required.
             </li>
             <li>
               <strong className="text-zinc-200">Build Your Streak</strong> - Every hour
@@ -76,8 +79,8 @@ export default function DocsPage() {
               Average Balance (TWAB) multiplied by your tier bonus equals your mining power.
             </li>
             <li>
-              <strong className="text-zinc-200">Receive Payouts</strong> - When
-              the reward pool hits $250 or 24 hours pass, mining rewards are paid
+              <strong className="text-zinc-200">Receive $GOLD Payouts</strong> - When
+              the reward pool hits $250 or 24 hours pass, $GOLD rewards are paid
               out proportionally based on Hash Power.
             </li>
           </ol>
@@ -121,7 +124,7 @@ Example:
 
         {/* Payouts */}
         <Section id="payouts" title="05. PAYOUTS">
-          <p>Mining rewards are paid out when either condition is met:</p>
+          <p>$GOLD rewards are paid out when either condition is met:</p>
           <ul className="space-y-2 list-disc list-inside">
             <li>
               <strong className="text-white">Threshold:</strong> Pool
@@ -136,31 +139,31 @@ Example:
             {`Your Reward = (Your Hash Power / Total Hash Power) × Pool Amount
 
 Example:
-- Pool: 100,000 $CPU
+- Pool: 100,000 $GOLD
 - Your HP: 5,000
 - Total HP: 100,000
-- Your Reward: (5,000 / 100,000) × 100,000 = 5,000 $CPU`}
+- Your Reward: (5,000 / 100,000) × 100,000 = 5,000 $GOLD`}
           </CodeBlock>
           <p>
-            Rewards are automatically sent to your wallet and compound into
-            your balance for future calculations.
+            $GOLD rewards are automatically sent to your wallet. Note: $GOLD is a separate
+            token from CPU - you hold CPU to mine, and receive $GOLD as rewards.
           </p>
         </Section>
 
         {/* FAQ */}
         <Section id="faq" title="06. FAQ">
           <div className="space-y-6">
-            <FAQ question="Do I need to stake my tokens?">
+            <FAQ question="Do I need to stake my CPU tokens?">
               No! Just hold them in your wallet. There&apos;s no staking contract
               or lock-up period.
             </FAQ>
-            <FAQ question="What happens if I sell some tokens?">
+            <FAQ question="What happens if I sell some CPU?">
               Selling triggers a tier drop. You&apos;ll go down one tier and your
               streak resets to that tier&apos;s minimum hours. Your TWAB will also
               adjust based on your new balance.
             </FAQ>
             <FAQ question="Are transfers counted as sells?">
-              No. Only DEX swaps where you sell $CPU for SOL or USDC are
+              No. Only DEX swaps where you sell CPU for SOL or USDC are
               detected as sells. Wallet-to-wallet transfers are ignored.
             </FAQ>
             <FAQ question="How often are snapshots taken?">
@@ -171,10 +174,53 @@ Example:
               Creator wallets, liquidity pool addresses, CEX deposit addresses,
               and system wallets are excluded from rewards.
             </FAQ>
-            <FAQ question="Where do the rewards come from?">
-              80% of trading fees go directly into the reward pool. 20% goes to
+            <FAQ question="Where do the $GOLD rewards come from?">
+              80% of trading fees go directly into the $GOLD reward pool. 20% goes to
               team operations and development.
             </FAQ>
+            <FAQ question="What&apos;s the difference between CPU and $GOLD?">
+              CPU is what you buy and hold - it determines your mining eligibility and hash power.
+              $GOLD is what you earn as rewards - it&apos;s distributed from the pool based on your hash power.
+            </FAQ>
+          </div>
+        </Section>
+
+        {/* Roadmap */}
+        <Section id="roadmap" title="07. ROADMAP">
+          <div className="space-y-6">
+            <RoadmapPhase
+              phase="V1"
+              title="Mining Protocol"
+              status="live"
+              items={[
+                'Hold CPU tokens to mine $GOLD rewards',
+                'Tier system with up to 5x multiplier',
+                'Automatic distributions every 24h or $250 threshold',
+                'Real-time dashboard and reward tracking',
+              ]}
+            />
+            <RoadmapPhase
+              phase="V2"
+              title="Algo Trading Bot"
+              status="upcoming"
+              items={[
+                'Automated trading bot for precious metals (Gold, Silver)',
+                'AI-powered algorithmic trading strategies',
+                'CPU holders receive % of trading profits',
+                'Profits distributed proportionally based on holdings',
+              ]}
+            />
+            <RoadmapPhase
+              phase="V3"
+              title="Expansion"
+              status="planned"
+              items={[
+                'Additional metal markets and trading pairs',
+                'Advanced analytics dashboard',
+                'Governance for CPU holders',
+                'Cross-chain expansion',
+              ]}
+            />
           </div>
         </Section>
       </div>
@@ -251,6 +297,55 @@ function FAQ({
     <div>
       <h3 className="text-zinc-200 font-medium mb-2 lg:font-mono">{question}</h3>
       <p className="text-sm text-zinc-400">{children}</p>
+    </div>
+  );
+}
+
+function RoadmapPhase({
+  phase,
+  title,
+  status,
+  items,
+}: {
+  phase: string;
+  title: string;
+  status: 'live' | 'upcoming' | 'planned';
+  items: string[];
+}) {
+  const statusStyles = {
+    live: 'bg-green-500/20 text-green-400 border-green-500/30',
+    upcoming: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    planned: 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30',
+  };
+
+  const statusLabels = {
+    live: 'LIVE',
+    upcoming: 'COMING SOON',
+    planned: 'PLANNED',
+  };
+
+  return (
+    <div className="p-4 bg-white/5 border border-white/10 rounded-lg">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <span className="text-lg font-bold text-white">{phase}</span>
+          <span className="text-zinc-300 font-medium">{title}</span>
+        </div>
+        <span className={cn(
+          'px-2 py-0.5 text-xs font-medium rounded border',
+          statusStyles[status]
+        )}>
+          {statusLabels[status]}
+        </span>
+      </div>
+      <ul className="space-y-2">
+        {items.map((item, index) => (
+          <li key={index} className="flex items-start gap-2 text-sm text-zinc-400">
+            <span className="text-zinc-600 mt-0.5">→</span>
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
