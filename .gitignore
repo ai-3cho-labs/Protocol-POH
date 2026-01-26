@@ -85,3 +85,4 @@ temp/
 # Project files
 CLAUDE.md
 .claude/
+.neon/
