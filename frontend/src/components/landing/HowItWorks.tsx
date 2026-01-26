@@ -11,8 +11,8 @@ export interface HowItWorksProps {
 const STEPS = [
   {
     icon: 'chest' as const,
-    title: 'Hold $CPU',
-    description: 'Buy tokens and hold them in your wallet. Your average balance over time determines your mining power.',
+    title: 'Hold CPU',
+    description: 'Buy CPU tokens and hold them in your wallet. Your average balance over time determines your mining power.',
   },
   {
     icon: 'lightning' as const,
@@ -21,8 +21,8 @@ const STEPS = [
   },
   {
     icon: 'coin' as const,
-    title: 'Collect Rewards',
-    description: 'Trading fees fill the pool. When it hits $250 or 24 hours pass, rewards drop to all miners automatically.',
+    title: 'Collect $GOLD',
+    description: '$GOLD rewards are distributed to all miners automatically based on your hash power.',
   },
 ];
 

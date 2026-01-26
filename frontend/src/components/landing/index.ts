@@ -18,3 +18,6 @@ export { WebGLBackground } from './WebGLBackground';
 
 export { Footer } from './Footer';
 export type { FooterProps } from './Footer';
+
+export { Roadmap } from './Roadmap';
+export type { RoadmapProps } from './Roadmap';

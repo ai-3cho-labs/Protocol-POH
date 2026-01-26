@@ -34,7 +34,7 @@ export function Footer({ className }: FooterProps) {
               'transition-all duration-200'
             )}
           >
-            Buy $CPU on Pump.fun
+            Buy CPU on Pump.fun
           </a>
           <a
             href="https://solscan.io"
@@ -49,11 +49,11 @@ export function Footer({ className }: FooterProps) {
         {/* Disclaimer */}
         <div className="text-center space-y-2">
           <p className="text-caption text-zinc-500 leading-relaxed">
-            $CPU is a memecoin with no intrinsic value or expectation of financial return.
+            CPU and $GOLD are memecoins with no intrinsic value or expectation of financial return.
             Not financial advice. Trade at your own risk.
           </p>
           <p className="text-caption text-zinc-600">
-            &copy; {currentYear} $CPU Mine. All rights reserved.
+            &copy; {currentYear} CPU Mine. All rights reserved.
           </p>
         </div>
       </div>

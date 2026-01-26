@@ -28,12 +28,12 @@ export function Hero({ stats, isLoading, className }: HeroProps) {
         <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-6 animate-fade-slide-in">
           <span className="text-text-primary">THE WORKING MAN&apos;S</span>
           <br />
-          <span className="text-white glow-white">COPPER MINE</span>
+          <span className="text-white glow-white">GOLD MINE</span>
         </h1>
 
         {/* Tagline - Staggered entrance */}
         <p className="text-body lg:text-lg text-text-secondary mb-8 max-w-2xl mx-auto animate-fade-slide-in [animation-delay:150ms]">
-          Your tokens mine $CPU around the clock. Trading fees fund the rewards
+          Hold CPU to mine $GOLD around the clock. Trading fees fund the rewards
           pool. Hold longer, earn up to 5x more.
         </p>
 
@@ -51,7 +51,7 @@ export function Hero({ stats, isLoading, className }: HeroProps) {
               'transition-all duration-200'
             )}
           >
-            Buy $CPU
+            Buy CPU
           </a>
           <a
             href="#how-it-works"
@@ -71,7 +71,7 @@ export function Hero({ stats, isLoading, className }: HeroProps) {
             <div className="w-px h-8 bg-border" />
             <StatDisplay
               label="Distributed"
-              value={`${formatCompactNumber(stats.totalDistributed)} $CPU`}
+              value={`${formatCompactNumber(stats.totalDistributed)} $GOLD`}
             />
           </div>
         )}
