@@ -79,7 +79,7 @@ class UserStatsResponse(BaseModel):
     wallet: str
     balance: float  # Token balance
     balance_raw: int
-    twab: float  # Time-weighted average balance
+    twab: float  # Time-weighted average balance (or projected if new holder)
     twab_raw: int
     tier: TierInfo
     multiplier: float
@@ -90,6 +90,10 @@ class UserStatsResponse(BaseModel):
     hours_to_next_tier: Optional[float]
     rank: Optional[int]
     pending_reward_estimate: float
+    # New fields for fresh holder UX
+    is_new_holder: bool = False  # True if no snapshot data yet
+    is_projected: bool = False  # True if TWAB is projected from current balance
+    pool_share_percent: float = 0.0  # User's % share of the reward pool
 
 
 class DistributionHistoryItem(BaseModel):
@@ -266,14 +270,42 @@ async def get_user_stats(
     # Get rank
     rank = await twab_service.get_wallet_rank(wallet)
 
+    # Determine if this is a new holder (no TWAB data yet)
+    # A holder is "new" if they have a balance but TWAB is 0 or very low
+    is_new_holder = balance_raw > 0 and hp_info.twab == 0
+    is_projected = False
+    effective_twab = hp_info.twab
+    effective_hash_power = hp_info.hash_power
+
+    # Fallback: use current balance as projected TWAB for new holders
+    if is_new_holder and balance_raw > 0:
+        is_projected = True
+        effective_twab = balance_raw
+        effective_hash_power = Decimal(balance_raw) * Decimal(str(hp_info.multiplier))
+
     # Estimate pending reward
     pool_status = await distribution_service.get_pool_status()
     pending_estimate = 0
+    pool_share_percent = 0.0
+
     if pool_status.balance > 0:
-        estimate, _ = await twab_service.estimate_reward_share(
-            wallet, pool_status.balance, start, end
-        )
-        pending_estimate = float(Decimal(estimate) / TOKEN_MULTIPLIER)
+        if is_projected:
+            # For new holders, calculate projected share based on current balance
+            total_hp = await twab_service.get_total_hash_power(start, end)
+            # Add their projected hash power to total for calculation
+            projected_total = total_hp + effective_hash_power
+            if projected_total > 0:
+                share_ratio = float(effective_hash_power / projected_total)
+                pool_share_percent = share_ratio * 100
+                pending_estimate = float(
+                    Decimal(pool_status.balance) * Decimal(str(share_ratio)) / TOKEN_MULTIPLIER
+                )
+        else:
+            estimate, share_percent = await twab_service.estimate_reward_share(
+                wallet, pool_status.balance, start, end
+            )
+            pending_estimate = float(Decimal(estimate) / TOKEN_MULTIPLIER)
+            pool_share_percent = share_percent or 0.0
 
     # Build next tier info
     next_tier_info = None
@@ -286,17 +318,20 @@ async def get_user_stats(
         wallet=wallet,
         balance=float(Decimal(balance_raw) / TOKEN_MULTIPLIER),
         balance_raw=balance_raw,
-        twab=float(Decimal(hp_info.twab) / TOKEN_MULTIPLIER),
-        twab_raw=hp_info.twab,
+        twab=float(Decimal(effective_twab) / TOKEN_MULTIPLIER),
+        twab_raw=effective_twab,
         tier=tier_to_info(hp_info.tier),
         multiplier=hp_info.multiplier,
-        hash_power=float(hp_info.hash_power / TOKEN_MULTIPLIER),
+        hash_power=float(effective_hash_power / TOKEN_MULTIPLIER),
         streak_hours=streak_info.streak_hours if streak_info else 0,
         streak_start=streak_info.streak_start if streak_info else None,
         next_tier=next_tier_info,
         hours_to_next_tier=hours_to_next,
         rank=rank,
-        pending_reward_estimate=pending_estimate
+        pending_reward_estimate=pending_estimate,
+        is_new_holder=is_new_holder,
+        is_projected=is_projected,
+        pool_share_percent=pool_share_percent
     )
 
 

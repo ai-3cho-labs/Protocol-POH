@@ -7,6 +7,8 @@ CPU = Token users hold, GOLD = Token distributed as rewards.
 
 import logging
 import re
+import threading
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 
@@ -47,6 +49,84 @@ from app.database import init_db, close_db
 from app.utils.http_client import close_http_client
 from app.utils.rate_limiter import limiter, validate_rate_limiter_config
 from app.websocket import socket_app, setup_redis_adapter
+
+
+# ===========================================
+# Embedded Celery Worker/Beat
+# ===========================================
+
+class EmbeddedCelery:
+    """
+    Embedded Celery worker and beat scheduler.
+
+    Runs worker and beat in background threads so you only need
+    to start one process (uvicorn) for development.
+
+    Enable with: EMBEDDED_CELERY=true
+    """
+
+    def __init__(self):
+        self.worker_thread = None
+        self.beat_thread = None
+        self.worker = None
+        self.beat = None
+        self._stop_event = threading.Event()
+
+    def start(self):
+        """Start embedded worker and beat in background threads."""
+        from app.tasks.celery_app import celery_app
+
+        # Start worker thread
+        self.worker_thread = threading.Thread(
+            target=self._run_worker,
+            args=(celery_app,),
+            daemon=True,
+            name="celery-worker"
+        )
+        self.worker_thread.start()
+
+        # Start beat thread
+        self.beat_thread = threading.Thread(
+            target=self._run_beat,
+            args=(celery_app,),
+            daemon=True,
+            name="celery-beat"
+        )
+        self.beat_thread.start()
+
+        logging.getLogger("copper").info(
+            "Embedded Celery started (worker + beat in background threads)"
+        )
+
+    def _run_worker(self, app):
+        """Run Celery worker in thread."""
+        self.worker = app.Worker(
+            pool="solo",
+            loglevel="INFO",
+            concurrency=1,
+            without_heartbeat=True,
+            without_mingle=True,
+            without_gossip=True,
+        )
+        self.worker.start()
+
+    def _run_beat(self, app):
+        """Run Celery beat in thread."""
+        from celery.beat import Service
+        self.beat = Service(app, max_interval=10)
+        self.beat.start()
+
+    def stop(self):
+        """Stop embedded worker and beat."""
+        if self.worker:
+            self.worker.stop()
+        if self.beat:
+            self.beat.stop()
+        logging.getLogger("copper").info("Embedded Celery stopped")
+
+
+# Global embedded celery instance
+_embedded_celery = None
 
 # Configure logging with sensitive data filter
 logging.basicConfig(
@@ -99,8 +179,15 @@ else:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler."""
+    global _embedded_celery
+
     # Startup
     logger.info("CPU Mining Backend initializing...")
+
+    # Start embedded Celery if enabled
+    if settings.embedded_celery:
+        _embedded_celery = EmbeddedCelery()
+        _embedded_celery.start()
 
     # Validate configuration
     if settings.is_production:
@@ -176,6 +263,10 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     logger.info("CPU Mining Backend shutting down...")
+
+    # Stop embedded Celery if running
+    if _embedded_celery:
+        _embedded_celery.stop()
 
     # Close HTTP client
     await close_http_client()

@@ -144,3 +144,51 @@ async def init_db():
 async def close_db():
     """Close database connections (for shutdown)."""
     await engine.dispose()
+
+
+# ===========================================
+# Celery Worker Database Support
+# ===========================================
+
+# Separate engine for Celery workers (created per-worker, not shared with FastAPI)
+_worker_engine = None
+_worker_session_maker = None
+
+
+def get_worker_session_maker():
+    """
+    Get or create a session maker for Celery workers.
+
+    Creates a separate engine/session pool for workers to avoid
+    event loop conflicts with FastAPI's async engine.
+
+    Uses NullPool to avoid connection pooling issues across threads.
+    """
+    global _worker_engine, _worker_session_maker
+
+    if _worker_session_maker is None:
+        # Create a fresh engine for the worker
+        worker_engine_kwargs = {
+            "echo": settings.debug,
+            "connect_args": connect_args,
+            "poolclass": NullPool,  # No pooling - each task gets fresh connection
+        }
+        _worker_engine = create_async_engine(database_url, **worker_engine_kwargs)
+        _worker_session_maker = async_sessionmaker(
+            _worker_engine,
+            class_=AsyncSession,
+            expire_on_commit=False,
+            autocommit=False,
+            autoflush=False
+        )
+
+    return _worker_session_maker
+
+
+async def close_worker_db():
+    """Close worker database connections."""
+    global _worker_engine, _worker_session_maker
+    if _worker_engine:
+        await _worker_engine.dispose()
+        _worker_engine = None
+        _worker_session_maker = None

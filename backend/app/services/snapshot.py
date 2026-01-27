@@ -15,7 +15,7 @@ from uuid import UUID
 from sqlalchemy import select, func, and_, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Snapshot, Balance, ExcludedWallet, SystemStats
+from app.models import Snapshot, Balance, ExcludedWallet, SystemStats, HoldStreak
 from app.services.helius import get_helius_service
 from app.config import get_settings
 
@@ -119,6 +119,9 @@ class SnapshotService:
                     insert(Balance),
                     balance_data
                 )
+
+                # Ensure all holders have streak records (for tier tracking)
+                await self._ensure_streaks_exist(valid_accounts)
 
             # Update system stats
             await self._update_system_stats(snapshot)
@@ -261,6 +264,53 @@ class SnapshotService:
             return int(before_balance + (after_balance - before_balance) * progress)
 
         return 0
+
+    async def _ensure_streaks_exist(self, accounts: list) -> int:
+        """
+        Ensure all holders have a HoldStreak record.
+
+        Creates new streak records for wallets that don't have one.
+        This enables tier tracking and multiplier calculations.
+
+        Args:
+            accounts: List of TokenAccount objects from Helius.
+
+        Returns:
+            Number of new streaks created.
+        """
+        if not accounts:
+            return 0
+
+        # Get wallets that already have streaks
+        wallet_addresses = [acc.wallet for acc in accounts]
+        existing_result = await self.db.execute(
+            select(HoldStreak.wallet).where(HoldStreak.wallet.in_(wallet_addresses))
+        )
+        existing_wallets = {row[0] for row in existing_result.fetchall()}
+
+        # Find new wallets that need streaks
+        new_wallets = [w for w in wallet_addresses if w not in existing_wallets]
+
+        if new_wallets:
+            now = utc_now()
+            streak_data = [
+                {
+                    "wallet": wallet,
+                    "streak_start": now,
+                    "current_tier": 1,
+                    "updated_at": now,
+                }
+                for wallet in new_wallets
+            ]
+
+            await self.db.execute(
+                insert(HoldStreak),
+                streak_data
+            )
+
+            logger.info(f"Created {len(new_wallets)} new streak records for holders")
+
+        return len(new_wallets)
 
     async def _update_system_stats(self, snapshot: Snapshot):
         """Update system stats with latest snapshot info."""

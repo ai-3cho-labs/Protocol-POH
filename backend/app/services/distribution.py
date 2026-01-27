@@ -103,7 +103,7 @@ class DistributionService:
                 logger.warning("Airdrop pool wallet not configured")
                 return 0
 
-            accounts = await self.helius.get_token_accounts()
+            accounts = await self.helius.get_token_accounts(settings.gold_token_mint)
 
             for account in accounts:
                 if account.wallet == pool_wallet:
@@ -579,9 +579,10 @@ class DistributionService:
         """
         result = await self.db.execute(
             select(DistributionRecipient)
+            .join(Distribution)
             .options(selectinload(DistributionRecipient.distribution))
             .where(DistributionRecipient.wallet == wallet)
-            .order_by(DistributionRecipient.id.desc())
+            .order_by(Distribution.executed_at.desc())
             .limit(limit)
         )
         return list(result.scalars().all())

@@ -5,19 +5,21 @@ Time-Weighted Average Balance calculation for fair reward distribution.
 TWAB captures holding behavior over time, not just point-in-time balance.
 
 OPTIMIZED: Uses batch queries to avoid N+1 query problems.
+OPTIMIZED: Uses streaming for memory efficiency with large holder counts.
+OPTIMIZED: Offloads CPU-bound calculations to thread pool.
 """
 
+import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Optional
 from dataclasses import dataclass
 from collections import defaultdict
-
-from sqlalchemy import select, and_, func
+from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Snapshot, Balance, HoldStreak
+from app.models import Snapshot, Balance, HoldStreak, ExcludedWallet
 from app.config import TIER_CONFIG
 
 logger = logging.getLogger(__name__)
@@ -101,9 +103,14 @@ class TWABService:
         fairer than trapezoidal interpolation which penalizes new holders
         by up to 50%.
 
-        For the period BEFORE the first snapshot, we assume zero balance
-        (holder hadn't bought yet). This ensures new holders get credit
-        for exactly the time they've held, not more.
+        ZERO-BALANCE HANDLING:
+        For the period BEFORE the first snapshot, zero balance is implicit.
+        The loop only processes time FROM each snapshot forward, so any time
+        between `start` and the first snapshot timestamp contributes zero
+        to the weighted sum. This ensures:
+        - New holders get credit for exactly the time they've held
+        - Holders who bought mid-period aren't unfairly rewarded
+        - The math is: (0 × pre_snapshot_time + balance × post_snapshot_time) / total
         """
         if not balances:
             return 0
@@ -195,67 +202,22 @@ class TWABService:
             tier_name=tier_name
         )
 
-    async def calculate_all_hash_powers(
+    def _compute_hash_powers_sync(
         self,
+        wallet_balances: dict[str, list[tuple[datetime, int]]],
+        wallet_tiers: dict[str, int],
         start: datetime,
         end: datetime,
-        min_balance: int = 0,
-        limit: Optional[int] = None
+        min_balance: int
     ) -> list[HashPowerInfo]:
         """
-        Calculate hash power for all eligible wallets using ATOMIC batch query.
+        Synchronous CPU-bound hash power calculation.
 
-        OPTIMIZED: Uses single JOIN query to prevent sell-timing gaming.
-        Previously used 2 separate queries, creating a race window where
-        a sell between queries could result in inconsistent tier data.
-
-        Args:
-            start: Start of period.
-            end: End of period.
-            min_balance: Minimum TWAB to include (filters dust).
-            limit: Optional limit on results (for leaderboard).
-
-        Returns:
-            List of HashPowerInfo sorted by hash power descending.
+        Separated from async code to run in thread pool, preventing
+        event loop blocking with large holder counts (10k+).
         """
-        # ATOMIC QUERY: Get ALL balances WITH tiers in single query
-        # This prevents sell-timing gaming where a sell between separate
-        # balance/tier queries could manipulate the distribution denominator.
-        # Using LEFT OUTER JOIN so wallets without streaks still get included.
-        result = await self.db.execute(
-            select(
-                Balance.wallet,
-                Snapshot.timestamp,
-                Balance.balance,
-                HoldStreak.current_tier
-            )
-            .join(Snapshot, Balance.snapshot_id == Snapshot.id)
-            .outerjoin(HoldStreak, Balance.wallet == HoldStreak.wallet)
-            .where(and_(
-                Snapshot.timestamp >= start,
-                Snapshot.timestamp <= end
-            ))
-            .order_by(Balance.wallet, Snapshot.timestamp.asc())
-        )
-        all_data = result.fetchall()
-
-        if not all_data:
-            return []
-
-        # Group balances by wallet, also capture tier (same for all rows per wallet)
-        wallet_balances: dict[str, list[tuple[datetime, int]]] = defaultdict(list)
-        wallet_tiers: dict[str, int] = {}
-
-        for wallet, timestamp, balance, tier in all_data:
-            wallet_balances[wallet].append((timestamp, balance))
-            # Tier is the same for all rows of a wallet, just capture first occurrence
-            if wallet not in wallet_tiers:
-                wallet_tiers[wallet] = tier if tier is not None else 1
-
-        logger.info(f"Batch TWAB: {len(wallet_balances)} wallets, {len(all_data)} balance records")
-
-        # Calculate hash powers (CPU-bound, no DB)
         hash_powers = []
+
         for wallet, balances in wallet_balances.items():
             # Compute TWAB
             twab = self._compute_twab(balances, start, end)
@@ -283,6 +245,99 @@ class TWABService:
 
         # Sort by hash power descending
         hash_powers.sort(key=lambda x: x.hash_power, reverse=True)
+
+        return hash_powers
+
+    async def calculate_all_hash_powers(
+        self,
+        start: datetime,
+        end: datetime,
+        min_balance: int = 0,
+        limit: Optional[int] = None
+    ) -> list[HashPowerInfo]:
+        """
+        Calculate hash power for all eligible wallets using ATOMIC batch query.
+
+        OPTIMIZED: Uses single JOIN query to prevent sell-timing gaming.
+        OPTIMIZED: Filters excluded wallets (team, CEX, pools) from results.
+        OPTIMIZED: Uses chunked fetching to limit memory usage.
+        OPTIMIZED: Offloads CPU-bound calculation to thread pool.
+
+        Args:
+            start: Start of period.
+            end: End of period.
+            min_balance: Minimum TWAB to include (filters dust).
+            limit: Optional limit on results (for leaderboard).
+
+        Returns:
+            List of HashPowerInfo sorted by hash power descending.
+        """
+        # First, get excluded wallets to filter them out
+        excluded_result = await self.db.execute(
+            select(ExcludedWallet.wallet)
+        )
+        excluded_wallets = {row[0] for row in excluded_result.fetchall()}
+
+        # ATOMIC QUERY: Get ALL balances WITH tiers in single query
+        # This prevents sell-timing gaming where a sell between separate
+        # balance/tier queries could manipulate the distribution denominator.
+        # Using LEFT OUTER JOIN so wallets without streaks still get included.
+        # Excludes wallets in the excluded_wallets table (team, CEX, pools).
+        query = (
+            select(
+                Balance.wallet,
+                Snapshot.timestamp,
+                Balance.balance,
+                HoldStreak.current_tier
+            )
+            .join(Snapshot, Balance.snapshot_id == Snapshot.id)
+            .outerjoin(HoldStreak, Balance.wallet == HoldStreak.wallet)
+            .where(and_(
+                Snapshot.timestamp >= start,
+                Snapshot.timestamp <= end
+            ))
+            .order_by(Balance.wallet, Snapshot.timestamp.asc())
+        )
+
+        # Use server-side cursor with yield_per for memory efficiency
+        # This fetches rows in chunks rather than loading all into memory
+        result = await self.db.stream(query)
+
+        # Group balances by wallet, also capture tier (same for all rows per wallet)
+        wallet_balances: dict[str, list[tuple[datetime, int]]] = defaultdict(list)
+        wallet_tiers: dict[str, int] = {}
+        total_records = 0
+
+        async for row in result:
+            wallet, timestamp, balance, tier = row
+            total_records += 1
+
+            # Skip excluded wallets early to save memory
+            if wallet in excluded_wallets:
+                continue
+
+            wallet_balances[wallet].append((timestamp, balance))
+            # Tier is the same for all rows of a wallet, just capture first occurrence
+            if wallet not in wallet_tiers:
+                wallet_tiers[wallet] = tier if tier is not None else 1
+
+        logger.info(
+            f"Batch TWAB: {len(wallet_balances)} wallets, {total_records} records "
+            f"({len(excluded_wallets)} excluded)"
+        )
+
+        if not wallet_balances:
+            return []
+
+        # Offload CPU-bound calculation to thread pool to avoid blocking event loop
+        hash_powers = await asyncio.to_thread(
+            self._compute_hash_powers_sync,
+            wallet_balances,
+            wallet_tiers,
+            start,
+            end,
+            min_balance
+        )
 
         # Apply limit if specified
         if limit:

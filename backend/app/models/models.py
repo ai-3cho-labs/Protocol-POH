@@ -143,7 +143,7 @@ class Buyback(Base):
     )
     tx_signature: Mapped[str] = mapped_column(String(88), nullable=False, unique=True)
     sol_amount: Mapped[Decimal] = mapped_column(Numeric(18, 9), nullable=False)
-    copper_amount: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    gold_amount: Mapped[int] = mapped_column(BigInteger, nullable=False)
     price_per_token: Mapped[Optional[Decimal]] = mapped_column(
         Numeric(18, 12), nullable=True
     )

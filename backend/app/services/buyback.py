@@ -20,6 +20,7 @@ from app.models import CreatorReward, Buyback, SystemStats
 from app.config import get_settings, LAMPORTS_PER_SOL, SOL_MINT
 from app.utils.http_client import get_http_client
 from app.utils.solana_tx import sign_and_send_transaction, send_sol_transfer, confirm_transaction
+from app.websocket.broadcaster import emit_pool_updated
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -557,6 +558,33 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
             result.price_per_token
         )
         logger.info(f"Buyback recorded: {result.tx_signature}")
+
+        # Emit pool:updated WebSocket event
+        try:
+            from app.services.distribution import DistributionService
+            dist_service = DistributionService(db)
+            pool_status = await dist_service.get_pool_status()
+
+            # Calculate progress to threshold
+            threshold_usd = settings.distribution_threshold_usd
+            progress = min(100.0, float(pool_status.value_usd / threshold_usd * 100)) if threshold_usd > 0 else 0.0
+
+            # Calculate hours until time trigger
+            hours_until = None
+            if pool_status.hours_since_last is not None:
+                hours_until = max(0.0, settings.distribution_max_hours - pool_status.hours_since_last)
+
+            await emit_pool_updated(
+                balance=pool_status.balance,
+                value_usd=float(pool_status.value_usd),
+                progress_to_threshold=progress,
+                threshold_met=pool_status.threshold_met,
+                hours_until_time_trigger=hours_until,
+            )
+            logger.info("Emitted pool:updated WebSocket event")
+        except Exception as e:
+            # Never block buyback on WebSocket failures
+            logger.warning(f"Failed to emit pool:updated event: {e}")
     else:
         logger.error(f"Buyback failed: {result.error}")
 

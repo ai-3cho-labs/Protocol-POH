@@ -11,7 +11,7 @@ set -e
 
 APP_NAME="copper"
 REGION="was"  # Washington DC (or: fra, sin, sao)
-GITHUB_REPO="your-username/copper-processing-unit"  # Change this!
+GITHUB_REPO="ai-3cho-labs/copper-processing-unit"
 BRANCH="main"
 
 # ===========================================

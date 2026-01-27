@@ -19,11 +19,15 @@ class Settings(BaseSettings):
     environment: str = "development"
     debug: bool = False
     test_mode: bool = False  # Enable mock data for testing
+    embedded_celery: bool = False  # Run Celery worker/beat inside FastAPI process
 
     # Test mode mock values (pool)
     test_pool_balance: float = 500000.0  # Mock pool balance in tokens
     test_pool_value_usd: float = 175.0  # Mock pool USD value
     test_hours_since_distribution: float = 8.0  # Mock hours since last distribution
+
+    # Devnet fallback price (used when price APIs don't have data for test tokens)
+    devnet_gold_price_usd: float = 0.001  # $0.001 per GOLD token on devnet
 
     # Test mode mock values (user) - used when wallet has no real data
     test_user_balance: float = 1000000.0  # Mock user balance in tokens
