@@ -20,6 +20,7 @@ settings = get_settings()
 
 JUPITER_PRICE_API = "https://price.jup.ag/v4/price"
 BIRDEYE_PRICE_API = "https://public-api.birdeye.so/public/price"
+DEXSCREENER_API = "https://api.dexscreener.com/latest/dex/tokens"
 
 # Cache configuration
 CACHE_TTL_SECONDS = 60  # Cache prices for 1 minute
@@ -74,6 +75,14 @@ async def get_gold_price_usd(use_fallback: bool = True) -> Decimal:
         )
         logger.debug(f"Using devnet fallback price: ${devnet_price}")
         return devnet_price
+
+    # Try DexScreener API first (most reliable, free, no auth)
+    price = await _fetch_dexscreener_price(token_mint)
+    if price and price > 0:
+        _price_cache[cache_key] = CachedPrice(
+            price=price, timestamp=now, source="dexscreener"
+        )
+        return price
 
     # Try Jupiter API
     price = await _fetch_jupiter_price(token_mint)
@@ -151,6 +160,34 @@ async def _fetch_birdeye_price(token_mint: str) -> Optional[Decimal]:
 
     except Exception as e:
         logger.warning(f"Birdeye price fetch failed: {e}")
+        return None
+
+
+async def _fetch_dexscreener_price(token_mint: str) -> Optional[Decimal]:
+    """Fetch price from DexScreener API (free, no auth)."""
+    try:
+        client = get_http_client()
+        response = await client.get(
+            f"{DEXSCREENER_API}/{token_mint}",
+            timeout=10.0,
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        # DexScreener returns pairs array, get price from first pair
+        pairs = data.get("pairs", [])
+        if pairs:
+            # Use the pair with highest liquidity
+            best_pair = max(pairs, key=lambda p: float(p.get("liquidity", {}).get("usd", 0) or 0))
+            price = best_pair.get("priceUsd")
+            if price and float(price) > 0:
+                logger.debug(f"DexScreener price for {token_mint[:8]}...: ${price}")
+                return Decimal(str(price))
+
+        return None
+
+    except Exception as e:
+        logger.warning(f"DexScreener price fetch failed: {e}")
         return None
 
 
