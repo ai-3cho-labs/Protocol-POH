@@ -28,6 +28,18 @@ router = APIRouter(prefix="/api/webhook", tags=["webhook"])
 # Solana wallet address validation: 32-44 base58 characters
 WALLET_REGEX = re.compile(r"^[1-9A-HJ-NP-Za-km-z]{32,44}$")
 
+# SECURITY: Helius webhook IP allowlist (update if Helius changes their IPs)
+# See: https://docs.helius.dev/webhooks/ip-addresses
+HELIUS_IP_ALLOWLIST = {
+    # Helius production IPs - verify these are current
+    "52.1.58.225",
+    "18.213.41.172",
+    "52.206.218.133",
+    "3.211.135.60",
+    "34.227.23.72",
+    "52.44.26.199",
+}
+
 # Maximum age for webhook timestamps to prevent replay attacks
 # Production: 5 minutes (strict)
 # Development: 30 minutes (more lenient for testing)
@@ -135,6 +147,13 @@ async def helius_webhook(
             status_code=503,
             detail="Webhook endpoint not configured. Set HELIUS_WEBHOOK_SECRET.",
         )
+
+    # SECURITY: Validate source IP in production (defense in depth)
+    if settings.is_production:
+        client_ip = request.client.host if request.client else None
+        if client_ip and client_ip not in HELIUS_IP_ALLOWLIST:
+            logger.warning(f"Webhook rejected: IP {client_ip} not in Helius allowlist")
+            raise HTTPException(status_code=403, detail="Forbidden")
 
     if not verify_webhook_auth(authorization, settings.helius_webhook_secret):
         logger.warning(

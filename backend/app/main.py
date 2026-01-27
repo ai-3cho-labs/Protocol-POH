@@ -196,18 +196,19 @@ async def lifespan(app: FastAPI):
         if not settings.gold_token_mint:
             logger.error("CRITICAL: GOLD token mint not configured")
 
-        # Validate wallet private keys are configured and valid Base58
+        # SECURITY: Validate wallet private keys - FAIL HARD if invalid in production
         wallet_keys = [
             ("CREATOR_WALLET", settings.creator_wallet_private_key),
             ("BUYBACK_WALLET", settings.buyback_wallet_private_key),
             ("AIRDROP_POOL", settings.airdrop_pool_private_key),
         ]
+        wallet_validation_errors = []
         for name, key in wallet_keys:
             if not key:
-                logger.error(f"CRITICAL: {name}_PRIVATE_KEY not configured")
+                wallet_validation_errors.append(f"{name}_PRIVATE_KEY not configured")
             elif len(key) < 80 or len(key) > 90:
-                logger.error(
-                    f"CRITICAL: {name}_PRIVATE_KEY invalid length (expected ~88 chars)"
+                wallet_validation_errors.append(
+                    f"{name}_PRIVATE_KEY invalid length (expected ~88 chars)"
                 )
             else:
                 # Validate Base58 decoding without exposing key material
@@ -216,32 +217,42 @@ async def lifespan(app: FastAPI):
 
                     decoded = base58.b58decode(key)
                     if len(decoded) != 64:
-                        logger.error(
-                            f"CRITICAL: {name}_PRIVATE_KEY invalid - decoded to {len(decoded)} bytes (expected 64)"
+                        wallet_validation_errors.append(
+                            f"{name}_PRIVATE_KEY invalid - decoded to {len(decoded)} bytes (expected 64)"
                         )
                     else:
                         logger.info(f"{name} private key validated (Base58, 64 bytes)")
                 except Exception as e:
-                    logger.error(
-                        f"CRITICAL: {name}_PRIVATE_KEY invalid Base58 encoding: {type(e).__name__}"
+                    wallet_validation_errors.append(
+                        f"{name}_PRIVATE_KEY invalid Base58 encoding: {type(e).__name__}"
                     )
+
+        if wallet_validation_errors:
+            for error in wallet_validation_errors:
+                logger.error(f"CRITICAL: {error}")
+            raise ValueError(
+                f"Wallet key validation failed: {'; '.join(wallet_validation_errors)}"
+            )
 
         # Prevent test mode in production
         if settings.test_mode:
             logger.error("CRITICAL: TEST_MODE is enabled in production!")
             raise ValueError("TEST_MODE cannot be enabled in production")
 
-        # Validate CORS configuration
+        # SECURITY: Validate CORS configuration - fail hard on localhost in production
         if (
             not settings.cors_origins
-            or settings.cors_origins == "http://localhost:3000"
+            or "localhost" in settings.cors_origins
+            or "127.0.0.1" in settings.cors_origins
         ):
-            logger.warning("CORS_ORIGINS should be set to production domains")
+            raise ValueError(
+                "CORS_ORIGINS must be set to production domains (no localhost)"
+            )
 
         # Validate API key configuration
         if not settings.api_keys_list:
             logger.warning(
-                "No API keys configured - endpoints will allow unauthenticated access"
+                "No API keys configured - protected endpoints will reject requests"
             )
 
     if settings.database_url:
@@ -317,7 +328,11 @@ app.add_middleware(SecurityHeadersMiddleware)
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Handle uncaught exceptions."""
-    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    # SECURITY: Only log full traceback in development to avoid exposing internals
+    if settings.is_production:
+        logger.error(f"Unhandled exception: {type(exc).__name__}: {exc}")
+    else:
+        logger.error(f"Unhandled exception: {exc}", exc_info=True)
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 

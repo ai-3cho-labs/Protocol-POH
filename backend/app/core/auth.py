@@ -47,10 +47,14 @@ async def verify_api_key(
     if not x_api_key:
         raise HTTPException(status_code=401, detail="API key required")
 
-    # Constant-time comparison to prevent timing attacks
+    # SECURITY: Constant-time comparison to prevent timing attacks
+    # Check ALL keys before returning to avoid leaking key position via timing
+    match_found = False
     for valid_key in settings.api_keys_list:
         if hmac.compare_digest(x_api_key, valid_key):
-            return x_api_key
+            match_found = True
+    if match_found:
+        return x_api_key
 
     # Log failed attempt (without exposing the key)
     logger.warning(
@@ -85,10 +89,11 @@ async def get_optional_api_key(
     if not settings.api_keys_list:
         return None
 
-    # Validate the provided key
+    # SECURITY: Constant-time comparison - check ALL keys to avoid timing leaks
+    match_found = False
     for valid_key in settings.api_keys_list:
         if hmac.compare_digest(x_api_key, valid_key):
-            return x_api_key
+            match_found = True
 
     # Invalid key provided - don't raise, just return None
-    return None
+    return x_api_key if match_found else None

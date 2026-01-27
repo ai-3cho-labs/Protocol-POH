@@ -90,10 +90,13 @@ async def rpc_proxy(request: Request) -> Dict[str, Any]:
             status_code=403, detail=f"Method '{method}' is not allowed through proxy"
         )
 
-    # Check if method is in allowlist (if configured for strict mode)
-    # For now, we block known dangerous methods but allow others
+    # SECURITY: Strict allowlist - reject any method not explicitly allowed
+    # This prevents exposure of new/unknown dangerous RPC methods
     if method not in ALLOWED_RPC_METHODS:
-        logger.warning(f"RPC proxy: unknown method '{method}' - allowing")
+        logger.warning(f"RPC proxy: rejected unknown method '{method}'")
+        raise HTTPException(
+            status_code=403, detail=f"Method '{method}' is not allowed through proxy"
+        )
 
     # Ensure required JSON-RPC fields
     if "jsonrpc" not in body:

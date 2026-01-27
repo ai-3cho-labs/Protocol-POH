@@ -30,6 +30,10 @@ BLOCKHASH_ERROR_PATTERNS = [
 # Maximum retries for stale blockhash
 MAX_BLOCKHASH_RETRIES = 2
 
+# SECURITY: Maximum transaction limits to prevent accidental/malicious large transfers
+MAX_SOL_LAMPORTS = 100_000_000_000_000  # 100,000 SOL
+MAX_TOKEN_AMOUNT = 10**18  # Reasonable upper bound for SPL tokens
+
 
 @dataclass
 class TransactionResult:
@@ -178,6 +182,14 @@ async def send_sol_transfer(
     Returns:
         TransactionResult with signature or error.
     """
+    # SECURITY: Validate transaction amount
+    if amount_lamports <= 0:
+        return TransactionResult(success=False, error="Amount must be positive")
+    if amount_lamports > MAX_SOL_LAMPORTS:
+        return TransactionResult(
+            success=False, error=f"Amount exceeds maximum ({MAX_SOL_LAMPORTS} lamports)"
+        )
+
     from solders.pubkey import Pubkey
     from solders.system_program import transfer, TransferParams
     from solders.message import MessageV0
@@ -293,6 +305,14 @@ async def send_spl_token_transfer(
     Returns:
         TransactionResult with signature or error.
     """
+    # SECURITY: Validate transaction amount
+    if amount <= 0:
+        return TransactionResult(success=False, error="Amount must be positive")
+    if amount > MAX_TOKEN_AMOUNT:
+        return TransactionResult(
+            success=False, error=f"Amount exceeds maximum ({MAX_TOKEN_AMOUNT})"
+        )
+
     from solders.pubkey import Pubkey
     from solders.message import MessageV0
     from solders.hash import Hash

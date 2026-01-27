@@ -21,8 +21,10 @@ _uses_ssl = _redis_url.startswith("rediss://")
 
 REDIS_SSL_CONFIG = (
     {
-        "ssl_cert_reqs": ssl.CERT_NONE,
-        "ssl_ca_certs": None,
+        # SECURITY: Use CERT_REQUIRED to verify Redis server certificates
+        # This prevents MITM attacks on Celery broker connections
+        "ssl_cert_reqs": ssl.CERT_REQUIRED,
+        "ssl_ca_certs": None,  # Uses system CA bundle
         "ssl_certfile": None,
         "ssl_keyfile": None,
     }
