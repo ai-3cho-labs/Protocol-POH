@@ -18,9 +18,13 @@ declare global {
  */
 export function WebGLBackground() {
   const handleLoad = () => {
-    if (window.UnicornStudio && !window.UnicornStudio.isInitialized) {
-      window.UnicornStudio.init();
-      window.UnicornStudio.isInitialized = true;
+    try {
+      if (window.UnicornStudio && !window.UnicornStudio.isInitialized) {
+        window.UnicornStudio.init();
+        window.UnicornStudio.isInitialized = true;
+      }
+    } catch {
+      // Canvas may not exist during navigation - ignore
     }
   };
 

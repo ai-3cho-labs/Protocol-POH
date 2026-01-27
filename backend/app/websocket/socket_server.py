@@ -153,8 +153,8 @@ def get_client_ip(environ: dict) -> str:
 
 
 # WebSocket namespace
-# Use /ws namespace to match frontend Socket.IO client connection
-WS_NAMESPACE = "/ws"
+# Use default namespace - the HTTP path /ws already separates WS from REST
+WS_NAMESPACE = "/"
 
 # Room names
 GLOBAL_ROOM = "global"
