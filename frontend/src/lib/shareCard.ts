@@ -236,7 +236,7 @@ export async function generateShareCard(
   ctx.fillStyle = COLORS.white;
   ctx.font = 'bold 32px Inter, system-ui, sans-serif';
   const totalMinedGold = extras?.lifetimeEarnings !== undefined && extras.lifetimeEarnings > 0
-    ? formatCompactNumber(extras.lifetimeEarnings)
+    ? (extras.lifetimeEarnings >= 1 ? formatCompactNumber(extras.lifetimeEarnings) : formatGOLD(extras.lifetimeEarnings))
     : '0.00';
   ctx.fillText(totalMinedGold, thirdCardX + cardWidth / 2, cardY + 70);
 
