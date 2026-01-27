@@ -9,7 +9,7 @@ from decimal import Decimal
 from typing import Optional
 
 from app.tasks.celery_app import celery_app
-from app.database import async_session_maker
+from app.database import get_worker_session_maker
 from app.services.buyback import BuybackService, process_pending_rewards
 from app.utils.async_utils import run_async
 from app.config import get_settings
@@ -79,7 +79,8 @@ async def _process_creator_rewards(task_id: Optional[str] = None) -> dict:
             "task_id": task_id
         }
 
-    async with async_session_maker() as db:
+    session_maker = get_worker_session_maker()
+    async with session_maker() as db:
         service = BuybackService(db)
 
         try:
@@ -142,7 +143,8 @@ async def _record_incoming_reward(
     tx_signature: str
 ) -> dict:
     """Async implementation of record_incoming_reward."""
-    async with async_session_maker() as db:
+    session_maker = get_worker_session_maker()
+    async with session_maker() as db:
         service = BuybackService(db)
 
         reward = await service.record_creator_reward(
@@ -167,7 +169,8 @@ def get_buyback_stats() -> dict:
 
 async def _get_buyback_stats() -> dict:
     """Async implementation of get_buyback_stats."""
-    async with async_session_maker() as db:
+    session_maker = get_worker_session_maker()
+    async with session_maker() as db:
         service = BuybackService(db)
 
         total_sol, total_copper = await service.get_total_buybacks()

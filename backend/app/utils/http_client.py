@@ -74,13 +74,6 @@ class HTTPClientManager:
             self._client = None
             logger.info("HTTP client closed")
 
-    async def __aenter__(self):
-        return self.client
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        # Don't close on context exit - let app lifecycle manage it
-        pass
-
 
 # Global singleton instance
 _http_manager = HTTPClientManager()

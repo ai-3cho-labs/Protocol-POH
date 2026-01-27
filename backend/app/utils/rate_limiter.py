@@ -36,26 +36,21 @@ def _get_storage_uri() -> str | None:
     """
     Get storage URI for rate limiter.
 
+    In development with embedded Celery, uses in-memory storage to avoid
+    SSL configuration issues with Upstash Redis.
     In production, Redis is required for proper rate limiting across workers.
-    In development, falls back to in-memory storage with a warning.
-
-    Returns:
-        Redis URL or None for in-memory storage.
-
-    Raises:
-        ValueError: If production mode and Redis is not configured.
     """
+    # In development with embedded Celery, use memory storage
+    # This avoids SSL cert issues with Upstash and is fine for single-process dev
+    if settings.embedded_celery:
+        logger.info("Rate limiter: using in-memory storage (embedded Celery mode)")
+        return "memory://"
+
     if settings.redis_url:
         logger.info("Rate limiter: using Redis storage")
         return settings.redis_url
 
     if settings.is_production:
-        logger.error(
-            "CRITICAL: Redis URL not configured in production! "
-            "Rate limiting will not work correctly across multiple workers. "
-            "Set REDIS_URL environment variable."
-        )
-        # In production, we raise an error to prevent startup without proper config
         raise ValueError(
             "Redis URL is required for rate limiting in production. "
             "Set REDIS_URL environment variable."
@@ -65,7 +60,7 @@ def _get_storage_uri() -> str | None:
         "Rate limiter: using in-memory storage (development only). "
         "This will not work correctly with multiple workers."
     )
-    return None
+    return "memory://"
 
 
 def _create_limiter() -> Limiter:
@@ -80,16 +75,14 @@ def _create_limiter() -> Limiter:
         storage_uri = _get_storage_uri()
     except ValueError as e:
         # SECURITY: Fail hard in production - do not allow startup without Redis
-        # This prevents running production with ineffective rate limiting
         if settings.is_production:
             logger.critical(f"FATAL: {e}")
             raise RuntimeError(
                 "Cannot start in production without Redis for rate limiting. "
                 "Set REDIS_URL environment variable."
             )
-        # In development, log warning but continue with in-memory storage
         logger.warning(str(e))
-        storage_uri = None
+        storage_uri = "memory://"
 
     return Limiter(
         key_func=get_remote_address,
@@ -101,31 +94,6 @@ def _create_limiter() -> Limiter:
 
 # Create shared limiter instance
 limiter = _create_limiter()
-
-
-def _create_wallet_limiter() -> Limiter:
-    """
-    Create a stricter rate limiter for wallet-specific endpoints.
-
-    Uses combined IP + wallet key for more granular limiting.
-    """
-    try:
-        storage_uri = _get_storage_uri()
-    except ValueError:
-        if settings.is_production:
-            raise
-        storage_uri = None
-
-    return Limiter(
-        key_func=get_wallet_key,
-        storage_uri=storage_uri,
-        default_limits=["10/minute"],  # Stricter limit for wallet queries
-        strategy="fixed-window"
-    )
-
-
-# Stricter limiter for wallet-specific endpoints
-wallet_limiter = _create_wallet_limiter()
 
 
 def validate_rate_limiter_config() -> bool:

@@ -43,6 +43,7 @@ async def get_gold_price_usd(use_fallback: bool = True) -> Decimal:
     Get GOLD price in USD with caching and fallback.
 
     Tries Jupiter first, falls back to Birdeye, then to cached value.
+    On devnet, uses configured fallback price since test tokens have no market price.
 
     Args:
         use_fallback: Whether to use cached value if all APIs fail.
@@ -63,6 +64,17 @@ async def get_gold_price_usd(use_fallback: bool = True) -> Decimal:
     if cached and (now - cached.timestamp) < CACHE_TTL_SECONDS:
         logger.debug(f"Using cached price from {cached.source}: {cached.price}")
         return cached.price
+
+    # On devnet, use configured fallback price (test tokens have no market price)
+    if settings.is_devnet:
+        devnet_price = Decimal(str(settings.devnet_gold_price_usd))
+        _price_cache[cache_key] = CachedPrice(
+            price=devnet_price,
+            timestamp=now,
+            source="devnet_fallback"
+        )
+        logger.debug(f"Using devnet fallback price: ${devnet_price}")
+        return devnet_price
 
     # Try Jupiter API
     price = await _fetch_jupiter_price(token_mint)

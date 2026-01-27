@@ -8,7 +8,7 @@ import logging
 from typing import Optional
 
 from app.tasks.celery_app import celery_app
-from app.database import async_session_maker
+from app.database import get_worker_session_maker
 from app.services.snapshot import SnapshotService
 from app.services.streak import StreakService
 from app.utils.async_utils import run_async
@@ -29,7 +29,8 @@ def maybe_take_snapshot() -> dict:
 
 async def _maybe_take_snapshot() -> dict:
     """Async implementation of maybe_take_snapshot."""
-    async with async_session_maker() as db:
+    session_maker = get_worker_session_maker()
+    async with session_maker() as db:
         service = SnapshotService(db)
 
         # RNG check
@@ -72,7 +73,8 @@ def force_snapshot() -> dict:
 
 async def _force_snapshot() -> dict:
     """Async implementation of force_snapshot."""
-    async with async_session_maker() as db:
+    session_maker = get_worker_session_maker()
+    async with session_maker() as db:
         service = SnapshotService(db)
         snapshot = await service.take_snapshot()
 
@@ -106,7 +108,8 @@ def update_all_tiers() -> dict:
 
 async def _update_all_tiers() -> dict:
     """Async implementation of update_all_tiers."""
-    async with async_session_maker() as db:
+    session_maker = get_worker_session_maker()
+    async with session_maker() as db:
         streak_service = StreakService(db)
 
         # Get all streaks

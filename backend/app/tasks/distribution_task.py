@@ -7,7 +7,7 @@ Background tasks for checking triggers and executing distributions.
 import logging
 
 from app.tasks.celery_app import celery_app
-from app.database import async_session_maker
+from app.database import get_worker_session_maker
 from app.services.distribution import DistributionService, check_and_distribute
 from app.utils.async_utils import run_async
 
@@ -28,7 +28,8 @@ def check_distribution_triggers() -> dict:
 
 async def _check_distribution_triggers() -> dict:
     """Async implementation of check_distribution_triggers."""
-    async with async_session_maker() as db:
+    session_maker = get_worker_session_maker()
+    async with session_maker() as db:
         service = DistributionService(db)
 
         try:
@@ -87,7 +88,8 @@ def force_distribution() -> dict:
 
 async def _force_distribution() -> dict:
     """Async implementation of force_distribution."""
-    async with async_session_maker() as db:
+    session_maker = get_worker_session_maker()
+    async with session_maker() as db:
         service = DistributionService(db)
 
         try:
@@ -137,7 +139,8 @@ def get_distribution_preview() -> dict:
 
 async def _get_distribution_preview() -> dict:
     """Async implementation of get_distribution_preview."""
-    async with async_session_maker() as db:
+    session_maker = get_worker_session_maker()
+    async with session_maker() as db:
         service = DistributionService(db)
 
         try:
@@ -185,7 +188,8 @@ def get_pool_status() -> dict:
 
 async def _get_pool_status() -> dict:
     """Async implementation of get_pool_status."""
-    async with async_session_maker() as db:
+    session_maker = get_worker_session_maker()
+    async with session_maker() as db:
         service = DistributionService(db)
         status = await service.get_pool_status()
 

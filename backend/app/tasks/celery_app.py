@@ -5,6 +5,7 @@ Celery configuration for background task processing.
 """
 
 import logging
+import ssl
 from celery import Celery, Task
 from celery.schedules import crontab
 
@@ -12,6 +13,18 @@ from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+
+# SSL configuration for Upstash Redis (uses rediss://)
+# Only enable SSL config when using rediss:// URLs
+_redis_url = settings.redis_url or ""
+_uses_ssl = _redis_url.startswith("rediss://")
+
+REDIS_SSL_CONFIG = {
+    "ssl_cert_reqs": ssl.CERT_NONE,
+    "ssl_ca_certs": None,
+    "ssl_certfile": None,
+    "ssl_keyfile": None,
+} if _uses_ssl else None
 
 
 class BaseTaskWithRetry(Task):
@@ -62,22 +75,29 @@ celery_app = Celery(
 )
 
 # Celery configuration
-celery_app.conf.update(
-    task_serializer="json",
-    accept_content=["json"],
-    result_serializer="json",
-    timezone="UTC",
-    enable_utc=True,
-    task_track_started=True,
-    task_time_limit=600,  # 10 minute hard limit (increased for network congestion)
-    task_soft_time_limit=300,  # 5 minute soft limit
-    worker_prefetch_multiplier=1,  # One task at a time
-    task_acks_late=True,  # Acknowledge after completion
-    task_reject_on_worker_lost=True,
+_celery_config = {
+    "task_serializer": "json",
+    "accept_content": ["json"],
+    "result_serializer": "json",
+    "timezone": "UTC",
+    "enable_utc": True,
+    "task_track_started": True,
+    "task_time_limit": 600,  # 10 minute hard limit (increased for network congestion)
+    "task_soft_time_limit": 300,  # 5 minute soft limit
+    "worker_prefetch_multiplier": 1,  # One task at a time
+    "task_acks_late": True,  # Acknowledge after completion
+    "task_reject_on_worker_lost": True,
     # SECURITY: Expire task results after 1 hour to limit data retention in Redis
     # Task results may contain wallet addresses and transaction data
-    result_expires=3600,  # 1 hour
-)
+    "result_expires": 3600,  # 1 hour
+}
+
+# Add SSL configuration only for rediss:// URLs (Upstash)
+if REDIS_SSL_CONFIG:
+    _celery_config["broker_use_ssl"] = REDIS_SSL_CONFIG
+    _celery_config["redis_backend_use_ssl"] = REDIS_SSL_CONFIG
+
+celery_app.conf.update(**_celery_config)
 
 # Beat schedule (periodic tasks)
 celery_app.conf.beat_schedule = {
