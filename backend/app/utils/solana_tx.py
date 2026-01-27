@@ -481,6 +481,255 @@ async def send_spl_token_transfer(
     )
 
 
+@dataclass
+class BatchTransferResult:
+    """Result of a batch token transfer."""
+
+    success: bool
+    signature: Optional[str] = None
+    successful_wallets: list[str] = None
+    failed_wallets: list[str] = None
+    error: Optional[str] = None
+
+    def __post_init__(self):
+        if self.successful_wallets is None:
+            self.successful_wallets = []
+        if self.failed_wallets is None:
+            self.failed_wallets = []
+
+
+async def send_batch_spl_token_transfers(
+    from_private_key: str,
+    token_mint: str,
+    recipients: list[tuple[str, int]],  # List of (wallet_address, amount)
+) -> BatchTransferResult:
+    """
+    Send SPL tokens to multiple recipients in a single transaction.
+
+    Batches multiple transfers into one transaction for efficiency.
+    Maximum ~10-12 recipients per batch (transaction size limit).
+
+    Args:
+        from_private_key: Base58-encoded private key of sender.
+        token_mint: Token mint address.
+        recipients: List of (wallet_address, amount) tuples.
+
+    Returns:
+        BatchTransferResult with signature and success status per wallet.
+    """
+    if not recipients:
+        return BatchTransferResult(success=True, successful_wallets=[], failed_wallets=[])
+
+    from solders.pubkey import Pubkey
+    from solders.message import MessageV0
+    from solders.hash import Hash
+    from solders.instruction import Instruction, AccountMeta
+    from solders.compute_budget import set_compute_unit_limit, set_compute_unit_price
+
+    # SPL Token Program IDs
+    TOKEN_PROGRAM_ID = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
+    ASSOCIATED_TOKEN_PROGRAM_ID = Pubkey.from_string(
+        "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+    )
+    SYSTEM_PROGRAM_ID = Pubkey.from_string("11111111111111111111111111111111")
+
+    # Create keypair and mint pubkey
+    keypair = keypair_from_base58(from_private_key)
+    mint_pubkey = Pubkey.from_string(token_mint)
+
+    # Helper to derive ATA
+    def get_ata(owner: Pubkey, mint: Pubkey) -> Pubkey:
+        seeds = [bytes(owner), bytes(TOKEN_PROGRAM_ID), bytes(mint)]
+        ata, _ = Pubkey.find_program_address(seeds, ASSOCIATED_TOKEN_PROGRAM_ID)
+        return ata
+
+    from_ata = get_ata(keypair.pubkey(), mint_pubkey)
+    client = get_http_client()
+
+    # Collect all recipient ATAs and check existence in batch
+    recipient_data = []
+    ata_addresses = []
+
+    for wallet_addr, amount in recipients:
+        to_pubkey = Pubkey.from_string(wallet_addr)
+        to_ata = get_ata(to_pubkey, mint_pubkey)
+        recipient_data.append({
+            "wallet": wallet_addr,
+            "pubkey": to_pubkey,
+            "ata": to_ata,
+            "amount": amount,
+            "ata_exists": False,
+        })
+        ata_addresses.append(str(to_ata))
+
+    # Batch check ATA existence with getMultipleAccounts
+    try:
+        ata_check_response = await client.post(
+            settings.helius_rpc_url,
+            json={
+                "jsonrpc": "2.0",
+                "id": "copper-batch-ata-check",
+                "method": "getMultipleAccounts",
+                "params": [ata_addresses, {"encoding": "base64"}],
+            },
+        )
+        ata_check_response.raise_for_status()
+        ata_check_data = ata_check_response.json()
+
+        accounts = ata_check_data.get("result", {}).get("value", [])
+        for i, account in enumerate(accounts):
+            if i < len(recipient_data):
+                recipient_data[i]["ata_exists"] = account is not None
+
+    except Exception as e:
+        logger.error(f"Failed to batch check ATAs: {e}")
+        return BatchTransferResult(
+            success=False,
+            failed_wallets=[w for w, _ in recipients],
+            error=f"ATA batch check failed: {e}",
+        )
+
+    # Build instructions
+    instructions = []
+
+    # Add compute budget for larger transactions
+    # ~50k CU per transfer, plus overhead
+    compute_units = 50_000 * len(recipients) + 100_000
+    compute_units = min(compute_units, 1_400_000)  # Max 1.4M
+    instructions.append(set_compute_unit_limit(compute_units))
+
+    # Add priority fee (1000 micro-lamports per CU)
+    instructions.append(set_compute_unit_price(1000))
+
+    # Create ATA instructions for recipients who don't have one
+    for rd in recipient_data:
+        if not rd["ata_exists"]:
+            create_ata_ix = Instruction(
+                program_id=ASSOCIATED_TOKEN_PROGRAM_ID,
+                accounts=[
+                    AccountMeta(keypair.pubkey(), is_signer=True, is_writable=True),  # Payer
+                    AccountMeta(rd["ata"], is_signer=False, is_writable=True),  # ATA
+                    AccountMeta(rd["pubkey"], is_signer=False, is_writable=False),  # Owner
+                    AccountMeta(mint_pubkey, is_signer=False, is_writable=False),  # Mint
+                    AccountMeta(SYSTEM_PROGRAM_ID, is_signer=False, is_writable=False),  # System
+                    AccountMeta(TOKEN_PROGRAM_ID, is_signer=False, is_writable=False),  # Token
+                ],
+                data=bytes(),
+            )
+            instructions.append(create_ata_ix)
+
+    # Add transfer instructions for all recipients
+    for rd in recipient_data:
+        transfer_data = bytes([3]) + rd["amount"].to_bytes(8, "little")
+        transfer_ix = Instruction(
+            program_id=TOKEN_PROGRAM_ID,
+            accounts=[
+                AccountMeta(from_ata, is_signer=False, is_writable=True),  # Source
+                AccountMeta(rd["ata"], is_signer=False, is_writable=True),  # Destination
+                AccountMeta(keypair.pubkey(), is_signer=True, is_writable=False),  # Authority
+            ],
+            data=transfer_data,
+        )
+        instructions.append(transfer_ix)
+
+    # Send transaction with retry logic
+    last_error = None
+    wallets = [w for w, _ in recipients]
+
+    for attempt in range(MAX_BLOCKHASH_RETRIES + 1):
+        try:
+            blockhash_str = await get_recent_blockhash()
+            if not blockhash_str:
+                return BatchTransferResult(
+                    success=False,
+                    failed_wallets=wallets,
+                    error="Failed to get blockhash",
+                )
+
+            recent_blockhash = Hash.from_string(blockhash_str)
+
+            message = MessageV0.try_compile(
+                payer=keypair.pubkey(),
+                instructions=instructions,
+                address_lookup_table_accounts=[],
+                recent_blockhash=recent_blockhash,
+            )
+
+            transaction = VersionedTransaction(message, [keypair])
+            tx_bytes = bytes(transaction)
+            tx_base64 = base64.b64encode(tx_bytes).decode("utf-8")
+
+            response = await client.post(
+                settings.helius_rpc_url,
+                json={
+                    "jsonrpc": "2.0",
+                    "id": "copper-batch-transfer",
+                    "method": "sendTransaction",
+                    "params": [
+                        tx_base64,
+                        {
+                            "encoding": "base64",
+                            "skipPreflight": False,
+                            "preflightCommitment": "confirmed",
+                            "maxRetries": 3,
+                        },
+                    ],
+                },
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            if "error" in data:
+                error_msg = data["error"].get("message", str(data["error"]))
+
+                if _is_blockhash_error(error_msg) and attempt < MAX_BLOCKHASH_RETRIES:
+                    logger.warning(
+                        f"Stale blockhash on batch transfer (attempt {attempt + 1}), retrying..."
+                    )
+                    last_error = error_msg
+                    continue
+
+                logger.error(f"Batch transfer error: {error_msg}")
+                return BatchTransferResult(
+                    success=False,
+                    failed_wallets=wallets,
+                    error=error_msg,
+                )
+
+            signature = data.get("result")
+            if signature:
+                logger.info(
+                    f"Batch transfer sent: {signature} ({len(recipients)} recipients)"
+                )
+                return BatchTransferResult(
+                    success=True,
+                    signature=signature,
+                    successful_wallets=wallets,
+                    failed_wallets=[],
+                )
+
+            return BatchTransferResult(
+                success=False,
+                failed_wallets=wallets,
+                error="No signature returned",
+            )
+
+        except Exception as e:
+            last_error = str(e)
+            if attempt < MAX_BLOCKHASH_RETRIES:
+                logger.warning(
+                    f"Batch transfer exception (attempt {attempt + 1}): {e}, retrying..."
+                )
+                continue
+            logger.error(f"Error sending batch transfer: {type(e).__name__}: {e}")
+
+    return BatchTransferResult(
+        success=False,
+        failed_wallets=wallets,
+        error=last_error or "Transaction failed after retries",
+    )
+
+
 async def confirm_transaction(signature: str, timeout_seconds: int = 60) -> bool:
     """
     Wait for transaction confirmation.

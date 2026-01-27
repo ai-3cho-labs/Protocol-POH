@@ -253,6 +253,52 @@ async def get_pending_rewards(
     )
 
 
+@router.get("/distribution-preview")
+@limiter.limit("30/minute")
+async def get_distribution_preview(
+    request: Request,
+    _: str = Depends(verify_admin_key),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Preview what the next distribution would look like (without executing).
+    """
+    from app.services.distribution import DistributionService
+
+    service = DistributionService(db)
+
+    try:
+        status = await service.get_pool_status()
+        plan = await service.calculate_distribution()
+
+        if not plan:
+            return {
+                "status": "no_distribution",
+                "pool_balance": status.balance,
+                "pool_value_usd": float(status.value_usd),
+                "reason": "no_eligible_recipients_or_empty_pool"
+            }
+
+        return {
+            "status": "preview",
+            "pool_amount": plan.pool_amount,
+            "pool_value_usd": float(plan.pool_value_usd),
+            "total_hashpower": float(plan.total_hashpower),
+            "recipient_count": plan.recipient_count,
+            "trigger_type": plan.trigger_type,
+            "top_recipients": [
+                {
+                    "wallet": r.wallet[:8] + "...",
+                    "share_pct": float(r.share_percentage),
+                    "amount": r.amount,
+                }
+                for r in plan.recipients[:10]
+            ]
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
 @router.get("/pool-balance", response_model=PoolBalanceResponse)
 @limiter.limit("30/minute")
 async def get_pool_balance(

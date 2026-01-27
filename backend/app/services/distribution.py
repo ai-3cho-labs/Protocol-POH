@@ -476,10 +476,10 @@ class DistributionService:
         self, recipients: list[RecipientShare]
     ) -> dict[str, Optional[str]]:
         """
-        Execute token transfers to all recipients sequentially with rate limiting.
+        Execute token transfers using batched transactions.
 
-        Processes transfers one at a time with delays to avoid RPC rate limits (429s),
-        then uses batch confirmation to verify all transactions efficiently.
+        Batches multiple transfers into single transactions for efficiency.
+        ~10 recipients per transaction, with delays between batches.
 
         Args:
             recipients: List of recipients with wallet and amount.
@@ -488,10 +488,12 @@ class DistributionService:
             Dict mapping wallet addresses to transaction signatures (or None if failed).
         """
         import asyncio
+        from app.utils.solana_tx import send_batch_spl_token_transfers
 
-        # Rate limiting: 150ms between transfers = ~6.6 transfers/second
-        # Well under Helius 10 RPS limit, leaving headroom for other calls
-        TRANSFER_DELAY_SECONDS = 0.15
+        # Batch size: ~10 transfers per transaction (conservative for tx size limits)
+        BATCH_SIZE = 10
+        # Delay between batches (seconds)
+        BATCH_DELAY_SECONDS = 1.0
 
         results: dict[str, Optional[str]] = {}
         token_mint = settings.gold_token_mint  # Distribute GOLD tokens
@@ -503,66 +505,83 @@ class DistributionService:
             )
             return results
 
-        # Collect pending signatures for batch confirmation
-        pending_signatures: list[tuple[str, str]] = []  # (wallet, signature)
         total = len(recipients)
+        num_batches = (total + BATCH_SIZE - 1) // BATCH_SIZE
 
-        logger.info(f"Executing {total} token transfers sequentially")
+        logger.info(
+            f"Executing {total} token transfers in {num_batches} batches "
+            f"(batch_size={BATCH_SIZE})"
+        )
 
-        # Process transfers sequentially with delays
-        for idx, recipient in enumerate(recipients):
+        # Collect signatures for batch confirmation
+        pending_signatures: list[tuple[str, str]] = []  # (wallet, signature)
+
+        # Process in batches
+        for batch_idx in range(num_batches):
+            start = batch_idx * BATCH_SIZE
+            end = min(start + BATCH_SIZE, total)
+            batch = recipients[start:end]
+
+            # Build recipient list for batch transfer
+            batch_recipients = [(r.wallet, r.amount) for r in batch]
+
+            logger.info(
+                f"Sending batch {batch_idx + 1}/{num_batches} "
+                f"({len(batch_recipients)} recipients)"
+            )
+
             try:
-                result = await send_spl_token_transfer(
+                batch_result = await send_batch_spl_token_transfers(
                     from_private_key=private_key,
-                    to_address=recipient.wallet,
                     token_mint=token_mint,
-                    amount=recipient.amount,
+                    recipients=batch_recipients,
                 )
 
-                if result.success and result.signature:
-                    # Don't confirm inline - collect for batch confirmation
-                    pending_signatures.append((recipient.wallet, result.signature))
-                    results[recipient.wallet] = result.signature
-                    logger.debug(
-                        f"Transfer sent ({idx + 1}/{total}): {recipient.wallet[:16]}..."
+                if batch_result.success and batch_result.signature:
+                    # All recipients in batch succeeded
+                    for wallet in batch_result.successful_wallets:
+                        results[wallet] = batch_result.signature
+                        pending_signatures.append((wallet, batch_result.signature))
+
+                    logger.info(
+                        f"Batch {batch_idx + 1} sent: {batch_result.signature[:16]}... "
+                        f"({len(batch_result.successful_wallets)} recipients)"
                     )
                 else:
+                    # Batch failed - mark all recipients as failed
+                    for wallet, _ in batch_recipients:
+                        results[wallet] = None
+
                     logger.error(
-                        f"Transfer failed to {recipient.wallet}: {result.error}"
+                        f"Batch {batch_idx + 1} failed: {batch_result.error}"
                     )
-                    results[recipient.wallet] = None
 
             except Exception as e:
-                logger.error(f"Transfer error to {recipient.wallet}: {e}")
-                results[recipient.wallet] = None
+                logger.error(f"Batch {batch_idx + 1} error: {e}")
+                for wallet, _ in batch_recipients:
+                    results[wallet] = None
 
-            # Delay between transfers (except after the last one)
-            if idx < total - 1:
-                await asyncio.sleep(TRANSFER_DELAY_SECONDS)
+            # Delay between batches (except after the last one)
+            if batch_idx < num_batches - 1:
+                await asyncio.sleep(BATCH_DELAY_SECONDS)
 
-        # Batch confirm all sent transactions
-        if pending_signatures:
-            signatures_to_confirm = [sig for _, sig in pending_signatures]
-            wallet_by_sig = {sig: wallet for wallet, sig in pending_signatures}
-
-            logger.info(f"Batch confirming {len(signatures_to_confirm)} transactions")
+        # Batch confirm all sent transactions (deduplicated)
+        unique_signatures = list(set(sig for _, sig in pending_signatures))
+        if unique_signatures:
+            logger.info(f"Batch confirming {len(unique_signatures)} transactions")
 
             confirmation_results = await batch_confirm_transactions(
-                signatures_to_confirm,
+                unique_signatures,
                 timeout_seconds=30,
                 poll_interval=2.0,
             )
 
-            # Update results based on confirmation status
+            # Log any unconfirmed transactions
             for sig, confirmed in confirmation_results.items():
-                wallet = wallet_by_sig.get(sig)
-                if wallet:
-                    if not confirmed:
-                        # Transaction was sent but failed/timed out on confirmation
-                        # Keep the signature in results for manual verification
-                        logger.warning(
-                            f"Transfer unconfirmed (may still succeed): {wallet[:16]}... -> {sig[:16]}..."
-                        )
+                if not confirmed:
+                    logger.warning(
+                        f"Batch tx unconfirmed (may still succeed): {sig[:16]}..."
+                    )
 
         successful = sum(1 for v in results.values() if v)
         logger.info(
