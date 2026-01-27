@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
+import { useWalletAddress } from '@/hooks/useWallet';
 import { PageContainer } from '@/components/layout';
 import {
   TerminalCard,
@@ -14,12 +14,37 @@ import { useLeaderboard } from '@/hooks/api';
 import { formatCompactNumber } from '@/lib/utils';
 import { cn } from '@/lib/cn';
 import type { LeaderboardUser } from '@/types/models';
+import { TIER_CONFIG, type TierId } from '@/types/models';
 
 const ITEMS_PER_PAGE = 25;
 
+/**
+ * TierBadgeCircle - Circular tier badge with color styling
+ */
+function TierBadgeCircle({ tier, size = 'md' }: { tier: TierId; size?: 'sm' | 'md' | 'lg' }) {
+  const config = TIER_CONFIG[tier];
+  const sizeClasses = {
+    sm: 'w-6 h-6 text-[10px]',
+    md: 'w-8 h-8 text-xs',
+    lg: 'w-10 h-10 text-sm',
+  };
+
+  return (
+    <div
+      className={cn(
+        'rounded-full flex items-center justify-center font-bold flex-shrink-0',
+        sizeClasses[size],
+        config.bgColor,
+        config.color
+      )}
+    >
+      {config.label}
+    </div>
+  );
+}
+
 export default function LeaderboardPage() {
-  const { publicKey } = useWallet();
-  const wallet = publicKey?.toBase58() ?? null;
+  const wallet = useWalletAddress();
   const [limit, setLimit] = useState(ITEMS_PER_PAGE);
 
   const { data, isLoading, isFetching } = useLeaderboard(limit, wallet);
@@ -166,8 +191,8 @@ function MobilePodium({ entries }: { entries: LeaderboardUser[] }) {
         >
           {entry && (
             <>
-              {/* Tier emoji */}
-              <span className="text-2xl mb-1">{entry.tier.emoji}</span>
+              {/* Tier badge */}
+              <TierBadgeCircle tier={entry.tier.tier as TierId} size="lg" />
 
               {/* Wallet */}
               <span
@@ -271,8 +296,8 @@ function MobileRow({ entry }: { entry: LeaderboardUser }) {
         </span>
       </div>
 
-      {/* Tier emoji */}
-      <span className="text-xl flex-shrink-0">{entry.tier.emoji}</span>
+      {/* Tier badge */}
+      <TierBadgeCircle tier={entry.tier.tier as TierId} size="md" />
 
       {/* Wallet + Multiplier */}
       <div className="flex-1 min-w-0">

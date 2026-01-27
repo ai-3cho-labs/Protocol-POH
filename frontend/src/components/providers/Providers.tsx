@@ -1,7 +1,7 @@
 'use client';
 
 import { FC, ReactNode } from 'react';
-import { WalletProvider } from './WalletProvider';
+import { AddressProvider } from '@/contexts/AddressContext';
 import { QueryProvider } from './QueryProvider';
 import { SocketProvider } from './SocketProvider';
 
@@ -15,15 +15,15 @@ interface ProvidersProps {
  *
  * Provider order (outer to inner):
  * 1. QueryProvider - Data fetching and caching
- * 2. WalletProvider - Solana wallet connection
- * 3. SocketProvider - WebSocket connection (requires wallet state)
+ * 2. AddressProvider - Wallet address storage (localStorage)
+ * 3. SocketProvider - WebSocket connection (requires address state)
  */
 export const Providers: FC<ProvidersProps> = ({ children }) => {
   return (
     <QueryProvider>
-      <WalletProvider>
+      <AddressProvider>
         <SocketProvider>{children}</SocketProvider>
-      </WalletProvider>
+      </AddressProvider>
     </QueryProvider>
   );
 };

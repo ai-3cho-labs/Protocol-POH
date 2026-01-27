@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
+import { useWalletAddress } from '@/hooks/useWallet';
 import { PageContainer } from '@/components/layout';
 import { WalletGuard } from '@/components/wallet/WalletGuard';
 import {
@@ -20,6 +20,7 @@ import {
 import type { DistributionHistoryItem } from '@/types/api';
 
 const ITEMS_PER_PAGE = 20;
+const MAX_LIMIT = 50; // Backend maximum
 
 export default function HistoryPage() {
   return (
@@ -38,14 +39,13 @@ export default function HistoryPage() {
 }
 
 function HistoryContent() {
-  const { publicKey } = useWallet();
-  const wallet = publicKey?.toBase58() ?? null;
+  const wallet = useWalletAddress();
   const [limit, setLimit] = useState(ITEMS_PER_PAGE);
 
   const { data, isLoading, isFetching } = useUserHistory(wallet, limit);
 
   const handleLoadMore = () => {
-    setLimit((prev) => prev + ITEMS_PER_PAGE);
+    setLimit((prev) => Math.min(prev + ITEMS_PER_PAGE, MAX_LIMIT));
   };
 
   // Calculate totals
@@ -120,7 +120,7 @@ function HistoryContent() {
         </div>
 
         {/* Load More */}
-        {data && data.length >= limit && (
+        {data && data.length >= limit && limit < MAX_LIMIT && (
           <div className="p-4 border-t border-zinc-800 lg:border-terminal-border">
             <Button
               variant="outline"

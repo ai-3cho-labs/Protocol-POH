@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/cn';
-import { ConnectButton } from '@/components/wallet/ConnectButton';
+import { AddressInput } from '@/components/wallet/AddressInput';
 
 const NAV_LINKS = [
   { href: '/', label: 'Home' },
@@ -54,8 +54,8 @@ export function Header() {
             })}
           </nav>
 
-          {/* Connect Button - Right */}
-          <ConnectButton size="sm" />
+          {/* Address Input - Right */}
+          <AddressInput size="sm" />
         </div>
       </div>
     </header>

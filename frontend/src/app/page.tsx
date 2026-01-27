@@ -14,21 +14,12 @@ export default function HomePage() {
       <WebGLBackground />
 
       {/* Hero Section */}
-      <Hero
-        stats={
-          globalStats.data
-            ? {
-                totalHolders: globalStats.data.total_holders,
-                totalDistributed: globalStats.data.total_distributed,
-              }
-            : undefined
-        }
-        isLoading={globalStats.isLoading}
-      />
+      <Hero />
 
       {/* Live Stats Ticker */}
       <LiveStatsBar
         holders={globalStats.data?.total_holders ?? 0}
+        totalDistributed={globalStats.data?.total_distributed ?? 0}
         volume24h={globalStats.data?.total_volume_24h ?? 0}
         poolValueUsd={poolStatus.data?.valueUsd ?? 0}
         hoursUntilNext={poolStatus.data?.hoursUntilTrigger ?? null}

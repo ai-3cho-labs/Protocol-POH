@@ -4,7 +4,7 @@
  * Socket Provider
  *
  * Provides WebSocket connection status to the application.
- * Must be placed inside WalletProvider to access wallet state.
+ * Must be placed inside AddressProvider to access address state.
  */
 
 import { createContext, useContext, FC, ReactNode } from 'react';
@@ -42,7 +42,7 @@ interface SocketProviderProps {
 /**
  * Socket Provider Component
  *
- * Initializes WebSocket connection when wallet is connected.
+ * Initializes WebSocket connection when address is set.
  * Provides connection status to descendant components.
  */
 export const SocketProvider: FC<SocketProviderProps> = ({ children }) => {
