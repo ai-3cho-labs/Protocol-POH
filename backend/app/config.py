@@ -77,7 +77,7 @@ class Settings(BaseSettings):
     cpu_token_mint: str = ""
     cpu_token_decimals: int = 9  # Standard SPL token decimals
     gold_token_mint: str = ""
-    gold_token_decimals: int = 9  # Standard SPL token decimals
+    gold_token_decimals: int = 6  # GOLD token has 6 decimals
 
     # Celery
     celery_broker_url: str = ""
