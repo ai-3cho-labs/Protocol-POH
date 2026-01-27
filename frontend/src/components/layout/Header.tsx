@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/cn';
@@ -27,6 +28,14 @@ export function Header() {
             href="/"
             className="flex items-center gap-2 group"
           >
+            <Image
+              src="/logo.jpg"
+              alt="CPU Logo"
+              width={40}
+              height={40}
+              className="rounded"
+              priority
+            />
             <span className="text-2xl font-bold text-white glow-white group-hover:text-gray-200 transition-colors">
               CPU
             </span>

@@ -8,18 +8,31 @@ export const metadata: Metadata = {
     'Hold CPU tokens to mine $GOLD rewards. Trading fees fund the pool. Build streaks, get paid.',
   keywords: ['solana', 'memecoin', 'mining', 'crypto', 'rewards', 'defi', 'cpu', 'gold'],
   authors: [{ name: 'CPU Team' }],
+  icons: {
+    icon: '/icon.jpg',
+    apple: '/icon.jpg',
+  },
   openGraph: {
     title: 'CPU - Hold CPU, Mine $GOLD',
     description:
       'Hold CPU tokens to mine $GOLD rewards. Trading fees fund the pool. Build streaks, get paid.',
     type: 'website',
     locale: 'en_US',
+    images: [
+      {
+        url: '/logo.jpg',
+        width: 1024,
+        height: 1024,
+        alt: 'CPU Logo',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'CPU - Hold CPU, Mine $GOLD',
     description:
       'Hold CPU tokens to mine $GOLD rewards. Trading fees fund the pool. Build streaks, get paid.',
+    images: ['/logo.jpg'],
   },
   robots: {
     index: true,
@@ -42,7 +55,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
       </head>
       <body>
