@@ -428,7 +428,7 @@ function RightPanel({
       {/* Earned Rewards - Hero */}
       <PanelCard glow className="text-center py-6">
         <div className="text-xs text-amber-400/70 uppercase tracking-wider mb-2">
-          Earned Rewards
+          Pending Rewards
         </div>
         <div className="text-5xl font-bold text-amber-400 font-mono tabular-nums drop-shadow-[0_0_20px_rgba(251,191,36,0.5)]">
           +{formatGOLD(tickingReward)}
@@ -605,7 +605,7 @@ function RewardsHeroMobile({
   return (
     <div className="w-full p-6 rounded-2xl bg-gradient-to-b from-amber-500/10 to-amber-500/[0.02] border border-amber-500/20 text-center">
       <div className="text-xs text-amber-400/70 uppercase tracking-wider mb-2">
-        Earned Rewards
+        Pending Rewards
       </div>
       <div className="text-4xl font-bold text-amber-400 font-mono tabular-nums drop-shadow-[0_0_16px_rgba(251,191,36,0.5)]">
         +{formatGOLD(tickingReward)}

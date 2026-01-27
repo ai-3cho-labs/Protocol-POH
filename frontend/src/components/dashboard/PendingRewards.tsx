@@ -1,6 +1,6 @@
 'use client';
 
-import { formatUSD, formatGOLD, calculateEarningRate, formatEarningRate } from '@/lib/utils';
+import { formatUSD, formatGOLD } from '@/lib/utils';
 import type { PoolInfo } from '@/types/models';
 import { PAYOUT_THRESHOLD_USD } from '@/types/models';
 import {
@@ -9,89 +9,93 @@ import {
   AsciiProgressBar,
   Skeleton,
 } from '@/components/ui';
-import { useCountdown, useTickingCounter } from '@/hooks/useCountdown';
+import { useCountdown } from '@/hooks/useCountdown';
 
-export interface PendingRewardsProps {
-  /** Estimated pending reward (GOLD tokens) */
-  pendingReward: number;
-  /** Pool information */
-  pool: PoolInfo | null;
-  /** User's pool share percentage */
-  poolSharePercent?: number;
+export interface TotalMinedProps {
+  /** Lifetime earnings from all distributions (GOLD tokens) */
+  lifetimeEarnings: number | undefined;
+  /** Total number of distributions received */
+  distributionCount?: number;
+  /** Pool information for countdown */
+  pool?: PoolInfo | null;
   /** Is data loading */
   isLoading?: boolean;
-  /** Show compact version */
-  compact?: boolean;
   /** Additional class names */
   className?: string;
 }
 
 /**
- * Calculate USD value of earned GOLD based on pool share
- */
-function calculateEarnedUsd(poolSharePercent: number, poolValueUsd: number): number {
-  return (poolSharePercent / 100) * poolValueUsd;
-}
-
-/**
- * PendingRewards - Live counter showing earned rewards with pool progress
+ * TotalMined - Shows lifetime mining earnings and pool status
  */
 export function PendingRewards({
-  pendingReward,
+  lifetimeEarnings,
+  distributionCount = 0,
   pool,
-  poolSharePercent = 0,
   isLoading = false,
-  compact = false,
   className,
-}: PendingRewardsProps) {
-  const earningRate = calculateEarningRate(pendingReward, pool?.hoursSinceLast ?? null);
-  const tickingReward = useTickingCounter(pendingReward, earningRate);
+}: TotalMinedProps) {
   const countdown = useCountdown(pool?.hoursUntilTrigger ?? null);
 
-  // Calculate USD value based on pool share
-  const earnedUsd = pool ? calculateEarnedUsd(poolSharePercent, pool.valueUsd) : 0;
-
   if (isLoading) {
-    return <PendingRewardsSkeleton compact={compact} className={className} />;
+    return <TotalMinedSkeleton className={className} />;
   }
 
-  if (compact) {
-    return (
-      <PendingRewardsCompact
-        pendingReward={pendingReward}
-        pool={pool}
-        poolSharePercent={poolSharePercent}
-        countdown={countdown}
-        className={className}
-      />
-    );
-  }
+  const hasEarnings = lifetimeEarnings !== undefined && lifetimeEarnings > 0;
 
   return (
-    <TerminalCard title="EARNED REWARDS" className={className}>
-      <div className="space-y-4">
-        {/* Earned Reward Amount */}
-        <div className="text-center py-4">
-          <div className="text-xs text-zinc-500 mb-1 lg:font-mono lg:text-gray-500">
-            YOUR EARNED GOLD
+    <div className={className}>
+      {/* Total Mined Section */}
+      <TerminalCard title="TOTAL MINED" className="mb-4">
+        <div className="space-y-4">
+          {/* Lifetime Earnings Amount */}
+          <div className="text-center py-4">
+            <div className="text-xs text-zinc-500 mb-1 lg:font-mono lg:text-gray-500">
+              LIFETIME EARNINGS
+            </div>
+            <div className="text-3xl sm:text-4xl lg:text-4xl font-bold text-white glow-white lg:font-mono tabular-nums">
+              {hasEarnings ? formatGOLD(lifetimeEarnings!) : '0.00'}
+            </div>
+            <div className="text-sm text-zinc-500 mt-1">$GOLD</div>
           </div>
-          <div className="text-3xl sm:text-4xl lg:text-4xl font-bold text-white glow-white lg:font-mono tabular-nums">
-            +{formatGOLD(tickingReward)}
+
+          {/* Distribution Stats */}
+          <div className="space-y-3 border-t border-zinc-800 lg:border-terminal-border pt-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-zinc-500 lg:font-mono lg:text-gray-500">
+                Distributions Received
+              </span>
+              <span className="font-medium text-zinc-100 lg:font-mono">
+                {distributionCount}
+              </span>
+            </div>
+
+            {hasEarnings && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-zinc-500 lg:font-mono lg:text-gray-500">
+                  Avg per Distribution
+                </span>
+                <span className="font-medium text-zinc-100 lg:font-mono">
+                  {formatGOLD(lifetimeEarnings! / Math.max(distributionCount, 1))} GOLD
+                </span>
+              </div>
+            )}
           </div>
-          <div className="text-sm text-zinc-500 mt-1">$GOLD</div>
-          <div className="text-lg text-amber-400 mt-1 lg:font-mono">
-            {formatUSD(earnedUsd)}
-          </div>
-          {earningRate !== null && (
-            <div className="text-sm text-amber-400/80 mt-2 lg:font-mono">
-              {formatEarningRate(earningRate)}
+
+          {/* No Earnings State */}
+          {!hasEarnings && (
+            <div className="text-center py-2 px-4 rounded bg-zinc-800/50 border border-zinc-700">
+              <span className="text-sm text-zinc-400 lg:font-mono">
+                No distributions received yet
+              </span>
             </div>
           )}
         </div>
+      </TerminalCard>
 
-        {/* Pool Progress */}
-        {pool && (
-          <div className="space-y-3">
+      {/* Reward Pool Section */}
+      {pool && (
+        <TerminalCard title="REWARD POOL">
+          <div className="space-y-4">
             {/* Pool Value */}
             <div className="flex items-center justify-between text-sm">
               <span className="text-zinc-500 lg:font-mono lg:text-gray-500">
@@ -104,9 +108,7 @@ export function PendingRewards({
 
             {/* Progress Bar */}
             <div className="hidden lg:block">
-              <AsciiProgressBar
-                value={pool.progressToThreshold}
-              />
+              <AsciiProgressBar value={pool.progressToThreshold} />
             </div>
             <div className="lg:hidden">
               <ProgressBar
@@ -114,6 +116,16 @@ export function PendingRewards({
                 variant="default"
                 size="md"
               />
+            </div>
+
+            {/* Pool Balance */}
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-zinc-500 lg:font-mono lg:text-gray-500">
+                Pool Balance
+              </span>
+              <span className="font-medium text-zinc-100 lg:font-mono">
+                {formatGOLD(pool.balance)} GOLD
+              </span>
             </div>
 
             {/* Next Trigger Info */}
@@ -127,19 +139,19 @@ export function PendingRewards({
               </div>
               <CountdownDisplay countdown={countdown} pool={pool} />
             </div>
-          </div>
-        )}
 
-        {/* Ready State */}
-        {pool?.thresholdMet && (
-          <div className="text-center py-2 px-4 rounded bg-white/10 border border-white/30">
-            <span className="text-sm text-white glow-white lg:font-mono">
-              Payout threshold reached!
-            </span>
+            {/* Ready State */}
+            {pool.thresholdMet && (
+              <div className="text-center py-2 px-4 rounded bg-white/10 border border-white/30">
+                <span className="text-sm text-white glow-white lg:font-mono">
+                  Payout threshold reached!
+                </span>
+              </div>
+            )}
           </div>
-        )}
-      </div>
-    </TerminalCard>
+        </TerminalCard>
+      )}
+    </div>
   );
 }
 
@@ -176,102 +188,32 @@ function CountdownDisplay({
 }
 
 /**
- * Compact version for widgets
- */
-function PendingRewardsCompact({
-  pendingReward,
-  pool,
-  poolSharePercent = 0,
-  countdown,
-  className,
-}: {
-  pendingReward: number;
-  pool: PoolInfo | null;
-  poolSharePercent?: number;
-  countdown: ReturnType<typeof useCountdown>;
-  className?: string;
-}) {
-  const earningRate = calculateEarningRate(pendingReward, pool?.hoursSinceLast ?? null);
-  const tickingReward = useTickingCounter(pendingReward, earningRate);
-  const earnedUsd = pool ? calculateEarnedUsd(poolSharePercent, pool.valueUsd) : 0;
-
-  return (
-    <TerminalCard className={className}>
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-xs text-zinc-500 flex items-center gap-2">
-            <span>Earned</span>
-            {earningRate !== null && (
-              <span className="text-amber-400/70">{formatEarningRate(earningRate)}</span>
-            )}
-          </div>
-          <div className="text-lg font-bold text-white glow-white tabular-nums">
-            +{formatGOLD(tickingReward)}
-          </div>
-          <div className="text-xs text-amber-400">
-            {formatUSD(earnedUsd)}
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="text-xs text-zinc-500">Next payout</div>
-          <div className="text-sm font-medium text-white">
-            {pool?.thresholdMet || pool?.timeTriggerMet
-              ? 'READY'
-              : countdown.formattedCompact}
-          </div>
-        </div>
-      </div>
-      {pool && (
-        <div className="mt-2">
-          <ProgressBar
-            value={pool.progressToThreshold}
-            variant="default"
-            size="sm"
-          />
-        </div>
-      )}
-    </TerminalCard>
-  );
-}
-
-/**
  * Loading skeleton
  */
-function PendingRewardsSkeleton({
-  compact = false,
+function TotalMinedSkeleton({
   className,
 }: {
-  compact?: boolean;
   className?: string;
 }) {
-  if (compact) {
-    return (
-      <TerminalCard className={className}>
-        <div className="flex items-center justify-between">
-          <div className="space-y-1.5">
-            <Skeleton className="h-3 w-12" />
-            <Skeleton className="h-6 w-20" />
-          </div>
-          <div className="space-y-1.5 text-right">
-            <Skeleton className="h-3 w-14 ml-auto" />
-            <Skeleton className="h-4 w-16 ml-auto" />
-          </div>
-        </div>
-        <Skeleton className="h-1.5 w-full mt-2 rounded-full" />
-      </TerminalCard>
-    );
-  }
-
   return (
-    <TerminalCard title="EARNED REWARDS" className={className}>
-      <div className="space-y-4">
-        <div className="text-center py-2">
-          <Skeleton className="h-3 w-32 mx-auto mb-2" />
-          <Skeleton className="h-10 w-28 mx-auto" />
-          <Skeleton className="h-4 w-16 mx-auto mt-1" />
-          <Skeleton className="h-5 w-20 mx-auto mt-1" />
+    <div className={className}>
+      <TerminalCard title="TOTAL MINED" className="mb-4">
+        <div className="space-y-4">
+          <div className="text-center py-2">
+            <Skeleton className="h-3 w-32 mx-auto mb-2" />
+            <Skeleton className="h-10 w-28 mx-auto" />
+            <Skeleton className="h-4 w-16 mx-auto mt-1" />
+          </div>
+          <div className="space-y-3 pt-2">
+            <div className="flex justify-between">
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-4 w-8" />
+            </div>
+          </div>
         </div>
-        <div className="space-y-3">
+      </TerminalCard>
+      <TerminalCard title="REWARD POOL">
+        <div className="space-y-4">
           <div className="flex justify-between">
             <Skeleton className="h-4 w-20" />
             <Skeleton className="h-4 w-24" />
@@ -282,7 +224,7 @@ function PendingRewardsSkeleton({
             <Skeleton className="h-4 w-16" />
           </div>
         </div>
-      </div>
-    </TerminalCard>
+      </TerminalCard>
+    </div>
   );
 }

@@ -72,6 +72,12 @@ export function DetailsModal({ open, onClose }: DetailsModalProps) {
     }));
   }, [rawHistory]);
 
+  // Calculate lifetime earnings from history
+  const lifetimeEarnings = useMemo(() => {
+    if (!rawHistory || rawHistory.length === 0) return undefined;
+    return rawHistory.reduce((sum, item) => sum + item.amount_received, 0);
+  }, [rawHistory]);
+
   // Handle animated close
   const handleClose = useCallback(() => {
     if (prefersReducedMotion) {
@@ -275,10 +281,10 @@ export function DetailsModal({ open, onClose }: DetailsModalProps) {
 
             {activeTab === 'pool' && (
               <PendingRewards
-                pendingReward={stats?.pendingReward ?? 0}
+                lifetimeEarnings={lifetimeEarnings}
+                distributionCount={rawHistory?.length ?? 0}
                 pool={pool ?? null}
-                poolSharePercent={stats?.poolSharePercent ?? 0}
-                isLoading={poolLoading || statsLoading}
+                isLoading={historyLoading || poolLoading}
               />
             )}
           </div>

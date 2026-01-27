@@ -9,7 +9,7 @@ export { TierProgress } from './TierProgress';
 export type { TierProgressProps } from './TierProgress';
 
 export { PendingRewards } from './PendingRewards';
-export type { PendingRewardsProps } from './PendingRewards';
+export type { TotalMinedProps } from './PendingRewards';
 
 export { MiniLeaderboard } from './MiniLeaderboard';
 export type { MiniLeaderboardProps } from './MiniLeaderboard';
