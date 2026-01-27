@@ -73,7 +73,9 @@ def prepare_database_url(url: str) -> tuple[str, dict]:
 
 
 # Prepare database URL and connection args
-database_url, connect_args = prepare_database_url(settings.database_url)
+# Default to SQLite in-memory for testing when DATABASE_URL is not set
+_raw_database_url = settings.database_url or "sqlite+aiosqlite:///:memory:"
+database_url, connect_args = prepare_database_url(_raw_database_url)
 
 # Check if using SQLite
 is_sqlite = database_url.startswith("sqlite")
