@@ -9,7 +9,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from app.websocket.socket_server import sio, GLOBAL_ROOM, wallet_room
+from app.websocket.socket_server import sio, GLOBAL_ROOM, wallet_room, WS_NAMESPACE
 from app.websocket.events import (
     EventType,
     DistributionExecutedPayload,
@@ -33,7 +33,7 @@ async def broadcast_global(event: str, data: dict) -> None:
         data: Event payload.
     """
     try:
-        await sio.emit(event, data, room=GLOBAL_ROOM)
+        await sio.emit(event, data, room=GLOBAL_ROOM, namespace=WS_NAMESPACE)
         logger.debug(f"Broadcast to global: {event}")
     except Exception as e:
         logger.warning(f"WebSocket broadcast failed (global): {event} - {e}")
@@ -50,7 +50,7 @@ async def broadcast_to_wallet(wallet: str, event: str, data: dict) -> None:
     """
     try:
         room = wallet_room(wallet)
-        await sio.emit(event, data, room=room)
+        await sio.emit(event, data, room=room, namespace=WS_NAMESPACE)
         logger.debug(f"Broadcast to wallet {wallet[:8]}...: {event}")
     except Exception as e:
         logger.warning(f"WebSocket broadcast failed (wallet): {event} - {e}")

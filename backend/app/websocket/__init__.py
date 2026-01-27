@@ -12,6 +12,7 @@ from app.websocket.socket_server import (
     connection_tracker,
     GLOBAL_ROOM,
     wallet_room,
+    WS_NAMESPACE,
 )
 
 # Event types and payloads
@@ -50,6 +51,7 @@ __all__ = [
     "connection_tracker",
     "GLOBAL_ROOM",
     "wallet_room",
+    "WS_NAMESPACE",
     # Event types
     "EventType",
     "TopRecipient",

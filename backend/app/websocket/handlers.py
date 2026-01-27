@@ -14,6 +14,7 @@ from app.websocket.socket_server import (
     get_client_ip,
     GLOBAL_ROOM,
     wallet_room,
+    WS_NAMESPACE,
 )
 
 logger = logging.getLogger(__name__)
@@ -32,7 +33,7 @@ def is_valid_wallet(address: str) -> bool:
     return bool(WALLET_PATTERN.match(address))
 
 
-@sio.event
+@sio.event(namespace=WS_NAMESPACE)
 async def connect(sid: str, environ: dict, auth: Optional[dict] = None) -> bool:
     """
     Handle new client connection.
@@ -56,13 +57,13 @@ async def connect(sid: str, environ: dict, auth: Optional[dict] = None) -> bool:
     connection_tracker.add_connection(sid, client_ip)
 
     # Auto-join global room
-    await sio.enter_room(sid, GLOBAL_ROOM)
+    await sio.enter_room(sid, GLOBAL_ROOM, namespace=WS_NAMESPACE)
 
     logger.info(f"Client connected: sid={sid}, ip={client_ip}")
     return True
 
 
-@sio.event
+@sio.event(namespace=WS_NAMESPACE)
 async def disconnect(sid: str) -> None:
     """
     Handle client disconnection.
@@ -76,11 +77,11 @@ async def disconnect(sid: str) -> None:
     # Clean up wallet subscription
     if sid in _session_wallets:
         wallet = _session_wallets.pop(sid)
-        await sio.leave_room(sid, wallet_room(wallet))
+        await sio.leave_room(sid, wallet_room(wallet), namespace=WS_NAMESPACE)
         logger.debug(f"Removed wallet subscription for sid={sid}")
 
     # Leave global room (happens automatically, but be explicit)
-    await sio.leave_room(sid, GLOBAL_ROOM)
+    await sio.leave_room(sid, GLOBAL_ROOM, namespace=WS_NAMESPACE)
 
     logger.info(f"Client disconnected: sid={sid}")
 
@@ -94,7 +95,7 @@ def _sanitize_for_log(value: str, max_len: int = 20) -> str:
     return sanitized
 
 
-@sio.event
+@sio.event(namespace=WS_NAMESPACE)
 async def subscribe_wallet(sid: str, data: dict) -> dict:
     """
     Subscribe to wallet-specific events.
@@ -117,25 +118,24 @@ async def subscribe_wallet(sid: str, data: dict) -> dict:
     # Leave previous wallet room if subscribed
     if sid in _session_wallets:
         old_wallet = _session_wallets[sid]
-        await sio.leave_room(sid, wallet_room(old_wallet))
+        await sio.leave_room(sid, wallet_room(old_wallet), namespace=WS_NAMESPACE)
 
     # Join new wallet room
     room = wallet_room(wallet)
-    await sio.enter_room(sid, room)
+    await sio.enter_room(sid, room, namespace=WS_NAMESPACE)
     _session_wallets[sid] = wallet
 
     logger.debug(f"Wallet subscription: sid={sid}, wallet={wallet[:8]}...")
     return {"success": True, "wallet": wallet}
 
 
-@sio.event
-async def unsubscribe_wallet(sid: str, data: Optional[dict] = None) -> dict:
+@sio.event(namespace=WS_NAMESPACE)
+async def unsubscribe_wallet(sid: str) -> dict:
     """
     Unsubscribe from wallet-specific events.
 
     Args:
         sid: Session ID.
-        data: Optional dict (unused).
 
     Returns:
         Response dict with success status.
@@ -144,7 +144,7 @@ async def unsubscribe_wallet(sid: str, data: Optional[dict] = None) -> dict:
         return {"success": True, "message": "Not subscribed to any wallet"}
 
     wallet = _session_wallets.pop(sid)
-    await sio.leave_room(sid, wallet_room(wallet))
+    await sio.leave_room(sid, wallet_room(wallet), namespace=WS_NAMESPACE)
 
     logger.debug(f"Wallet unsubscription: sid={sid}, wallet={wallet[:8]}...")
     return {"success": True}

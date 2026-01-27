@@ -21,8 +21,8 @@ MAX_CONNECTIONS_PER_IP = 5
 sio = socketio.AsyncServer(
     async_mode="asgi",
     cors_allowed_origins=settings.cors_origins_list,
-    logger=not settings.is_production,
-    engineio_logger=False,  # Too verbose
+    logger=True,  # Enable Socket.IO logging for debugging
+    engineio_logger=True,  # Enable Engine.IO logging for debugging
     ping_timeout=20,
     ping_interval=25,
 )
@@ -44,15 +44,37 @@ async def setup_redis_adapter() -> None:
         logger.warning("No Redis URL configured, WebSocket will run in single-worker mode")
         return
 
+    # Skip Redis adapter in development to avoid SSL issues with Upstash
+    # WebSocket will still work fine in single-worker mode
+    if not settings.is_production:
+        logger.info("WebSocket running in single-worker mode (development)")
+        return
+
     try:
         # Use Redis manager for pub/sub across workers
         # Must set server reference for manager to work properly
-        mgr = socketio.AsyncRedisManager(settings.redis_url)
+        # For Upstash (rediss://), we need proper SSL config
+        import ssl
+        redis_url = settings.redis_url
+
+        # Create SSL context for Upstash TLS connections
+        if redis_url.startswith("rediss://"):
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = True
+            ssl_context.verify_mode = ssl.CERT_REQUIRED
+            mgr = socketio.AsyncRedisManager(
+                redis_url,
+                redis_options={"ssl": ssl_context}
+            )
+        else:
+            mgr = socketio.AsyncRedisManager(redis_url)
+
         mgr.set_server(sio)
         sio.manager = mgr
         logger.info("WebSocket Redis adapter initialized")
     except Exception as e:
         logger.error(f"Failed to setup Redis adapter: {e}")
+        logger.info("Falling back to single-worker mode")
 
 
 class ConnectionTracker:
@@ -142,6 +164,10 @@ def get_client_ip(environ: dict) -> str:
 
     return "unknown"
 
+
+# WebSocket namespace
+# Use default namespace since the mount point /ws already separates WebSocket traffic
+WS_NAMESPACE = "/"
 
 # Room names
 GLOBAL_ROOM = "global"
