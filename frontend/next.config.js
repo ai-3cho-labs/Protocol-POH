@@ -10,12 +10,9 @@ const nextConfig = {
     NEXT_PUBLIC_COPPER_TOKEN_MINT: process.env.NEXT_PUBLIC_COPPER_TOKEN_MINT,
   },
 
-  // Static export for Cloudflare Pages
-  output: 'export',
-
-  // Image optimization - unoptimized for static export
+  // Image optimization
   images: {
-    unoptimized: true,
+    remotePatterns: [],
   },
 
   // Webpack configuration for Solana wallet adapter
