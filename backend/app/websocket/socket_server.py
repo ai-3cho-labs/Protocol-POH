@@ -152,9 +152,12 @@ def get_client_ip(environ: dict) -> str:
     return "unknown"
 
 
-# WebSocket namespace
-# Use default namespace - the HTTP path /ws already separates WS from REST
-WS_NAMESPACE = "/"
+# WebSocket namespaces
+# Support both default "/" and "/ws" namespaces for client compatibility
+# - Local dev clients typically use "/" (default namespace)
+# - Production clients may use "/ws" if URL includes /ws path
+WS_NAMESPACE = "/ws"  # Primary namespace for handlers
+WS_NAMESPACES = ["/", "/ws"]  # All supported namespaces
 
 # Room names
 GLOBAL_ROOM = "global"
