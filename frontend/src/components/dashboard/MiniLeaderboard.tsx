@@ -4,11 +4,31 @@ import Link from 'next/link';
 import { cn } from '@/lib/cn';
 import { formatCompactNumber } from '@/lib/utils';
 import type { LeaderboardUser } from '@/types/models';
+import { TIER_CONFIG, type TierId } from '@/types/models';
 import {
   TerminalCard,
   RankBadge,
   Skeleton,
 } from '@/components/ui';
+
+/**
+ * TierBadgeCircle - Circular tier badge with color styling
+ */
+function TierBadgeCircle({ tier, title }: { tier: TierId; title?: string }) {
+  const config = TIER_CONFIG[tier];
+  return (
+    <div
+      className={cn(
+        'w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold',
+        config.bgColor,
+        config.color
+      )}
+      title={title}
+    >
+      {config.label}
+    </div>
+  );
+}
 
 export interface MiniLeaderboardProps {
   /** Leaderboard entries */
@@ -157,9 +177,7 @@ function LeaderboardRow({
         {/* Right side: Tier + Hash Power */}
         <div className="flex items-center gap-3 lg:col-span-5 lg:grid lg:grid-cols-5 lg:gap-2">
           <div className="lg:col-span-2 lg:flex lg:justify-center">
-            <span className="text-lg" title={entry.tier.name}>
-              {entry.tier.emoji}
-            </span>
+            <TierBadgeCircle tier={entry.tier.tier as TierId} title={entry.tier.name} />
           </div>
           <div className="lg:col-span-3 lg:text-right">
             <span

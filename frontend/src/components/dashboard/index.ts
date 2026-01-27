@@ -24,3 +24,4 @@ export { PixelMiner } from './PixelMiner';
 export { MinerDisplay } from './MinerDisplay';
 export { DetailsModal } from './DetailsModal';
 export { MineTilemap } from './MineTilemap';
+export { ShareCard } from './ShareCard';

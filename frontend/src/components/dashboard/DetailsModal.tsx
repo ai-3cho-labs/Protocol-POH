@@ -45,10 +45,18 @@ export function DetailsModal({ open, onClose }: DetailsModalProps) {
   const prefersReducedMotion = usePrefersReducedMotion();
 
   // Fetch all data
-  const { data: stats, isLoading: statsLoading } = useUserStats(wallet);
+  const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useUserStats(wallet);
   const { data: pool, isLoading: poolLoading } = usePoolStatus();
   const { data: leaderboard, isLoading: leaderboardLoading } = useLeaderboard(25, wallet);
-  const { data: rawHistory, isLoading: historyLoading } = useUserHistory(wallet, 20);
+  const { data: rawHistory, isLoading: historyLoading, refetch: refetchHistory } = useUserHistory(wallet, 20);
+
+  // Refetch data when modal opens
+  useEffect(() => {
+    if (open) {
+      refetchStats();
+      refetchHistory();
+    }
+  }, [open, refetchStats, refetchHistory]);
 
   // Transform history data to RewardHistoryItem format
   const history: RewardHistoryItem[] | null = useMemo(() => {
@@ -220,10 +228,7 @@ export function DetailsModal({ open, onClose }: DetailsModalProps) {
 
         {/* Tab Content */}
         <div className="flex-1 overflow-y-auto p-3 xs:p-4">
-          <div
-            key={activeTab}
-            className={cn(!prefersReducedMotion && 'animate-fade-in')}
-          >
+          <div key={activeTab}>
             {activeTab === 'overview' && (
               <div className="space-y-4">
                 <MiningCard data={stats ?? null} isLoading={statsLoading} />

@@ -7,6 +7,7 @@ import {
   formatMultiplier,
 } from '@/lib/utils';
 import type { UserMiningStats } from '@/types/models';
+import { TIER_CONFIG, type TierId } from '@/types/models';
 import { TerminalCard, TierBadge, RankBadge, Skeleton } from '@/components/ui';
 
 export interface MiningCardProps {
@@ -115,11 +116,22 @@ function MiningCardCompact({
   data: UserMiningStats;
   className?: string;
 }) {
+  const tierId = data.tier.tier as TierId;
+  const tierConfig = TIER_CONFIG[tierId];
+
   return (
     <TerminalCard className={className}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="text-2xl">{data.tier.emoji}</div>
+          <div
+            className={cn(
+              'w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold',
+              tierConfig.bgColor,
+              tierConfig.color
+            )}
+          >
+            {tierConfig.label}
+          </div>
           <div>
             <div className="font-medium text-zinc-100">
               {formatCPU(data.balance)} CPU

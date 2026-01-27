@@ -3,7 +3,7 @@
 import { cn } from '@/lib/cn';
 import { formatDuration, formatMultiplier } from '@/lib/utils';
 import type { TierInfo } from '@/types/api';
-import { TIER_CONFIG, type TierId } from '@/types/models';
+import { TIER_CONFIG, type TierId, type TierStyle } from '@/types/models';
 import {
   TerminalCard,
   ProgressBar,
@@ -28,6 +28,31 @@ export interface TierProgressProps {
   showAllTiers?: boolean;
   /** Additional class names */
   className?: string;
+}
+
+/**
+ * TierBadge - Displays tier label with color styling
+ */
+function TierBadge({ tier, size = 'md' }: { tier: TierId; size?: 'sm' | 'md' | 'lg' }) {
+  const config = TIER_CONFIG[tier];
+  const sizeClasses = {
+    sm: 'w-6 h-6 text-[10px]',
+    md: 'w-8 h-8 text-xs',
+    lg: 'w-10 h-10 text-sm',
+  };
+
+  return (
+    <div
+      className={cn(
+        'rounded-full flex items-center justify-center font-bold',
+        sizeClasses[size],
+        config.bgColor,
+        config.color
+      )}
+    >
+      {config.label}
+    </div>
+  );
 }
 
 /**
@@ -56,7 +81,7 @@ export function TierProgress({
         {/* Current Tier Display */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-3xl">{tier.emoji}</span>
+            <TierBadge tier={tier.tier as TierId} size="lg" />
             <div>
               <div className="font-medium text-zinc-100 lg:font-mono">
                 {tier.name}
@@ -130,7 +155,7 @@ export function TierProgress({
  * Tier timeline showing all tiers
  */
 function TierTimeline({ currentTier }: { currentTier: TierId }) {
-  const tiers = Object.entries(TIER_CONFIG) as [string, (typeof TIER_CONFIG)[TierId]][];
+  const tiers = Object.entries(TIER_CONFIG) as [string, TierStyle][];
 
   return (
     <div className="pt-3 border-t border-zinc-800 lg:border-terminal-border">
@@ -149,17 +174,15 @@ function TierTimeline({ currentTier }: { currentTier: TierId }) {
               <div
                 className={cn(
                   'relative flex items-center justify-center',
-                  'w-8 h-8 rounded-full text-sm',
+                  'w-8 h-8 rounded-full text-xs font-bold',
                   'transition-all duration-200',
-                  isActive && 'bg-white/20 ring-2 ring-white scale-110',
-                  isPast && 'bg-white/20',
-                  !isActive && !isPast && 'bg-zinc-800'
+                  isActive && 'ring-2 ring-white scale-110',
+                  isActive || isPast ? config.bgColor : 'bg-zinc-800',
+                  isActive || isPast ? config.color : 'text-zinc-500'
                 )}
                 title={`${config.name} (${formatMultiplier(config.multiplier)})`}
               >
-                <span className={cn(isActive ? 'text-lg' : 'text-sm')}>
-                  {config.emoji}
-                </span>
+                {config.label}
               </div>
 
               {/* Connector line */}
