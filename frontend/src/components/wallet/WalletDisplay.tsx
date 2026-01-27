@@ -3,11 +3,8 @@
 import { useWallet } from '@/hooks/useWallet';
 import { cn } from '@/lib/cn';
 import { getAddressUrl } from '@/lib/constants';
-import { isValidWalletIconUrl } from '@/lib/validators';
 
 export interface WalletDisplayProps {
-  /** Show wallet icon */
-  showIcon?: boolean;
   /** Show copy button */
   showCopy?: boolean;
   /** Show explorer link */
@@ -22,14 +19,12 @@ export interface WalletDisplayProps {
  * Display connected wallet information
  */
 export function WalletDisplay({
-  showIcon = true,
   showCopy = false,
   showExplorerLink = false,
   size = 'md',
   className,
 }: WalletDisplayProps) {
-  const { address, shortAddress, walletIcon, walletName, connected } =
-    useWallet();
+  const { address, shortAddress, connected } = useWallet();
 
   if (!connected || !address) {
     return null;
@@ -38,7 +33,6 @@ export function WalletDisplay({
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(address);
-      // Could add toast notification here
     } catch (error) {
       console.error('Failed to copy address:', error);
     }
@@ -64,15 +58,6 @@ export function WalletDisplay({
         className
       )}
     >
-      {/* Wallet icon */}
-      {showIcon && walletIcon && isValidWalletIconUrl(walletIcon) && (
-        <img
-          src={walletIcon}
-          alt={walletName || 'Wallet'}
-          className={cn('rounded-sm', iconSizes[size])}
-        />
-      )}
-
       {/* Address */}
       <span className="text-zinc-300">{shortAddress}</span>
 

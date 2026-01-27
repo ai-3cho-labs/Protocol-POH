@@ -2,8 +2,8 @@
  * Wallet components exports
  */
 
-export { ConnectButton } from './ConnectButton';
-export type { ConnectButtonProps } from './ConnectButton';
+export { AddressInput } from './AddressInput';
+export type { AddressInputProps } from './AddressInput';
 
 export { WalletDisplay } from './WalletDisplay';
 export type { WalletDisplayProps } from './WalletDisplay';

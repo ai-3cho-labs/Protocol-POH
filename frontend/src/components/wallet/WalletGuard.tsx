@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
 import { LoadingPage } from '@/components/ui/LoadingSpinner';
 import { TerminalCard } from '@/components/ui/TerminalCard';
-import { ConnectButton } from './ConnectButton';
+import { AddressInput } from './AddressInput';
 import { isValidRedirectPath } from '@/lib/validators';
 
 export interface WalletGuardProps {
@@ -21,7 +21,7 @@ export interface WalletGuardProps {
 
 /**
  * Wallet guard component
- * Protects routes that require wallet connection
+ * Protects routes that require a wallet address
  */
 export function WalletGuard({
   children,
@@ -30,25 +30,14 @@ export function WalletGuard({
   notConnectedComponent,
 }: WalletGuardProps) {
   const router = useRouter();
-  const { connected, connecting } = useWallet();
+  const { connected } = useWallet();
 
   // Handle redirect when not connected
   useEffect(() => {
-    if (!connecting && !connected && redirectTo && isValidRedirectPath(redirectTo)) {
+    if (!connected && redirectTo && isValidRedirectPath(redirectTo)) {
       router.push(redirectTo);
     }
-  }, [connected, connecting, redirectTo, router]);
-
-  // Show loading while connecting
-  if (connecting) {
-    return (
-      <>
-        {loadingComponent || (
-          <LoadingPage text="Connecting wallet..." />
-        )}
-      </>
-    );
-  }
+  }, [connected, redirectTo, router]);
 
   // Not connected - show message or redirect
   if (!connected) {
@@ -84,22 +73,26 @@ function WalletNotConnected() {
         className="max-w-md w-full"
       >
         <div className="text-center py-6">
-          {/* Icon */}
-          <div className="text-4xl mb-4">🔐</div>
-
           {/* Title */}
           <h2 className="text-xl font-semibold text-zinc-200 mb-2">
-            Connect Your Wallet
+            Enter Your Wallet Address
           </h2>
 
           {/* Description */}
           <p className="text-sm text-zinc-400 mb-6">
-            Connect your Solana wallet to access your mining dashboard and view
-            your rewards.
+            Paste your Solana wallet address to view your mining dashboard and
+            rewards. No wallet connection required.
           </p>
 
-          {/* Connect button */}
-          <ConnectButton size="lg" />
+          {/* Address input */}
+          <div className="max-w-sm mx-auto">
+            <AddressInput size="lg" fullWidth />
+          </div>
+
+          {/* Security note */}
+          <p className="text-xs text-zinc-500 mt-4">
+            Your address is stored locally. No signing or permissions needed.
+          </p>
         </div>
       </TerminalCard>
     </div>
