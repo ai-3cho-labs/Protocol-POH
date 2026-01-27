@@ -41,7 +41,7 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest tests/ -v --tb=short
+          PYTHONPATH=. pytest tests/ -v --tb=short
         env:
           ENVIRONMENT: test
           TEST_MODE: "true"

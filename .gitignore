@@ -112,6 +112,7 @@ DEAD_CODE_AUDIT.md
 TODO.md
 ARCHITECTURE.md
 debug.md
+*.txt
 
 # Local scripts
 backend/env-switch.py

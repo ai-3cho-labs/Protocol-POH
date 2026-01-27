@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  output: 'export',
 
   // ESLint is run separately in CI
   eslint: {
@@ -15,9 +16,9 @@ const nextConfig = {
     NEXT_PUBLIC_COPPER_TOKEN_MINT: process.env.NEXT_PUBLIC_COPPER_TOKEN_MINT,
   },
 
-  // Image optimization
+  // Image optimization (unoptimized for static export)
   images: {
-    remotePatterns: [],
+    unoptimized: true,
   },
 
   // Webpack configuration for Solana wallet adapter
