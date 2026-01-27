@@ -389,7 +389,7 @@ export async function generateShareCard(
   ctx.fillStyle = COLORS.gray600;
   ctx.font = '500 12px Inter, system-ui, sans-serif';
   ctx.textAlign = 'left';
-  ctx.fillText('cpuonsolana.com', 40, footerY + 24);
+  ctx.fillText('https://cpu-mine.xyz/', 40, footerY + 24);
 
   // Timestamp
   ctx.textAlign = 'right';
