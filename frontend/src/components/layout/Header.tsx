@@ -24,21 +24,15 @@ export function Header() {
       <div className="container mx-auto px-6">
         <div className="relative flex items-center justify-between h-16">
           {/* Logo - Left */}
-          <Link
-            href="/"
-            className="flex items-center gap-2 group"
-          >
+          <Link href="/" className="flex items-center group">
             <Image
               src="/logo.jpg"
-              alt="CPU Logo"
-              width={40}
-              height={40}
-              className="rounded"
+              alt="CPU"
+              width={48}
+              height={48}
+              className="rounded group-hover:opacity-90 transition-opacity"
               priority
             />
-            <span className="text-2xl font-bold text-white glow-white group-hover:text-gray-200 transition-colors">
-              CPU
-            </span>
           </Link>
 
           {/* Navigation - Centered */}
