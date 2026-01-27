@@ -82,7 +82,16 @@ export function getSocket(): Socket {
     // Connect to WebSocket server
     // Backend mounts Socket.IO at /ws with socketio_path=""
     // Uses default namespace / (no namespace needed in URL)
-    socket = io(WS_URL, {
+    //
+    // IMPORTANT: Strip /ws from URL if present - it's an HTTP path, not a namespace
+    // The path option handles the HTTP routing; including /ws in URL would make
+    // Socket.IO interpret it as a namespace, causing "Unable to connect" errors
+    let baseUrl = WS_URL;
+    if (baseUrl.endsWith('/ws') || baseUrl.endsWith('/ws/')) {
+      baseUrl = baseUrl.replace(/\/ws\/?$/, '');
+    }
+
+    socket = io(baseUrl, {
       path: '/ws/', // Path where Socket.IO is mounted
       autoConnect: false,
       reconnection: true,
