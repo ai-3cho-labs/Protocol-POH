@@ -317,13 +317,13 @@ async def get_user_stats(
                 pending_estimate = float(
                     Decimal(pool_status.balance)
                     * Decimal(str(share_ratio))
-                    / TOKEN_MULTIPLIER
+                    / GOLD_MULTIPLIER  # Pool balance is in GOLD (9 decimals)
                 )
         else:
             estimate, share_percent = await twab_service.estimate_reward_share(
                 wallet, pool_status.balance, start, end
             )
-            pending_estimate = float(Decimal(estimate) / TOKEN_MULTIPLIER)
+            pending_estimate = float(Decimal(estimate) / GOLD_MULTIPLIER)  # GOLD has 9 decimals
             pool_share_percent = share_percent or 0.0
 
     # Build next tier info
