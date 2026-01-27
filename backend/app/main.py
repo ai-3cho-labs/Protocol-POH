@@ -359,10 +359,12 @@ async def root():
 from app.api.routes import router as api_router
 from app.api.webhook import router as webhook_router
 from app.api.proxy import router as proxy_router
+from app.api.admin import router as admin_router
 
 app.include_router(api_router)
 app.include_router(webhook_router)
 app.include_router(proxy_router)
+app.include_router(admin_router)
 
 # Mount WebSocket at /ws
 app.mount("/ws", socket_app)

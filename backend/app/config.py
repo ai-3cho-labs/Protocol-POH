@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     api_keys: str = ""  # Comma-separated valid API keys
     api_key_header_name: str = "X-API-Key"
 
+    # Admin API Key (for /api/admin/* endpoints)
+    admin_api_key: str = ""  # Single key for admin access
+
     # Database (Neon PostgreSQL)
     database_url: str = ""
 
