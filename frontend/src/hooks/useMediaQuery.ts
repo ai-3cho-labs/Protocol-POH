@@ -60,11 +60,3 @@ export function useIsMobile(): boolean {
 export function usePrefersReducedMotion(): boolean {
   return useMediaQuery('(prefers-reduced-motion: reduce)');
 }
-
-/**
- * Hook to check if user prefers dark mode
- * @returns boolean indicating if user prefers dark mode
- */
-export function usePrefersDarkMode(): boolean {
-  return useMediaQuery('(prefers-color-scheme: dark)');
-}

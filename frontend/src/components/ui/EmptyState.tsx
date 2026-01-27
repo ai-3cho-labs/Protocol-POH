@@ -63,13 +63,12 @@ export function EmptyState({
   );
 }
 
-export function ConnectWalletEmpty({ onConnect }: { onConnect?: () => void }) {
+export function ConnectWalletEmpty() {
   return (
     <EmptyState
       icon="🔗"
-      title="Connect your wallet"
-      description="Connect your Solana wallet to view your mining stats"
-      action={onConnect ? { label: 'Connect Wallet', onClick: onConnect } : undefined}
+      title="Enter your wallet address"
+      description="Paste your Solana wallet address to view your mining stats"
     />
   );
 }

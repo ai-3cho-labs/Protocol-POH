@@ -23,17 +23,14 @@ export type { PixelIconProps } from './PixelIcon';
 export {
   LoadingSpinner,
   LoadingPage,
-  LoadingInline,
 } from './LoadingSpinner';
 export type { LoadingSpinnerProps } from './LoadingSpinner';
 
 // Skeleton
 export {
   Skeleton,
-  SkeletonText,
   SkeletonCard,
   SkeletonListItem,
-  SkeletonStats,
 } from './Skeleton';
 export type { SkeletonProps } from './Skeleton';
 

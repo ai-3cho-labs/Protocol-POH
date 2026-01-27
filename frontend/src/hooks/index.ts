@@ -11,7 +11,6 @@ export {
   useIsDesktop,
   useIsMobile,
   usePrefersReducedMotion,
-  usePrefersDarkMode,
 } from './useMediaQuery';
 
 // Utility hooks
@@ -27,8 +26,6 @@ export {
   useUserHistory,
   useLeaderboard,
   usePoolStatus,
-  useDistributions,
-  useTiers,
 } from './api';
 
 // WebSocket hooks

@@ -47,33 +47,6 @@ export function Skeleton({
 }
 
 /**
- * Skeleton for text lines
- */
-export function SkeletonText({
-  lines = 1,
-  className,
-}: {
-  lines?: number;
-  className?: string;
-}) {
-  return (
-    <div className={cn('space-y-2', className)}>
-      {Array.from({ length: lines }).map((_, i) => (
-        <Skeleton
-          key={i}
-          className={cn(
-            'h-4',
-            // Last line is shorter
-            i === lines - 1 && lines > 1 && 'w-3/4'
-          )}
-          rounded
-        />
-      ))}
-    </div>
-  );
-}
-
-/**
  * Skeleton for a card
  */
 export function SkeletonCard({ className }: { className?: string }) {
@@ -106,18 +79,6 @@ export function SkeletonListItem({ className }: { className?: string }) {
         <Skeleton className="h-3 w-1/2" rounded />
       </div>
       <Skeleton className="h-4 w-16" rounded />
-    </div>
-  );
-}
-
-/**
- * Skeleton for stats display
- */
-export function SkeletonStats({ className }: { className?: string }) {
-  return (
-    <div className={cn('space-y-1', className)}>
-      <Skeleton className="h-3 w-16" rounded />
-      <Skeleton className="h-6 w-24" rounded />
     </div>
   );
 }

@@ -7,5 +7,3 @@ export { useUserStats, userStatsQueryKey } from './useUserStats';
 export { useUserHistory, userHistoryQueryKey } from './useUserHistory';
 export { useLeaderboard, leaderboardQueryKey } from './useLeaderboard';
 export { usePoolStatus, POOL_STATUS_QUERY_KEY } from './usePoolStatus';
-export { useDistributions, distributionsQueryKey } from './useDistributions';
-export { useTiers, TIERS_QUERY_KEY } from './useTiers';

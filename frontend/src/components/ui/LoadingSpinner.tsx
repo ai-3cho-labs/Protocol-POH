@@ -94,15 +94,3 @@ export function LoadingPage({ text = 'Loading...' }: { text?: string }) {
     </div>
   );
 }
-
-/**
- * Inline loading indicator
- */
-export function LoadingInline({ text }: { text?: string }) {
-  return (
-    <span className="inline-flex items-center gap-1 text-gray-500">
-      <LoadingSpinner size="sm" variant="dots" />
-      {text && <span className="text-sm">{text}</span>}
-    </span>
-  );
-}
