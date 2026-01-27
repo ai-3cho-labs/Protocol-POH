@@ -54,23 +54,9 @@ async def setup_redis_adapter() -> None:
 
     try:
         # Use Redis manager for pub/sub across workers
-        # Must set server reference for manager to work properly
-        # For Upstash (rediss://), we need proper SSL config
-        import ssl
-
-        redis_url = settings.redis_url
-
-        # Create SSL context for Upstash TLS connections
-        if redis_url.startswith("rediss://"):
-            ssl_context = ssl.create_default_context()
-            ssl_context.check_hostname = True
-            ssl_context.verify_mode = ssl.CERT_REQUIRED
-            mgr = socketio.AsyncRedisManager(
-                redis_url, redis_options={"ssl": ssl_context}
-            )
-        else:
-            mgr = socketio.AsyncRedisManager(redis_url)
-
+        # The rediss:// scheme automatically handles SSL/TLS
+        # No need for explicit ssl_context - redis-py handles it
+        mgr = socketio.AsyncRedisManager(settings.redis_url)
         mgr.set_server(sio)
         sio.manager = mgr
         logger.info("WebSocket Redis adapter initialized")
