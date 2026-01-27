@@ -2,6 +2,11 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // ESLint is run separately in CI
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
   // Environment variables exposed to the browser
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,

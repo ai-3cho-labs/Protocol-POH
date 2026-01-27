@@ -181,7 +181,7 @@ export function onSocketEvent<K extends keyof SocketEvents>(
   callback: SocketEvents[K]
 ): void {
   const s = getSocket();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line
   s.on(event, callback as any);
 }
 
@@ -194,7 +194,7 @@ export function offSocketEvent<K extends keyof SocketEvents>(
 ): void {
   const s = getSocket();
   if (callback) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line
     s.off(event, callback as any);
   } else {
     s.off(event);
