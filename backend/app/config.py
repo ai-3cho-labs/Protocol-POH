@@ -59,13 +59,14 @@ class Settings(BaseSettings):
     # Helius API
     helius_api_key: str = ""
     helius_webhook_secret: str = ""
+    helius_webhook_ips: str = ""  # Comma-separated IP allowlist (optional)
 
     # Solana RPC (override for custom RPC, otherwise uses Helius)
     solana_rpc_url: str = ""
 
     # Wallet Private Keys (Base58 encoded)
+    # Note: Buybacks use creator_wallet - no separate buyback wallet needed
     creator_wallet_private_key: str = ""
-    buyback_wallet_private_key: str = ""
     airdrop_pool_private_key: str = ""
     team_wallet_public_key: str = ""
     algo_bot_wallet_public_key: str = ""

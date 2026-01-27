@@ -541,10 +541,40 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
         f"team={split.team_sol} SOL"
     )
 
-    # Execute buyback (40% → reward pool)
-    result = await service.execute_swap(
-        split.buyback_sol, settings.creator_wallet_private_key
+    # Step 1: Transfer 40% SOL from CREATOR → AIRDROP_POOL for buyback
+    pool_transfer_tx = None
+    if settings.airdrop_pool_private_key and settings.creator_wallet_private_key:
+        from app.utils.solana_tx import keypair_from_base58
+
+        pool_keypair = keypair_from_base58(settings.airdrop_pool_private_key)
+        pool_address = str(pool_keypair.pubkey())
+
+        pool_transfer_tx = await transfer_to_team_wallet(
+            amount_sol=split.buyback_sol,
+            from_private_key=settings.creator_wallet_private_key,
+            to_address=pool_address,
+        )
+        if pool_transfer_tx:
+            logger.info(f"Pool transfer: {pool_transfer_tx}, {split.buyback_sol} SOL")
+        else:
+            logger.error("Pool transfer failed")
+    else:
+        logger.error("Pool transfer skipped: missing configuration")
+
+    # Step 2: Execute buyback swap from AIRDROP_POOL (SOL → GOLD)
+    result = BuybackResult(
+        success=False,
+        tx_signature=None,
+        sol_spent=Decimal(0),
+        copper_received=0,
+        price_per_token=None,
+        error="Pool transfer failed",
     )
+
+    if pool_transfer_tx:
+        result = await service.execute_swap(
+            split.buyback_sol, settings.airdrop_pool_private_key
+        )
 
     buyback_success = result.success and result.tx_signature
 

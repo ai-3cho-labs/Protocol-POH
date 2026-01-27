@@ -399,14 +399,13 @@ class DevnetSetup:
         print("SOLANA_NETWORK=devnet")
         print()
 
-        # Main wallet
+        # Main wallet (Creator wallet also handles buybacks)
         main_wallet = self.load_keypair(self.main_wallet_path)
         if main_wallet:
             private_key = base58.b58encode(bytes(main_wallet)).decode()
-            print("# Main Wallet (Creator/Buyback/Distribution)")
+            print("# Main Wallet (Creator + Buyback / Distribution)")
             print(f"TEAM_WALLET_PUBLIC_KEY={main_wallet.pubkey()}")
             print(f"CREATOR_WALLET_PRIVATE_KEY={private_key}")
-            print(f"BUYBACK_WALLET_PRIVATE_KEY={private_key}")
             print(f"AIRDROP_POOL_PRIVATE_KEY={private_key}")
             print()
 

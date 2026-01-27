@@ -197,9 +197,9 @@ async def lifespan(app: FastAPI):
             logger.error("CRITICAL: GOLD token mint not configured")
 
         # SECURITY: Validate wallet private keys - FAIL HARD if invalid in production
+        # Note: BUYBACK_WALLET not required - buybacks use CREATOR_WALLET
         wallet_keys = [
             ("CREATOR_WALLET", settings.creator_wallet_private_key),
-            ("BUYBACK_WALLET", settings.buyback_wallet_private_key),
             ("AIRDROP_POOL", settings.airdrop_pool_private_key),
         ]
         wallet_validation_errors = []
