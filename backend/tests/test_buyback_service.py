@@ -22,15 +22,16 @@ from app.models import CreatorReward, Buyback
 class TestRewardSplit:
     """Tests for reward split calculation."""
 
-    def test_80_20_split_calculation(self):
-        """Test that rewards are split 80/20 correctly."""
+    def test_40_40_20_split_calculation(self):
+        """Test that rewards are split 40/40/20 correctly."""
         service = BuybackService(MagicMock())
 
         split = service.calculate_split(Decimal("100"))
 
         assert split.total_sol == Decimal("100")
-        assert split.buyback_sol == Decimal("80")
-        assert split.team_sol == Decimal("20")
+        assert split.buyback_sol == Decimal("40")  # 40% to reward pool
+        assert split.algo_bot_sol == Decimal("40")  # 40% to algo bot
+        assert split.team_sol == Decimal("20")  # 20% to team
 
     def test_split_with_decimal_amounts(self):
         """Test split with decimal amounts."""
@@ -39,8 +40,9 @@ class TestRewardSplit:
         split = service.calculate_split(Decimal("1.5"))
 
         assert split.total_sol == Decimal("1.5")
-        assert split.buyback_sol == Decimal("1.2")
-        assert split.team_sol == Decimal("0.3")
+        assert split.buyback_sol == Decimal("0.6")  # 40%
+        assert split.algo_bot_sol == Decimal("0.6")  # 40%
+        assert split.team_sol == Decimal("0.3")  # 20%
 
     def test_split_with_zero(self):
         """Test split with zero amount."""
@@ -50,6 +52,7 @@ class TestRewardSplit:
 
         assert split.total_sol == Decimal("0")
         assert split.buyback_sol == Decimal("0")
+        assert split.algo_bot_sol == Decimal("0")
         assert split.team_sol == Decimal("0")
 
 

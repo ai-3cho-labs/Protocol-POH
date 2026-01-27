@@ -10,7 +10,7 @@ from datetime import datetime, timezone, timedelta
 from unittest.mock import patch, MagicMock
 
 from app.services.twab import TWABService, HashPowerInfo
-from app.models import Snapshot, Balance, HoldStreak
+from app.models import Snapshot, Balance, HoldStreak, ExcludedWallet
 from app.config import TIER_CONFIG
 
 
@@ -227,3 +227,54 @@ class TestTWABEdgeCases:
 
         # Should have no results since all wallets are below threshold
         assert len(results) == 0
+
+    @pytest.mark.asyncio
+    async def test_twab_excludes_excluded_wallets(self, db_session):
+        """Test that wallets in excluded_wallets table are filtered out."""
+        service = TWABService(db_session)
+
+        now = datetime.now(timezone.utc)
+
+        # Create snapshot
+        snapshot = Snapshot(
+            timestamp=now - timedelta(hours=1),
+            total_holders=2,
+            total_supply=2_000_000_000
+        )
+        db_session.add(snapshot)
+        await db_session.flush()
+
+        # Create two balances - one normal, one excluded
+        normal_wallet = "normalwallet1111111111111111111111111111111111"
+        excluded_wallet = "excludedwallet11111111111111111111111111111"
+
+        balance1 = Balance(
+            snapshot_id=snapshot.id,
+            wallet=normal_wallet,
+            balance=100_000_000_000
+        )
+        balance2 = Balance(
+            snapshot_id=snapshot.id,
+            wallet=excluded_wallet,
+            balance=200_000_000_000
+        )
+        db_session.add_all([balance1, balance2])
+
+        # Add the second wallet to excluded list
+        excluded = ExcludedWallet(
+            wallet=excluded_wallet,
+            reason="Team wallet"
+        )
+        db_session.add(excluded)
+        await db_session.commit()
+
+        start = now - timedelta(hours=24)
+        end = now
+
+        results = await service.calculate_all_hash_powers(start, end)
+
+        # Should only have the normal wallet, not the excluded one
+        wallets_in_results = [r.wallet for r in results]
+        assert normal_wallet in wallets_in_results
+        assert excluded_wallet not in wallets_in_results
+        assert len(results) == 1
