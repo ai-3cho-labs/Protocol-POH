@@ -117,3 +117,7 @@ debug.md
 # Local scripts
 backend/env-switch.py
 backend/scripts/load_test_twab.py
+
+
+# Remotion
+remotion/

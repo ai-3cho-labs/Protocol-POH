@@ -16,23 +16,61 @@ from app.websocket import emit_snapshot_taken
 logger = logging.getLogger(__name__)
 
 
+@celery_app.task(name="app.tasks.snapshot_task.take_snapshot")
+def take_snapshot() -> dict:
+    """
+    Take a balance snapshot (always executes).
+
+    Called every 15 minutes for consistent TWAB calculation.
+    """
+    return run_async(_take_snapshot())
+
+
+async def _take_snapshot() -> dict:
+    """Async implementation of take_snapshot."""
+    session_maker = get_worker_session_maker()
+    async with session_maker() as db:
+        service = SnapshotService(db)
+
+        # Take snapshot (no RNG check)
+        snapshot = await service.take_snapshot()
+
+        if snapshot:
+            # Emit WebSocket event
+            await emit_snapshot_taken(snapshot.created_at)
+
+            logger.info(
+                f"Snapshot taken: {snapshot.total_holders} holders, "
+                f"supply={snapshot.total_supply}"
+            )
+
+            return {
+                "status": "success",
+                "snapshot_id": str(snapshot.id),
+                "holders": snapshot.total_holders,
+                "supply": snapshot.total_supply,
+            }
+        else:
+            return {"status": "failed", "reason": "snapshot_error"}
+
+
 @celery_app.task(name="app.tasks.snapshot_task.maybe_take_snapshot")
 def maybe_take_snapshot() -> dict:
     """
-    Maybe take a balance snapshot (40% probability).
+    Legacy: Maybe take a balance snapshot (40% probability).
 
-    Called hourly to achieve 3-6 snapshots per day.
+    Deprecated: Use take_snapshot instead. Kept for backwards compatibility.
     """
     return run_async(_maybe_take_snapshot())
 
 
 async def _maybe_take_snapshot() -> dict:
-    """Async implementation of maybe_take_snapshot."""
+    """Async implementation of maybe_take_snapshot (legacy)."""
     session_maker = get_worker_session_maker()
     async with session_maker() as db:
         service = SnapshotService(db)
 
-        # RNG check
+        # RNG check (legacy behavior)
         if not service.should_take_snapshot():
             logger.info("Snapshot RNG: skipping this hour")
             return {"status": "skipped", "reason": "rng"}

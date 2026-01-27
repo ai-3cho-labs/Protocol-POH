@@ -11,10 +11,10 @@ export interface LiveStatsBarProps {
   holders: number;
   /** Total GOLD distributed */
   totalDistributed: number;
-  /** 24h volume (USD) */
-  volume24h: number;
   /** Pool value (USD) */
   poolValueUsd: number;
+  /** Pool balance (GOLD) - used to calculate GOLD price */
+  poolBalance: number;
   /** Hours until next distribution */
   hoursUntilNext: number | null;
   /** Is loading */
@@ -30,8 +30,8 @@ export interface LiveStatsBarProps {
 export function LiveStatsBar({
   holders,
   totalDistributed,
-  volume24h,
   poolValueUsd,
+  poolBalance,
   hoursUntilNext,
   isLoading = false,
   className,
@@ -39,10 +39,13 @@ export function LiveStatsBar({
   const countdown = useCountdown(hoursUntilNext);
   const { status: socketStatus } = useSocketContext();
 
+  // Calculate GOLD price from pool data
+  const goldPrice = poolBalance > 0 ? poolValueUsd / poolBalance : 0;
+  const distributedUsd = totalDistributed * goldPrice;
+
   // Animated number values for smooth count-up effect
   const animatedHolders = useAnimatedNumber(holders, 800);
-  const animatedDistributed = useAnimatedNumber(totalDistributed, 800);
-  const animatedVolume = useAnimatedNumber(volume24h, 800);
+  const animatedDistributedUsd = useAnimatedNumber(distributedUsd, 800);
   const animatedPool = useAnimatedNumber(poolValueUsd, 800);
 
   if (isLoading) {
@@ -73,12 +76,7 @@ export function LiveStatsBar({
           <Divider />
           <StatItem
             label="DISTRIBUTED"
-            value={`${formatCompactNumber(Math.round(animatedDistributed))} $GOLD`}
-          />
-          <Divider />
-          <StatItem
-            label="24H VOLUME"
-            value={formatUSD(animatedVolume, true)}
+            value={formatUSD(animatedDistributedUsd, true)}
           />
           <Divider />
           <StatItem
@@ -101,10 +99,9 @@ export function LiveStatsBar({
             <ConnectionIndicator socketStatus={socketStatus} compact />
           </div>
           {/* Stats grid */}
-          <div className="grid grid-cols-5 gap-1">
+          <div className="grid grid-cols-4 gap-1">
             <MobileStatItem label="Miners" value={formatCompactNumber(Math.round(animatedHolders))} />
-            <MobileStatItem label="Distributed" value={`${formatCompactNumber(Math.round(animatedDistributed))}`} />
-            <MobileStatItem label="Volume" value={formatUSD(animatedVolume, true)} />
+            <MobileStatItem label="Distributed" value={formatUSD(animatedDistributedUsd, true)} />
             <MobileStatItem
               label="Pool"
               value={formatUSD(animatedPool)}

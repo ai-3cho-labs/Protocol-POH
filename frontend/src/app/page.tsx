@@ -20,8 +20,8 @@ export default function HomePage() {
       <LiveStatsBar
         holders={globalStats.data?.total_holders ?? 0}
         totalDistributed={globalStats.data?.total_distributed ?? 0}
-        volume24h={globalStats.data?.total_volume_24h ?? 0}
         poolValueUsd={poolStatus.data?.valueUsd ?? 0}
+        poolBalance={poolStatus.data?.balance ?? 0}
         hoursUntilNext={poolStatus.data?.hoursUntilTrigger ?? null}
         isLoading={globalStats.isLoading || poolStatus.isLoading}
       />

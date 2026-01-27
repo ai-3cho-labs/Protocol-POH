@@ -8,7 +8,7 @@ import logging
 
 from app.tasks.celery_app import celery_app
 from app.database import get_worker_session_maker
-from app.services.distribution import DistributionService, check_and_distribute
+from app.services.distribution import DistributionService
 from app.utils.async_utils import run_async
 
 logger = logging.getLogger(__name__)
@@ -17,17 +17,16 @@ logger = logging.getLogger(__name__)
 @celery_app.task(name="app.tasks.distribution_task.check_distribution_triggers")
 def check_distribution_triggers() -> dict:
     """
-    Check if distribution should be triggered.
+    Execute hourly distribution.
 
-    Triggers:
-    - Pool value >= $250 USD (threshold)
-    - 24 hours since last distribution (time)
+    Distributes all GOLD in the pool to eligible holders every hour.
+    No threshold or time triggers - just distributes if pool > 0.
     """
     return run_async(_check_distribution_triggers())
 
 
 async def _check_distribution_triggers() -> dict:
-    """Async implementation of check_distribution_triggers."""
+    """Async implementation of check_distribution_triggers (hourly distribution)."""
     session_maker = get_worker_session_maker()
     async with session_maker() as db:
         service = DistributionService(db)
@@ -37,36 +36,50 @@ async def _check_distribution_triggers() -> dict:
             status = await service.get_pool_status()
 
             logger.info(
-                f"Distribution check: "
-                f"pool=${status.value_usd:.2f}, "
-                f"threshold_met={status.threshold_met}, "
-                f"time_trigger_met={status.time_trigger_met}"
+                f"Hourly distribution: pool={status.balance_formatted}, "
+                f"value=${status.value_usd:.2f}"
             )
 
-            if not status.should_distribute:
+            # Skip if pool is empty
+            if status.balance <= 0:
+                logger.info("Hourly distribution: skipped (pool empty)")
                 return {
                     "status": "skipped",
-                    "pool_value_usd": float(status.value_usd),
-                    "threshold_met": status.threshold_met,
-                    "time_trigger_met": status.time_trigger_met,
+                    "reason": "pool_empty",
+                    "pool_balance": status.balance,
+                }
+
+            # Calculate distribution plan
+            plan = await service.calculate_distribution()
+
+            if not plan:
+                logger.info("Hourly distribution: skipped (no eligible recipients)")
+                return {
+                    "status": "skipped",
+                    "reason": "no_eligible_recipients",
+                    "pool_balance": status.balance,
                 }
 
             # Execute distribution
-            distribution = await check_and_distribute(db)
+            distribution = await service.execute_distribution(plan)
 
             if distribution:
+                logger.info(
+                    f"Hourly distribution: success - "
+                    f"{distribution.pool_amount} GOLD to {distribution.recipient_count} recipients"
+                )
                 return {
                     "status": "success",
                     "distribution_id": str(distribution.id),
                     "pool_amount": distribution.pool_amount,
                     "recipient_count": distribution.recipient_count,
-                    "trigger_type": distribution.trigger_type,
+                    "trigger_type": "hourly",
                 }
             else:
                 return {"status": "failed", "reason": "distribution_error"}
 
         except Exception as e:
-            logger.error(f"Error in distribution check: {e}")
+            logger.error(f"Error in hourly distribution: {e}")
             return {"status": "error", "error": str(e)}
 
 

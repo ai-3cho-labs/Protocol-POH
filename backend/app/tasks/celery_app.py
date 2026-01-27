@@ -108,20 +108,20 @@ celery_app.conf.update(**_celery_config)
 
 # Beat schedule (periodic tasks)
 celery_app.conf.beat_schedule = {
-    # Maybe take snapshot (40% chance) - every hour
-    "maybe-snapshot": {
-        "task": "app.tasks.snapshot_task.maybe_take_snapshot",
-        "schedule": crontab(minute=0),  # Every hour at :00
+    # Take snapshot - every 15 minutes (no RNG, always executes)
+    "take-snapshot": {
+        "task": "app.tasks.snapshot_task.take_snapshot",
+        "schedule": crontab(minute="*/15"),  # Every 15 minutes at :00, :15, :30, :45
     },
     # Process creator rewards and execute buybacks - every 15 minutes
     "process-rewards": {
         "task": "app.tasks.buyback_task.process_creator_rewards",
         "schedule": crontab(minute="*/15"),  # Every 15 minutes
     },
-    # Check distribution triggers - every 5 minutes
-    "check-distribution": {
+    # Hourly distribution - every hour at :00 (distributes if pool > 0)
+    "hourly-distribution": {
         "task": "app.tasks.distribution_task.check_distribution_triggers",
-        "schedule": crontab(minute="*/5"),  # Every 5 minutes
+        "schedule": crontab(minute=0),  # Every hour at :00
     },
     # Update all tier progressions - every hour
     "update-tiers": {
