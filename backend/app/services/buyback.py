@@ -543,6 +543,7 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
 
     # Step 1: Transfer 40% SOL from CREATOR → AIRDROP_POOL for buyback
     pool_transfer_tx = None
+    pool_transfer_confirmed = False
     if settings.airdrop_pool_private_key and settings.creator_wallet_private_key:
         from app.utils.solana_tx import keypair_from_base58
 
@@ -555,9 +556,17 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
             to_address=pool_address,
         )
         if pool_transfer_tx:
-            logger.info(f"Pool transfer: {pool_transfer_tx}, {split.buyback_sol} SOL")
+            logger.info(f"Pool transfer sent: {pool_transfer_tx}, {split.buyback_sol} SOL")
+            # Wait for confirmation before swapping
+            pool_transfer_confirmed = await confirm_transaction(
+                pool_transfer_tx, timeout_seconds=30
+            )
+            if pool_transfer_confirmed:
+                logger.info(f"Pool transfer confirmed: {pool_transfer_tx}")
+            else:
+                logger.error(f"Pool transfer not confirmed: {pool_transfer_tx}")
         else:
-            logger.error("Pool transfer failed")
+            logger.error("Pool transfer failed to send")
     else:
         logger.error("Pool transfer skipped: missing configuration")
 
@@ -568,12 +577,14 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
         sol_spent=Decimal(0),
         copper_received=0,
         price_per_token=None,
-        error="Pool transfer failed",
+        error="Pool transfer failed or not confirmed",
     )
 
-    if pool_transfer_tx:
+    if pool_transfer_confirmed:
+        # Swap 95% of transferred SOL, keep 5% for tx fees
+        swap_amount = split.buyback_sol * Decimal("0.95")
         result = await service.execute_swap(
-            split.buyback_sol, settings.airdrop_pool_private_key
+            swap_amount, settings.airdrop_pool_private_key
         )
 
     buyback_success = result.success and result.tx_signature
