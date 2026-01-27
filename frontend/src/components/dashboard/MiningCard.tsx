@@ -94,7 +94,7 @@ export function MiningCard({
           <div className="pt-3 border-t border-zinc-800 lg:border-terminal-border">
             <div className="flex items-center justify-between">
               <span className="text-xs text-zinc-500 lg:font-mono lg:text-gray-500">
-                PENDING REWARD
+                EARNED REWARD
               </span>
               <span className="text-sm font-medium text-white glow-white lg:font-mono">
                 +{formatGOLD(data.pendingReward)} $GOLD

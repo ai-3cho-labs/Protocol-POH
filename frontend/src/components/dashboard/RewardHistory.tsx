@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { cn } from '@/lib/cn';
 import {
   formatCompactNumber,
   formatGOLD,
@@ -76,10 +75,11 @@ export function RewardHistory({
           <>
             {/* Desktop Table Header */}
             <div className="hidden lg:grid grid-cols-12 gap-2 px-2 py-1 text-xs font-mono text-gray-500 border-b border-terminal-border">
-              <div className="col-span-3">DATE</div>
+              <div className="col-span-2">DATE</div>
               <div className="col-span-3 text-right">AMOUNT</div>
               <div className="col-span-3 text-right">HASH PWR</div>
-              <div className="col-span-3 text-right">SHARE</div>
+              <div className="col-span-2 text-right">SHARE</div>
+              <div className="col-span-2 text-right">TX</div>
             </div>
 
             {/* History Items */}
@@ -119,23 +119,33 @@ export function RewardHistory({
  * Single reward row
  */
 function RewardRow({ item }: { item: RewardHistoryItem }) {
-  const solscanUrl = item.txSignature
-    ? `https://solscan.io/tx/${item.txSignature}`
-    : null;
-
-  const content = (
-    <>
+  return (
+    <div className="px-2 py-1.5 -mx-1">
       {/* Desktop Layout */}
       <div className="hidden lg:grid grid-cols-12 gap-2 items-center font-mono text-sm">
-        <div className="col-span-3 text-zinc-400">{item.timeAgo}</div>
+        <div className="col-span-2 text-zinc-400">{item.timeAgo}</div>
         <div className="col-span-3 text-right text-white glow-white">
           +{formatGOLD(item.amount)}
         </div>
         <div className="col-span-3 text-right text-zinc-400">
           {formatCompactNumber(item.hashPower)}
         </div>
-        <div className="col-span-3 text-right text-white">
+        <div className="col-span-2 text-right text-white">
           {formatPercent(item.sharePercent, 2)}
+        </div>
+        <div className="col-span-2 text-right">
+          {item.txSignature ? (
+            <a
+              href={`https://solscan.io/tx/${item.txSignature}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-amber-400 hover:text-amber-300 transition-colors"
+            >
+              {item.txSignature.slice(0, 4)}...{item.txSignature.slice(-4)}
+            </a>
+          ) : (
+            <span className="text-zinc-600">-</span>
+          )}
         </div>
       </div>
 
@@ -149,29 +159,22 @@ function RewardRow({ item }: { item: RewardHistoryItem }) {
         </div>
         <div className="flex items-center justify-between text-xs text-zinc-500 mt-0.5">
           <span>HP: {formatCompactNumber(item.hashPower)}</span>
-          <span>Share: {formatPercent(item.sharePercent, 2)}</span>
+          {item.txSignature ? (
+            <a
+              href={`https://solscan.io/tx/${item.txSignature}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-amber-400 hover:text-amber-300"
+            >
+              TX: {item.txSignature.slice(0, 4)}...
+            </a>
+          ) : (
+            <span>Share: {formatPercent(item.sharePercent, 2)}</span>
+          )}
         </div>
       </div>
-    </>
+    </div>
   );
-
-  if (solscanUrl) {
-    return (
-      <a
-        href={solscanUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={cn(
-          'block px-2 py-1.5 -mx-1 rounded',
-          'transition-colors hover:bg-zinc-800/50'
-        )}
-      >
-        {content}
-      </a>
-    );
-  }
-
-  return <div className="px-2 py-1.5 -mx-1">{content}</div>;
 }
 
 /**

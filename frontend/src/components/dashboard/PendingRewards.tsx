@@ -1,6 +1,6 @@
 'use client';
 
-import { formatUSD, formatCompactNumber, formatGOLD, calculateEarningRate, formatEarningRate } from '@/lib/utils';
+import { formatUSD, formatGOLD, calculateEarningRate, formatEarningRate } from '@/lib/utils';
 import type { PoolInfo } from '@/types/models';
 import { PAYOUT_THRESHOLD_USD } from '@/types/models';
 import {

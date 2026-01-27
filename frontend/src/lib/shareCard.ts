@@ -4,7 +4,7 @@
  */
 
 import type { UserMiningStats } from '@/types/models';
-import { formatCompactNumber, formatMultiplier, formatNumber, shortenAddress } from './utils';
+import { formatCompactNumber, formatGOLD, formatMultiplier, shortenAddress } from './utils';
 
 // Card dimensions (optimized for social sharing)
 const CARD_WIDTH = 800;
@@ -278,7 +278,7 @@ export async function generateShareCard(
   const cardGap = 8;
   const bottomCardWidth = (rightWidth - cardGap * 2) / 3;
 
-  // Card 1: Pending Rewards
+  // Card 1: Earned Rewards
   roundRect(ctx, rightX, bottomRowY, bottomCardWidth, bottomCardHeight, 10);
   ctx.fillStyle = COLORS.cardBg;
   ctx.fill();
@@ -289,13 +289,13 @@ export async function generateShareCard(
   ctx.textAlign = 'center';
   ctx.fillStyle = COLORS.gray500;
   ctx.font = '600 9px Inter, system-ui, sans-serif';
-  ctx.fillText('PENDING', rightX + bottomCardWidth / 2, bottomRowY + 18);
+  ctx.fillText('EARNED', rightX + bottomCardWidth / 2, bottomRowY + 18);
 
   ctx.fillStyle = COLORS.amberLight;
   ctx.font = 'bold 20px Inter, system-ui, sans-serif';
   const pendingValue = stats.pendingReward >= 1
     ? `+${formatCompactNumber(Math.floor(stats.pendingReward))}`
-    : `+${formatNumber(stats.pendingReward, 2)}`;
+    : `+${formatGOLD(stats.pendingReward)}`;
   ctx.fillText(pendingValue, rightX + bottomCardWidth / 2, bottomRowY + 42);
 
   ctx.fillStyle = COLORS.gray500;
