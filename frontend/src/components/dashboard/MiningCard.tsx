@@ -4,6 +4,7 @@ import { cn } from '@/lib/cn';
 import {
   formatCPU,
   formatCompactNumber,
+  formatGOLD,
   formatMultiplier,
 } from '@/lib/utils';
 import type { UserMiningStats } from '@/types/models';
@@ -96,7 +97,7 @@ export function MiningCard({
                 PENDING REWARD
               </span>
               <span className="text-sm font-medium text-white glow-white lg:font-mono">
-                +{formatCompactNumber(data.pendingReward)} $GOLD
+                +{formatGOLD(data.pendingReward)} $GOLD
               </span>
             </div>
           </div>

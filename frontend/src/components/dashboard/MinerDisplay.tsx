@@ -6,6 +6,7 @@ import { useUserStats, usePoolStatus, useGlobalStats, useUserHistory } from '@/h
 import { useTickingCounter, useCountdown } from '@/hooks/useCountdown';
 import {
   formatCompactNumber,
+  formatGOLD,
   formatMultiplier,
   calculateEarningRate,
   formatEarningRate,
@@ -430,7 +431,7 @@ function RightPanel({
           Earned Rewards
         </div>
         <div className="text-5xl font-bold text-amber-400 font-mono tabular-nums drop-shadow-[0_0_20px_rgba(251,191,36,0.5)]">
-          +{formatCompactNumber(Math.floor(tickingReward))}
+          +{formatGOLD(tickingReward)}
         </div>
         <div className="text-lg text-amber-400/80 mt-1">$GOLD</div>
         <div className="text-xl text-white mt-1 font-mono">
@@ -523,7 +524,7 @@ function RightPanel({
             Pool Balance
           </div>
           <div className="text-lg font-bold text-white font-mono">
-            {formatCompactNumber(pool?.balance ?? 0)}
+            {formatGOLD(pool?.balance ?? 0)}
           </div>
           <div className="text-xs text-gray-500">GOLD</div>
         </PanelCard>
@@ -607,7 +608,7 @@ function RewardsHeroMobile({
         Earned Rewards
       </div>
       <div className="text-4xl font-bold text-amber-400 font-mono tabular-nums drop-shadow-[0_0_16px_rgba(251,191,36,0.5)]">
-        +{formatCompactNumber(Math.floor(tickingReward))}
+        +{formatGOLD(tickingReward)}
       </div>
       <div className="text-base text-amber-400/80 mt-1">$GOLD</div>
       <div className="text-lg text-white mt-1 font-mono">

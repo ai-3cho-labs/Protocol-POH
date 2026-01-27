@@ -1,6 +1,6 @@
 'use client';
 
-import { formatUSD, formatCompactNumber, calculateEarningRate, formatEarningRate } from '@/lib/utils';
+import { formatUSD, formatCompactNumber, formatGOLD, calculateEarningRate, formatEarningRate } from '@/lib/utils';
 import type { PoolInfo } from '@/types/models';
 import { PAYOUT_THRESHOLD_USD } from '@/types/models';
 import {
@@ -76,7 +76,7 @@ export function PendingRewards({
             YOUR EARNED GOLD
           </div>
           <div className="text-3xl sm:text-4xl lg:text-4xl font-bold text-white glow-white lg:font-mono tabular-nums">
-            +{formatCompactNumber(Math.floor(tickingReward))}
+            +{formatGOLD(tickingReward)}
           </div>
           <div className="text-sm text-zinc-500 mt-1">$GOLD</div>
           <div className="text-lg text-amber-400 mt-1 lg:font-mono">
@@ -206,7 +206,7 @@ function PendingRewardsCompact({
             )}
           </div>
           <div className="text-lg font-bold text-white glow-white tabular-nums">
-            +{formatCompactNumber(Math.floor(tickingReward))}
+            +{formatGOLD(tickingReward)}
           </div>
           <div className="text-xs text-amber-400">
             {formatUSD(earnedUsd)}

@@ -190,10 +190,21 @@ export function formatCPU(value: number, decimals = 2): string {
 
 /**
  * Format a $GOLD token amount (rewards)
+ * Handles tiny amounts common in early distributions
  */
 export function formatGOLD(value: number, decimals = 2): string {
   if (value === 0) return '0';
-  if (value < 0.01) return '<0.01';
+  // For very tiny amounts, show scientific notation
+  if (value < 0.000001) {
+    return value.toExponential(2);
+  }
+  // For small amounts, show more decimal places
+  if (value < 0.01) {
+    // Find first significant digit and show 2 more
+    const exp = Math.floor(Math.log10(Math.abs(value)));
+    const sigFigs = Math.max(2, -exp + 1);
+    return value.toFixed(Math.min(sigFigs, 9));
+  }
   return formatNumber(value, decimals);
 }
 

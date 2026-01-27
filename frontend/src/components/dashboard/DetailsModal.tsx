@@ -48,7 +48,7 @@ export function DetailsModal({ open, onClose }: DetailsModalProps) {
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useUserStats(wallet);
   const { data: pool, isLoading: poolLoading } = usePoolStatus();
   const { data: leaderboard, isLoading: leaderboardLoading } = useLeaderboard(25, wallet);
-  const { data: rawHistory, isLoading: historyLoading, refetch: refetchHistory } = useUserHistory(wallet, 20);
+  const { data: rawHistory, isLoading: historyLoading, refetch: refetchHistory, error: historyError } = useUserHistory(wallet, 20);
 
   // Refetch data when modal opens
   useEffect(() => {
@@ -258,12 +258,19 @@ export function DetailsModal({ open, onClose }: DetailsModalProps) {
             )}
 
             {activeTab === 'history' && (
-              <RewardHistory
-                history={history ?? null}
-                isLoading={historyLoading}
-                showViewAll={false}
-                limit={20}
-              />
+              historyError ? (
+                <div className="text-center py-6 text-red-400">
+                  <p className="text-sm">Error loading history</p>
+                  <p className="text-xs text-red-400/70 mt-1">{historyError.message}</p>
+                </div>
+              ) : (
+                <RewardHistory
+                  history={history ?? null}
+                  isLoading={historyLoading}
+                  showViewAll={false}
+                  limit={20}
+                />
+              )
             )}
 
             {activeTab === 'pool' && (

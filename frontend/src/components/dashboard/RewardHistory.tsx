@@ -129,7 +129,7 @@ function RewardRow({ item }: { item: RewardHistoryItem }) {
       <div className="hidden lg:grid grid-cols-12 gap-2 items-center font-mono text-sm">
         <div className="col-span-3 text-zinc-400">{item.timeAgo}</div>
         <div className="col-span-3 text-right text-white glow-white">
-          +{formatCompactNumber(item.amount)}
+          +{formatGOLD(item.amount)}
         </div>
         <div className="col-span-3 text-right text-zinc-400">
           {formatCompactNumber(item.hashPower)}
@@ -143,7 +143,7 @@ function RewardRow({ item }: { item: RewardHistoryItem }) {
       <div className="lg:hidden">
         <div className="flex items-center justify-between">
           <span className="text-white glow-white font-medium">
-            +{formatCompactNumber(item.amount)} $GOLD
+            +{formatGOLD(item.amount)} $GOLD
           </span>
           <span className="text-xs text-zinc-500">{item.timeAgo}</span>
         </div>
