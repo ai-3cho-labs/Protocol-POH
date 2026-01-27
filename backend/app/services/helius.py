@@ -183,6 +183,90 @@ class HeliusService:
             logger.error(f"Error fetching token supply: {e}")
             raise
 
+    async def get_sol_balance(self, wallet: str) -> int:
+        """
+        Get SOL balance for a wallet.
+
+        Args:
+            wallet: Wallet public address.
+
+        Returns:
+            Balance in lamports.
+        """
+        try:
+            response = await self.client.post(
+                _get_rpc_url(),
+                json={
+                    "jsonrpc": "2.0",
+                    "id": "copper-sol-balance",
+                    "method": "getBalance",
+                    "params": [wallet],
+                },
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            if "error" in data:
+                error_msg = data["error"].get("message", str(data["error"]))
+                logger.error(f"Helius API error: {error_msg}")
+                return 0
+
+            return data.get("result", {}).get("value", 0)
+
+        except Exception as e:
+            logger.error(f"Error fetching SOL balance: {e}")
+            return 0
+
+    async def get_token_balance(self, wallet: str, mint: str) -> int:
+        """
+        Get token balance for a wallet.
+
+        Args:
+            wallet: Wallet public address.
+            mint: Token mint address.
+
+        Returns:
+            Balance in raw token amount.
+        """
+        try:
+            response = await self.client.post(
+                _get_rpc_url(),
+                json={
+                    "jsonrpc": "2.0",
+                    "id": "copper-token-balance",
+                    "method": "getTokenAccountsByOwner",
+                    "params": [
+                        wallet,
+                        {"mint": mint},
+                        {"encoding": "jsonParsed"},
+                    ],
+                },
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            if "error" in data:
+                error_msg = data["error"].get("message", str(data["error"]))
+                logger.error(f"Helius API error: {error_msg}")
+                return 0
+
+            accounts = data.get("result", {}).get("value", [])
+            if not accounts:
+                return 0
+
+            # Sum all token accounts (usually just one)
+            total = 0
+            for account in accounts:
+                info = account.get("account", {}).get("data", {}).get("parsed", {}).get("info", {})
+                amount = info.get("tokenAmount", {}).get("amount", "0")
+                total += int(amount)
+
+            return total
+
+        except Exception as e:
+            logger.error(f"Error fetching token balance: {e}")
+            return 0
+
     def parse_webhook_transaction(self, payload: dict) -> Optional[ParsedTransaction]:
         """
         Parse incoming Helius webhook transaction.
