@@ -87,3 +87,21 @@ temp/
 CLAUDE.md
 .claude/
 .neon/
+
+# Celery
+celerybeat-schedule*
+celerybeat.pid
+
+# Local env files
+.env.dev
+.env.prod
+backend/.env.dev
+backend/.env.prod
+
+# Test data
+test_wallets.json
+backend/test_wallets.json
+
+# Windows artifacts
+nul
+frontend/nul
