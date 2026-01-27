@@ -2,9 +2,9 @@
 $GOLD Buyback Service
 
 Processes creator rewards and executes Jupiter swaps.
-40% → Buybacks (SOL → GOLD) → Airdrop Pool
-40% → Algo Bot (trading operations)
-20% → Team Operations (maintenance)
+80% → Buybacks (SOL → GOLD) → Airdrop Pool
+10% → Algo Bot (trading operations)
+10% → Team Operations (maintenance)
 """
 
 import logging
@@ -72,12 +72,12 @@ class BuybackResult:
 
 @dataclass
 class RewardSplit:
-    """40/40/20 split of creator rewards."""
+    """80/10/10 split of creator rewards."""
 
     total_sol: Decimal
-    buyback_sol: Decimal  # 40% → Reward pool
-    algo_bot_sol: Decimal  # 40% → Algo bot
-    team_sol: Decimal  # 20% → Maintenance
+    buyback_sol: Decimal  # 80% → Reward pool
+    algo_bot_sol: Decimal  # 10% → Algo bot
+    team_sol: Decimal  # 10% → Maintenance
 
 
 class BuybackService:
@@ -124,7 +124,7 @@ class BuybackService:
 
     def calculate_split(self, total_sol: Decimal) -> RewardSplit:
         """
-        Calculate 40/40/20 split of rewards.
+        Calculate 80/10/10 split of rewards.
 
         Args:
             total_sol: Total SOL to split.
@@ -132,9 +132,9 @@ class BuybackService:
         Returns:
             RewardSplit with buyback, algo bot, and team amounts.
         """
-        buyback_sol = total_sol * Decimal("0.4")  # 40% → Reward pool
-        algo_bot_sol = total_sol * Decimal("0.4")  # 40% → Algo bot
-        team_sol = total_sol * Decimal("0.2")  # 20% → Maintenance
+        buyback_sol = total_sol * Decimal("0.8")  # 80% → Reward pool
+        algo_bot_sol = total_sol * Decimal("0.1")  # 10% → Algo bot
+        team_sol = total_sol * Decimal("0.1")  # 10% → Maintenance
 
         return RewardSplit(
             total_sol=total_sol,
@@ -473,7 +473,7 @@ async def transfer_to_team_wallet(
     amount_sol: Decimal, from_private_key: str, to_address: str
 ) -> Optional[str]:
     """
-    Transfer SOL to team wallet (20% of creator rewards).
+    Transfer SOL to team wallet (10% of creator rewards).
 
     Args:
         amount_sol: Amount of SOL to transfer.
@@ -512,9 +512,9 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
     Process all pending creator rewards.
 
     Main entry point for the buyback task.
-    - 40% goes to Jupiter swap (SOL → GOLD) for airdrop pool
-    - 40% goes to algo bot wallet for trading operations
-    - 20% goes to team wallet for maintenance
+    - 80% goes to Jupiter swap (SOL → GOLD) for airdrop pool
+    - 10% goes to algo bot wallet for trading operations
+    - 10% goes to team wallet for maintenance
 
     Args:
         db: Database session.
@@ -541,7 +541,7 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
         f"team={split.team_sol} SOL"
     )
 
-    # Step 1: Transfer 40% SOL from CREATOR → AIRDROP_POOL for buyback
+    # Step 1: Transfer 80% SOL from CREATOR → AIRDROP_POOL for buyback
     pool_transfer_tx = None
     pool_transfer_confirmed = False
     if settings.airdrop_pool_private_key and settings.creator_wallet_private_key:
@@ -635,7 +635,7 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
     else:
         logger.error(f"Buyback failed: {result.error}")
 
-    # Transfer 40% to algo bot wallet
+    # Transfer 10% to algo bot wallet
     algo_bot_tx = None
     if settings.algo_bot_wallet_public_key and settings.creator_wallet_private_key:
         algo_bot_tx = await transfer_to_team_wallet(
@@ -650,7 +650,7 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
     else:
         logger.warning("Algo bot wallet transfer skipped: missing configuration")
 
-    # Transfer 20% to team wallet (maintenance)
+    # Transfer 10% to team wallet (maintenance)
     team_tx = None
     if settings.team_wallet_public_key and settings.creator_wallet_private_key:
         team_tx = await transfer_to_team_wallet(
