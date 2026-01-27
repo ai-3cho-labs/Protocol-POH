@@ -155,7 +155,7 @@ function HistoryRow({ item }: { item: DistributionHistoryItem }) {
       {/* Amount */}
       <div className="col-span-6 lg:col-span-3 text-right">
         <span className="text-sm font-medium text-white glow-white lg:font-mono tabular-nums">
-          +{formatCompactNumber(item.amount_received)}
+          +{formatGOLD(item.amount_received)}
         </span>
         <span className="text-xs text-zinc-500 ml-1">$GOLD</span>
       </div>
