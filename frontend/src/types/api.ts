@@ -76,6 +76,12 @@ export interface UserStatsResponse {
   rank: number | null;
   /** Estimated pending reward from pool */
   pending_reward_estimate: number;
+  /** Is this a new holder with no snapshot data yet? */
+  is_new_holder?: boolean;
+  /** Is TWAB projected from current balance (not actual)? */
+  is_projected?: boolean;
+  /** User's percentage share of the reward pool */
+  pool_share_percent?: number;
 }
 
 /** GET /api/user/{wallet}/history - Distribution history item */

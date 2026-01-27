@@ -94,12 +94,19 @@ const config: Config = {
         // Entrance animations (use 'both' to apply initial state during delay)
         'fade-slide-in': 'fadeSlideIn 0.4s ease-out both',
         'fade-in': 'fadeIn 0.5s ease-out both',
+        'fade-out': 'fadeOut 0.2s ease-in forwards',
         'count-up': 'countUp 0.6s ease-out both',
         // Shimmer for skeletons
         'shimmer': 'shimmer 1.5s infinite',
         // Modal slide animations
         'slide-up': 'slideUp 0.3s ease-out both',
         'slide-down': 'slideDown 0.2s ease-in forwards',
+        // Landing page enhancements
+        'pulse-glow': 'pulseGlow 2s ease-in-out infinite',
+        'pulse-dot': 'pulseDot 2s ease-in-out infinite',
+        'word-reveal': 'wordReveal 0.5s ease-out both',
+        'scale-in': 'scaleIn 0.3s ease-out both',
+        'draw-line': 'drawLine 1s ease-out both',
       },
       keyframes: {
         blink: {
@@ -129,6 +136,10 @@ const config: Config = {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
         },
+        fadeOut: {
+          '0%': { opacity: '1' },
+          '100%': { opacity: '0' },
+        },
         countUp: {
           '0%': { opacity: '0', transform: 'scale(0.95)' },
           '100%': { opacity: '1', transform: 'scale(1)' },
@@ -145,6 +156,27 @@ const config: Config = {
         slideDown: {
           '0%': { transform: 'translateY(0)', opacity: '1' },
           '100%': { transform: 'translateY(100%)', opacity: '0' },
+        },
+        // Landing page enhancement keyframes
+        pulseGlow: {
+          '0%, 100%': { textShadow: '0 0 10px rgba(255, 255, 255, 0.5), 0 0 20px rgba(255, 255, 255, 0.3)' },
+          '50%': { textShadow: '0 0 20px rgba(255, 255, 255, 0.8), 0 0 40px rgba(255, 255, 255, 0.4)' },
+        },
+        pulseDot: {
+          '0%, 100%': { opacity: '1', transform: 'scale(1)' },
+          '50%': { opacity: '0.5', transform: 'scale(0.8)' },
+        },
+        wordReveal: {
+          '0%': { opacity: '0', transform: 'translateY(10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        scaleIn: {
+          '0%': { opacity: '0', transform: 'scale(0.9)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        drawLine: {
+          '0%': { strokeDashoffset: '100' },
+          '100%': { strokeDashoffset: '0' },
         },
       },
       screens: {

@@ -47,9 +47,9 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
   const url = `${API_BASE_URL}${endpoint}`;
 
   // Build headers with optional API key
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options?.headers,
+    ...(options?.headers as Record<string, string>),
   };
 
   // Add API key if configured
@@ -88,14 +88,14 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
  * Get global statistics
  */
 export async function getGlobalStats(): Promise<GlobalStatsResponse> {
-  return fetchApi<GlobalStatsResponse>('/api/stats/global');
+  return fetchApi<GlobalStatsResponse>('/api/stats');
 }
 
 /**
  * Get user statistics by wallet address
  */
 export async function getUserStats(wallet: string): Promise<UserStatsResponse> {
-  return fetchApi<UserStatsResponse>(`/api/user/${wallet}/stats`);
+  return fetchApi<UserStatsResponse>(`/api/user/${wallet}`);
 }
 
 /**
@@ -103,11 +103,10 @@ export async function getUserStats(wallet: string): Promise<UserStatsResponse> {
  */
 export async function getUserHistory(
   wallet: string,
-  limit = 10,
-  offset = 0
+  limit = 10
 ): Promise<DistributionHistoryItem[]> {
   return fetchApi<DistributionHistoryItem[]>(
-    `/api/user/${wallet}/history?limit=${limit}&offset=${offset}`
+    `/api/user/${wallet}/history?limit=${limit}`
   );
 }
 
@@ -122,7 +121,7 @@ export async function getLeaderboard(limit = 100): Promise<LeaderboardEntry[]> {
  * Get pool status
  */
 export async function getPoolStatus(): Promise<PoolStatusResponse> {
-  return fetchApi<PoolStatusResponse>('/api/pool-status');
+  return fetchApi<PoolStatusResponse>('/api/pool');
 }
 
 /**

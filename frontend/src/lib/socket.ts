@@ -40,6 +40,34 @@ export interface PoolUpdateEvent {
   threshold_met: boolean;
 }
 
+// WebSocket payload types used by useWebSocket hook
+export interface PoolUpdatedPayload {
+  balance: number;
+  value_usd: number;
+  progress_to_threshold: number;
+  threshold_met: boolean;
+  hours_until_time_trigger: number | null;
+}
+
+export interface DistributionExecutedPayload {
+  distribution_id: string;
+  pool_amount: number;
+  recipient_count: number;
+  trigger_type: 'threshold' | 'time';
+  executed_at: string;
+}
+
+export interface TierChangedPayload {
+  wallet: string;
+  old_tier: number;
+  new_tier: number;
+}
+
+export interface SellDetectedPayload {
+  wallet: string;
+  amount: number;
+}
+
 // ===========================================
 // Socket Instance
 // ===========================================
@@ -51,7 +79,11 @@ let socket: Socket | null = null;
  */
 export function getSocket(): Socket {
   if (!socket) {
+    // Connect to WebSocket server
+    // Backend mounts Socket.IO at /ws with socketio_path=""
+    // Uses default namespace / (no namespace needed in URL)
     socket = io(WS_URL, {
+      path: '/ws/', // Path where Socket.IO is mounted
       autoConnect: false,
       reconnection: true,
       reconnectionAttempts: 5,
@@ -149,7 +181,8 @@ export function onSocketEvent<K extends keyof SocketEvents>(
   callback: SocketEvents[K]
 ): void {
   const s = getSocket();
-  s.on(event, callback as (...args: unknown[]) => void);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  s.on(event, callback as any);
 }
 
 /**
@@ -161,7 +194,8 @@ export function offSocketEvent<K extends keyof SocketEvents>(
 ): void {
   const s = getSocket();
   if (callback) {
-    s.off(event, callback as (...args: unknown[]) => void);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    s.off(event, callback as any);
   } else {
     s.off(event);
   }

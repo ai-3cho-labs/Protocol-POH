@@ -42,6 +42,12 @@ export interface UserMiningStats {
   rank: number | null;
   /** Pending reward estimate */
   pendingReward: number;
+  /** Is this a new holder with no snapshot data yet? */
+  isNewHolder: boolean;
+  /** Is TWAB projected from current balance (not actual)? */
+  isProjected: boolean;
+  /** User's percentage share of the reward pool */
+  poolSharePercent: number;
 }
 
 // ===========================================
@@ -89,14 +95,25 @@ export interface PoolInfo {
 /** Tier ID type (1-6) */
 export type TierId = 1 | 2 | 3 | 4 | 5 | 6;
 
+/** Tier color configuration */
+export interface TierStyle {
+  name: string;
+  label: string;
+  multiplier: number;
+  minHours: number;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+}
+
 /** Static tier configuration */
-export const TIER_CONFIG: Record<TierId, { name: string; emoji: string; multiplier: number; minHours: number }> = {
-  1: { name: 'Ore', emoji: '🪨', multiplier: 1.0, minHours: 0 },
-  2: { name: 'Raw Copper', emoji: '🔶', multiplier: 1.25, minHours: 6 },
-  3: { name: 'Refined', emoji: '⚡', multiplier: 1.5, minHours: 12 },
-  4: { name: 'Industrial', emoji: '🏭', multiplier: 2.5, minHours: 72 },
-  5: { name: 'Master Miner', emoji: '👑', multiplier: 3.5, minHours: 168 },
-  6: { name: 'Diamond Hands', emoji: '💎', multiplier: 5.0, minHours: 720 },
+export const TIER_CONFIG: Record<TierId, TierStyle> = {
+  1: { name: 'Ore', label: 'T1', multiplier: 1.0, minHours: 0, color: 'text-gray-400', bgColor: 'bg-gray-500/20', borderColor: 'border-gray-500/30' },
+  2: { name: 'Raw Copper', label: 'T2', multiplier: 1.25, minHours: 6, color: 'text-orange-400', bgColor: 'bg-orange-500/20', borderColor: 'border-orange-500/30' },
+  3: { name: 'Refined', label: 'T3', multiplier: 1.5, minHours: 12, color: 'text-amber-400', bgColor: 'bg-amber-500/20', borderColor: 'border-amber-500/30' },
+  4: { name: 'Industrial', label: 'T4', multiplier: 2.5, minHours: 72, color: 'text-purple-400', bgColor: 'bg-purple-500/20', borderColor: 'border-purple-500/30' },
+  5: { name: 'Master Miner', label: 'T5', multiplier: 3.5, minHours: 168, color: 'text-yellow-400', bgColor: 'bg-yellow-500/20', borderColor: 'border-yellow-500/30' },
+  6: { name: 'Diamond Hands', label: 'T6', multiplier: 5.0, minHours: 720, color: 'text-cyan-400', bgColor: 'bg-cyan-500/20', borderColor: 'border-cyan-500/30' },
 };
 
 // ===========================================

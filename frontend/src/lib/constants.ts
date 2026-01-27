@@ -24,22 +24,6 @@ export const SOLANA_RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC_URL
   || `${API_BASE_URL}/api/proxy/rpc`;
 
 // ===========================================
-// Query Configuration
-// ===========================================
-
-/** Default stale time for React Query (5 minutes) */
-export const DEFAULT_STALE_TIME = 5 * 60 * 1000;
-
-/** Default refetch interval for global stats (30 seconds) */
-export const DEFAULT_REFETCH_INTERVAL = 30 * 1000;
-
-/** Refetch interval for pool status (15 seconds) */
-export const POOL_REFETCH_INTERVAL = 15 * 1000;
-
-/** Refetch interval for user stats (30 seconds) */
-export const USER_STATS_REFETCH_INTERVAL = 30 * 1000;
-
-// ===========================================
 // UI Configuration
 // ===========================================
 
@@ -60,3 +44,23 @@ export const CPU_TOKEN_MINT = process.env.NEXT_PUBLIC_CPU_TOKEN_MINT || '';
 
 /** GOLD token mint address */
 export const TOKEN_MINT = process.env.NEXT_PUBLIC_GOLD_TOKEN_MINT || '';
+
+// ===========================================
+// Explorer URLs
+// ===========================================
+
+/** Base URL for Solscan explorer */
+export const SOLSCAN_BASE_URL = 'https://solscan.io';
+
+/**
+ * Get Solscan URL for a wallet address
+ * Validates address format to prevent URL injection
+ */
+export function getAddressUrl(address: string): string {
+  // Import validation inline to avoid circular deps
+  const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+  if (!address || !base58Regex.test(address)) {
+    return '#'; // Safe fallback for invalid addresses
+  }
+  return `${SOLSCAN_BASE_URL}/account/${encodeURIComponent(address)}`;
+}
