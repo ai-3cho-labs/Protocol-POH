@@ -5,7 +5,6 @@ import { formatCompactNumber, formatUSD } from '@/lib/utils';
 import { Skeleton } from '@/components/ui';
 import { useCountdown, useAnimatedNumber } from '@/hooks/useCountdown';
 import { useSocketContext } from '@/components/providers/SocketProvider';
-import { useIsConnected } from '@/hooks/useWallet';
 
 export interface LiveStatsBarProps {
   /** Total holders */
@@ -39,7 +38,6 @@ export function LiveStatsBar({
 }: LiveStatsBarProps) {
   const countdown = useCountdown(hoursUntilNext);
   const { status: socketStatus } = useSocketContext();
-  const isWalletConnected = useIsConnected();
 
   // Animated number values for smooth count-up effect
   const animatedHolders = useAnimatedNumber(holders, 800);
@@ -66,10 +64,7 @@ export function LiveStatsBar({
         {/* Desktop Layout - Horizontal */}
         <div className="hidden lg:flex items-center justify-center gap-8 font-mono text-sm">
           {/* Connection-aware Live Indicator */}
-          <ConnectionIndicator
-            socketStatus={socketStatus}
-            isWalletConnected={isWalletConnected}
-          />
+          <ConnectionIndicator socketStatus={socketStatus} />
           <Divider />
           <StatItem
             label="MINERS"
@@ -103,11 +98,7 @@ export function LiveStatsBar({
         <div className="lg:hidden">
           {/* Live indicator row */}
           <div className="flex items-center justify-center mb-2">
-            <ConnectionIndicator
-              socketStatus={socketStatus}
-              isWalletConnected={isWalletConnected}
-              compact
-            />
+            <ConnectionIndicator socketStatus={socketStatus} compact />
           </div>
           {/* Stats grid */}
           <div className="grid grid-cols-5 gap-1">
@@ -132,26 +123,20 @@ export function LiveStatsBar({
 }
 
 /**
- * Connection-aware indicator component
- * Shows different states based on wallet and WebSocket connection
+ * Connection indicator component
+ * Shows WebSocket connection status independent of wallet state
  */
 function ConnectionIndicator({
   socketStatus,
-  isWalletConnected,
   compact = false,
 }: {
   socketStatus: 'connected' | 'connecting' | 'disconnected';
-  isWalletConnected: boolean;
   compact?: boolean;
 }) {
-  // Determine display state
-  // If wallet is connected, show WebSocket status
-  // If wallet is not connected, show "cached" state (data is from API, not live)
-  const isLive = isWalletConnected && socketStatus === 'connected';
-  const isConnecting = isWalletConnected && socketStatus === 'connecting';
-  const isCached = !isWalletConnected;
+  const isLive = socketStatus === 'connected';
+  const isConnecting = socketStatus === 'connecting';
 
-  // Colors and labels based on state
+  // Colors and labels based on WebSocket status
   let dotColor: string;
   let label: string;
   let showPing: boolean;
@@ -164,12 +149,8 @@ function ConnectionIndicator({
     dotColor = 'bg-amber-400';
     label = 'Connecting';
     showPing = false;
-  } else if (isCached) {
-    dotColor = 'bg-blue-400';
-    label = 'Cached';
-    showPing = false;
   } else {
-    // Disconnected (wallet connected but WebSocket disconnected)
+    // Disconnected
     dotColor = 'bg-gray-400';
     label = 'Offline';
     showPing = false;
@@ -208,8 +189,7 @@ function ConnectionIndicator({
           'font-medium uppercase tracking-wider',
           isLive && 'text-green-400',
           isConnecting && 'text-amber-400',
-          isCached && 'text-blue-400',
-          !isLive && !isConnecting && !isCached && 'text-gray-400'
+          !isLive && !isConnecting && 'text-gray-400'
         )}
       >
         {label}

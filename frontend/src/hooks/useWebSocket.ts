@@ -3,7 +3,8 @@
 /**
  * WebSocket hook for real-time updates
  *
- * Connects when address is set, disconnects when cleared.
+ * Always connects for global stats (pool, distributions, leaderboard).
+ * Subscribes to wallet-specific events when wallet is connected.
  * Updates React Query cache on WebSocket events.
  */
 
@@ -14,6 +15,8 @@ import {
   getSocket,
   disconnectSocket,
   subscribeToWallet,
+  unsubscribeFromWallet,
+  subscribeToGlobal,
   type DistributionExecutedPayload,
   type PoolUpdatedPayload,
   type TierChangedPayload,
@@ -188,20 +191,12 @@ export function useWebSocket(): UseWebSocketReturn {
   }, []);
 
   // ========================================================================
-  // Main Connection Effect
+  // Main Connection Effect (Always connects for global stats)
   // ========================================================================
 
   useEffect(() => {
     // Don't run during SSR
     if (!isBrowser()) return;
-
-    // Don't connect if wallet is not connected
-    if (!isWalletConnected || !walletAddress) {
-      disconnectSocket();
-      setStatus('disconnected');
-      subscribedWalletRef.current = null;
-      return;
-    }
 
     let socket: ReturnType<typeof getSocket>;
     try {
@@ -214,10 +209,15 @@ export function useWebSocket(): UseWebSocketReturn {
     // Connection handlers
     const onConnect = () => {
       setStatus('connected');
-      // Subscribe to wallet room
-      subscribeToWallet(walletAddress);
-      subscribedWalletRef.current = walletAddress;
-      console.log('[WebSocket] Connected');
+      // Always subscribe to global updates (pool, distributions, leaderboard)
+      subscribeToGlobal();
+      // Subscribe to wallet room if wallet is connected
+      const currentWallet = walletAddressRef.current;
+      if (currentWallet) {
+        subscribeToWallet(currentWallet);
+        subscribedWalletRef.current = currentWallet;
+      }
+      console.log('[WebSocket] Connected (global stats)');
     };
 
     const onDisconnect = () => {
@@ -232,7 +232,9 @@ export function useWebSocket(): UseWebSocketReturn {
 
     const onReconnect = () => {
       console.log('[WebSocket] Reconnected');
-      // Resubscribe to wallet room (use ref for fresh value)
+      // Resubscribe to global updates
+      subscribeToGlobal();
+      // Resubscribe to wallet room if connected (use ref for fresh value)
       const currentWallet = walletAddressRef.current;
       if (currentWallet) {
         subscribeToWallet(currentWallet);
@@ -257,7 +259,7 @@ export function useWebSocket(): UseWebSocketReturn {
     socket.on('tier:changed', handleTierChanged);
     socket.on('sell:detected', handleSellDetected);
 
-    // Connect
+    // Connect immediately for global stats
     setStatus('connecting');
     socket.connect();
 
@@ -274,10 +276,10 @@ export function useWebSocket(): UseWebSocketReturn {
       socket.off('snapshot:taken', handleSnapshotTaken);
       socket.off('tier:changed', handleTierChanged);
       socket.off('sell:detected', handleSellDetected);
+
+      disconnectSocket();
     };
   }, [
-    isWalletConnected,
-    walletAddress, // Still needed to trigger reconnect on wallet change
     queryClient,
     handlePoolUpdated,
     handleDistributionExecuted,
@@ -286,6 +288,46 @@ export function useWebSocket(): UseWebSocketReturn {
     handleTierChanged,
     handleSellDetected,
   ]);
+
+  // ========================================================================
+  // Wallet Subscription Effect (Subscribe/unsubscribe on wallet change)
+  // ========================================================================
+
+  useEffect(() => {
+    if (!isBrowser()) return;
+
+    let socket: ReturnType<typeof getSocket>;
+    try {
+      socket = getSocket();
+    } catch {
+      return;
+    }
+
+    // Only manage subscriptions if socket is connected
+    if (!socket.connected) return;
+
+    const previousWallet = subscribedWalletRef.current;
+
+    // Unsubscribe from previous wallet if different
+    if (previousWallet && previousWallet !== walletAddress) {
+      unsubscribeFromWallet(previousWallet);
+      subscribedWalletRef.current = null;
+    }
+
+    // Subscribe to new wallet if connected
+    if (isWalletConnected && walletAddress && walletAddress !== previousWallet) {
+      subscribeToWallet(walletAddress);
+      subscribedWalletRef.current = walletAddress;
+      console.log('[WebSocket] Subscribed to wallet:', walletAddress);
+    }
+
+    // Unsubscribe if wallet disconnected
+    if (!isWalletConnected && previousWallet) {
+      unsubscribeFromWallet(previousWallet);
+      subscribedWalletRef.current = null;
+      console.log('[WebSocket] Unsubscribed from wallet');
+    }
+  }, [isWalletConnected, walletAddress]);
 
   return { status, forceReconnect };
 }
