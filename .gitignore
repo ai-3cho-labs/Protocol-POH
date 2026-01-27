@@ -105,3 +105,14 @@ backend/test_wallets.json
 # Windows artifacts
 nul
 frontend/nul
+
+# Local documentation
+SECURITY_AUDIT.md
+DEAD_CODE_AUDIT.md
+TODO.md
+ARCHITECTURE.md
+debug.md
+
+# Local scripts
+backend/env-switch.py
+backend/scripts/load_test_twab.py
