@@ -17,7 +17,7 @@ from app.services.snapshot import SnapshotService
 from app.services.streak import StreakService
 from app.services.twab import TWABService
 from app.services.distribution import DistributionService
-from app.config import TIER_CONFIG, TOKEN_MULTIPLIER, get_settings
+from app.config import TIER_CONFIG, TOKEN_MULTIPLIER, GOLD_MULTIPLIER, get_settings
 
 settings = get_settings()
 from app.utils.rate_limiter import limiter
@@ -375,7 +375,7 @@ async def get_user_history(
             twab=float(Decimal(r.twab) / TOKEN_MULTIPLIER),
             multiplier=float(r.multiplier),
             hash_power=float(r.hash_power / TOKEN_MULTIPLIER),
-            amount_received=float(Decimal(r.amount_received) / TOKEN_MULTIPLIER),
+            amount_received=float(Decimal(r.amount_received) / GOLD_MULTIPLIER),
             tx_signature=r.tx_signature,
         )
         for r in recipients
@@ -461,7 +461,7 @@ async def get_distributions(
     return [
         DistributionItem(
             id=str(d.id),
-            pool_amount=float(Decimal(d.pool_amount) / TOKEN_MULTIPLIER),
+            pool_amount=float(Decimal(d.pool_amount) / GOLD_MULTIPLIER),
             pool_value_usd=float(d.pool_value_usd) if d.pool_value_usd else None,
             total_hashpower=float(d.total_hashpower / TOKEN_MULTIPLIER),
             recipient_count=d.recipient_count,

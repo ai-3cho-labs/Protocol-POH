@@ -219,7 +219,7 @@ class DistributionService:
 
         return PoolStatus(
             balance=balance,
-            balance_formatted=float(Decimal(balance) / TOKEN_MULTIPLIER),
+            balance_formatted=float(Decimal(balance) / GOLD_MULTIPLIER),
             value_usd=value_usd,
             last_distribution=last_dist.executed_at if last_dist else None,
             hours_since_last=hours_since,
