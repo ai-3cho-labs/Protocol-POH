@@ -167,21 +167,41 @@ def get_settings() -> Settings:
 # Tier configuration
 TIER_CONFIG = {
     1: {"name": "Ore", "emoji": "\U0001FAA8", "multiplier": 1.0, "min_hours": 0},
-    2: {"name": "Raw Copper", "emoji": "\U0001F536", "multiplier": 1.25, "min_hours": 6},
+    2: {
+        "name": "Raw Copper",
+        "emoji": "\U0001F536",
+        "multiplier": 1.25,
+        "min_hours": 6,
+    },
     3: {"name": "Refined", "emoji": "\u26A1", "multiplier": 1.5, "min_hours": 12},
-    4: {"name": "Industrial", "emoji": "\U0001F3ED", "multiplier": 2.5, "min_hours": 72},  # 3 days
-    5: {"name": "Master Miner", "emoji": "\U0001F451", "multiplier": 3.5, "min_hours": 168},  # 7 days
-    6: {"name": "Diamond Hands", "emoji": "\U0001F48E", "multiplier": 5.0, "min_hours": 720},  # 30 days
+    4: {
+        "name": "Industrial",
+        "emoji": "\U0001F3ED",
+        "multiplier": 2.5,
+        "min_hours": 72,
+    },  # 3 days
+    5: {
+        "name": "Master Miner",
+        "emoji": "\U0001F451",
+        "multiplier": 3.5,
+        "min_hours": 168,
+    },  # 7 days
+    6: {
+        "name": "Diamond Hands",
+        "emoji": "\U0001F48E",
+        "multiplier": 5.0,
+        "min_hours": 720,
+    },  # 30 days
 }
 
 # Tier thresholds in hours
 TIER_THRESHOLDS = {
-    1: 0,      # 0 hours
-    2: 6,      # 6 hours
-    3: 12,     # 12 hours
-    4: 72,     # 3 days
-    5: 168,    # 7 days
-    6: 720,    # 30 days
+    1: 0,  # 0 hours
+    2: 6,  # 6 hours
+    3: 12,  # 12 hours
+    4: 72,  # 3 days
+    5: 168,  # 7 days
+    6: 720,  # 30 days
 }
 
 # Solana constants
@@ -195,5 +215,5 @@ LAMPORTS_PER_SOL = 1_000_000_000
 # GOLD token is what gets distributed as rewards
 CPU_DECIMALS = get_settings().cpu_token_decimals
 GOLD_DECIMALS = get_settings().gold_token_decimals
-TOKEN_MULTIPLIER = 10 ** CPU_DECIMALS
-GOLD_MULTIPLIER = 10 ** GOLD_DECIMALS
+TOKEN_MULTIPLIER = 10**CPU_DECIMALS
+GOLD_MULTIPLIER = 10**GOLD_DECIMALS

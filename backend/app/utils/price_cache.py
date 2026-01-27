@@ -29,6 +29,7 @@ STALE_TTL_SECONDS = 300  # Use stale cache up to 5 minutes if API fails
 @dataclass
 class CachedPrice:
     """Cached price with timestamp."""
+
     price: Decimal
     timestamp: float
     source: str
@@ -69,9 +70,7 @@ async def get_gold_price_usd(use_fallback: bool = True) -> Decimal:
     if settings.is_devnet:
         devnet_price = Decimal(str(settings.devnet_gold_price_usd))
         _price_cache[cache_key] = CachedPrice(
-            price=devnet_price,
-            timestamp=now,
-            source="devnet_fallback"
+            price=devnet_price, timestamp=now, source="devnet_fallback"
         )
         logger.debug(f"Using devnet fallback price: ${devnet_price}")
         return devnet_price
@@ -80,9 +79,7 @@ async def get_gold_price_usd(use_fallback: bool = True) -> Decimal:
     price = await _fetch_jupiter_price(token_mint)
     if price and price > 0:
         _price_cache[cache_key] = CachedPrice(
-            price=price,
-            timestamp=now,
-            source="jupiter"
+            price=price, timestamp=now, source="jupiter"
         )
         return price
 
@@ -90,9 +87,7 @@ async def get_gold_price_usd(use_fallback: bool = True) -> Decimal:
     price = await _fetch_birdeye_price(token_mint)
     if price and price > 0:
         _price_cache[cache_key] = CachedPrice(
-            price=price,
-            timestamp=now,
-            source="birdeye"
+            price=price, timestamp=now, source="birdeye"
         )
         return price
 
@@ -114,9 +109,7 @@ async def _fetch_jupiter_price(token_mint: str) -> Optional[Decimal]:
     try:
         client = get_http_client()
         response = await client.get(
-            JUPITER_PRICE_API,
-            params={"ids": token_mint},
-            timeout=10.0
+            JUPITER_PRICE_API, params={"ids": token_mint}, timeout=10.0
         )
         response.raise_for_status()
         data = response.json()
@@ -143,7 +136,7 @@ async def _fetch_birdeye_price(token_mint: str) -> Optional[Decimal]:
             BIRDEYE_PRICE_API,
             params={"address": token_mint},
             headers={"accept": "application/json"},
-            timeout=10.0
+            timeout=10.0,
         )
         response.raise_for_status()
         data = response.json()

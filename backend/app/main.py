@@ -8,7 +8,6 @@ CPU = Token users hold, GOLD = Token distributed as rewards.
 import logging
 import re
 import threading
-import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 
@@ -17,7 +16,7 @@ class SensitiveDataFilter(logging.Filter):
     """Filter to mask sensitive data in log messages."""
 
     # Pattern matches Base58 private keys (64 bytes = ~88 chars)
-    PRIVATE_KEY_PATTERN = re.compile(r'[1-9A-HJ-NP-Za-km-z]{60,90}')
+    PRIVATE_KEY_PATTERN = re.compile(r"[1-9A-HJ-NP-Za-km-z]{60,90}")
     # Pattern matches common secret-like values
     SECRET_PATTERNS = [
         re.compile(r'(private[_-]?key["\s:=]+)[^\s"\']+', re.IGNORECASE),
@@ -29,10 +28,10 @@ class SensitiveDataFilter(logging.Filter):
         if record.msg:
             msg = str(record.msg)
             # Mask long Base58-like strings that could be private keys
-            msg = self.PRIVATE_KEY_PATTERN.sub('[REDACTED_KEY]', msg)
+            msg = self.PRIVATE_KEY_PATTERN.sub("[REDACTED_KEY]", msg)
             # Mask explicit secret patterns
             for pattern in self.SECRET_PATTERNS:
-                msg = pattern.sub(r'\1[REDACTED]', msg)
+                msg = pattern.sub(r"\1[REDACTED]", msg)
             record.msg = msg
         return True
 
@@ -54,6 +53,7 @@ from app.websocket import socket_app, setup_redis_adapter
 # ===========================================
 # Embedded Celery Worker/Beat
 # ===========================================
+
 
 class EmbeddedCelery:
     """
@@ -81,16 +81,13 @@ class EmbeddedCelery:
             target=self._run_worker,
             args=(celery_app,),
             daemon=True,
-            name="celery-worker"
+            name="celery-worker",
         )
         self.worker_thread.start()
 
         # Start beat thread
         self.beat_thread = threading.Thread(
-            target=self._run_beat,
-            args=(celery_app,),
-            daemon=True,
-            name="celery-beat"
+            target=self._run_beat, args=(celery_app,), daemon=True, name="celery-beat"
         )
         self.beat_thread.start()
 
@@ -113,6 +110,7 @@ class EmbeddedCelery:
     def _run_beat(self, app):
         """Run Celery beat in thread."""
         from celery.beat import Service
+
         self.beat = Service(app, max_interval=10)
         self.beat.start()
 
@@ -130,8 +128,7 @@ _embedded_celery = None
 
 # Configure logging with sensitive data filter
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 # Add sensitive data filter to root logger
 for handler in logging.root.handlers:
@@ -159,10 +156,7 @@ if settings.sentry_dsn:
                 FastApiIntegration(transaction_style="endpoint"),
                 SqlalchemyIntegration(),
                 CeleryIntegration(),
-                LoggingIntegration(
-                    level=logging.INFO,
-                    event_level=logging.ERROR
-                ),
+                LoggingIntegration(level=logging.INFO, event_level=logging.ERROR),
             ],
             send_default_pii=False,
             attach_stacktrace=True,
@@ -212,11 +206,14 @@ async def lifespan(app: FastAPI):
             if not key:
                 logger.error(f"CRITICAL: {name}_PRIVATE_KEY not configured")
             elif len(key) < 80 or len(key) > 90:
-                logger.error(f"CRITICAL: {name}_PRIVATE_KEY invalid length (expected ~88 chars)")
+                logger.error(
+                    f"CRITICAL: {name}_PRIVATE_KEY invalid length (expected ~88 chars)"
+                )
             else:
                 # Validate Base58 decoding without exposing key material
                 try:
                     import base58
+
                     decoded = base58.b58decode(key)
                     if len(decoded) != 64:
                         logger.error(
@@ -225,7 +222,9 @@ async def lifespan(app: FastAPI):
                     else:
                         logger.info(f"{name} private key validated (Base58, 64 bytes)")
                 except Exception as e:
-                    logger.error(f"CRITICAL: {name}_PRIVATE_KEY invalid Base58 encoding: {type(e).__name__}")
+                    logger.error(
+                        f"CRITICAL: {name}_PRIVATE_KEY invalid Base58 encoding: {type(e).__name__}"
+                    )
 
         # Prevent test mode in production
         if settings.test_mode:
@@ -233,12 +232,17 @@ async def lifespan(app: FastAPI):
             raise ValueError("TEST_MODE cannot be enabled in production")
 
         # Validate CORS configuration
-        if not settings.cors_origins or settings.cors_origins == "http://localhost:3000":
+        if (
+            not settings.cors_origins
+            or settings.cors_origins == "http://localhost:3000"
+        ):
             logger.warning("CORS_ORIGINS should be set to production domains")
 
         # Validate API key configuration
         if not settings.api_keys_list:
-            logger.warning("No API keys configured - endpoints will allow unauthenticated access")
+            logger.warning(
+                "No API keys configured - endpoints will allow unauthenticated access"
+            )
 
     if settings.database_url:
         await init_db()
@@ -253,6 +257,7 @@ async def lifespan(app: FastAPI):
     # Warm price cache at startup
     try:
         from app.utils.price_cache import warm_price_cache
+
         await warm_price_cache()
     except Exception as e:
         logger.warning(f"Failed to warm price cache: {e}")
@@ -313,10 +318,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 async def global_exception_handler(request: Request, exc: Exception):
     """Handle uncaught exceptions."""
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal server error"}
-    )
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
 # Health check endpoint
@@ -324,11 +326,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 @limiter.limit("60/minute")
 async def health_check(request: Request):
     """Health check endpoint."""
-    return {
-        "status": "healthy",
-        "service": "copper-backend",
-        "version": "0.1.0"
-    }
+    return {"status": "healthy", "service": "copper-backend", "version": "0.1.0"}
 
 
 # Root endpoint
@@ -338,7 +336,7 @@ async def root():
     return {
         "message": "Welcome to the CPU Mining API (Hold CPU → Mine $GOLD)",
         "docs": "/docs",
-        "health": "/api/health"
+        "health": "/api/health",
     }
 
 
@@ -357,9 +355,10 @@ app.mount("/ws", socket_app)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
         "app.main:app",
         host=settings.api_host,
         port=settings.api_port,
-        reload=not settings.is_production
+        reload=not settings.is_production,
     )

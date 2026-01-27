@@ -1,0 +1,6 @@
+[lint]
+# Ignore import order in files with early env loading
+per-file-ignores = { "app/main.py" = ["E402"], "app/api/routes.py" = ["E402"] }
+
+# Ignore E712 for SQLAlchemy boolean comparisons
+ignore = ["E712"]

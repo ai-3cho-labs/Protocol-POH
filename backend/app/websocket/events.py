@@ -60,6 +60,7 @@ def validate_payload_size(payload: dict, event_name: str) -> dict:
 
 class EventType(str, Enum):
     """WebSocket event types."""
+
     # Global room events
     DISTRIBUTION_EXECUTED = "distribution:executed"
     POOL_UPDATED = "pool:updated"
@@ -74,6 +75,7 @@ class EventType(str, Enum):
 @dataclass
 class TopRecipient:
     """Top recipient in a distribution."""
+
     wallet: str  # Full address, frontend truncates
     amount: int  # Raw token amount
     rank: int
@@ -82,6 +84,7 @@ class TopRecipient:
 @dataclass
 class DistributionExecutedPayload:
     """Payload for distribution:executed event."""
+
     distribution_id: str
     pool_amount: int  # Raw token amount
     pool_value_usd: float
@@ -114,6 +117,7 @@ class DistributionExecutedPayload:
 @dataclass
 class PoolUpdatedPayload:
     """Payload for pool:updated event."""
+
     balance: int  # Raw token amount
     value_usd: float
     progress_to_threshold: float  # 0-100 percentage
@@ -129,6 +133,7 @@ class PoolUpdatedPayload:
 @dataclass
 class LeaderboardUpdatedPayload:
     """Payload for leaderboard:updated event (signal only)."""
+
     server_timestamp: str = field(default_factory=iso_timestamp)
 
     def to_dict(self) -> dict:
@@ -140,6 +145,7 @@ class LeaderboardUpdatedPayload:
 @dataclass
 class SnapshotTakenPayload:
     """Payload for snapshot:taken event."""
+
     snapshot_at: str  # ISO timestamp of snapshot
     server_timestamp: str = field(default_factory=iso_timestamp)
 
@@ -151,6 +157,7 @@ class SnapshotTakenPayload:
 @dataclass
 class TierChangedPayload:
     """Payload for tier:changed event."""
+
     wallet: str
     old_tier: int
     new_tier: int
@@ -167,6 +174,7 @@ class TierChangedPayload:
 @dataclass
 class SellDetectedPayload:
     """Payload for sell:detected event."""
+
     wallet: str
     tx_signature: Optional[str]
     amount_sold: Optional[int]  # Raw token amount if available

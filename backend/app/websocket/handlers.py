@@ -112,7 +112,9 @@ async def subscribe_wallet(sid: str, data: dict) -> dict:
     if not is_valid_wallet(wallet):
         # Sanitize wallet for logging to prevent log injection
         safe_wallet = _sanitize_for_log(str(wallet))
-        logger.warning(f"Invalid wallet subscription attempt: sid={sid}, wallet={safe_wallet}")
+        logger.warning(
+            f"Invalid wallet subscription attempt: sid={sid}, wallet={safe_wallet}"
+        )
         return {"success": False, "error": "Invalid wallet address"}
 
     # Leave previous wallet room if subscribed

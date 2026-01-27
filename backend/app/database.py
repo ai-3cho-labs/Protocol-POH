@@ -44,14 +44,16 @@ def prepare_database_url(url: str) -> tuple[str, dict]:
 
     # Rebuild URL without sslmode
     new_query = urlencode(query_params, doseq=True)
-    clean_url = urlunparse((
-        parsed.scheme,
-        parsed.netloc,
-        parsed.path,
-        parsed.params,
-        new_query,
-        parsed.fragment
-    ))
+    clean_url = urlunparse(
+        (
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            parsed.params,
+            new_query,
+            parsed.fragment,
+        )
+    )
 
     # Build connect_args with proper SSL context for asyncpg
     connect_args = {
@@ -85,6 +87,7 @@ engine_kwargs = {
 if is_sqlite:
     # SQLite-specific configuration
     from sqlalchemy.pool import StaticPool
+
     engine_kwargs["connect_args"] = {"check_same_thread": False}
     engine_kwargs["poolclass"] = StaticPool
 elif settings.is_production:
@@ -107,7 +110,7 @@ async_session_maker = async_sessionmaker(
     class_=AsyncSession,
     expire_on_commit=False,
     autocommit=False,
-    autoflush=False
+    autoflush=False,
 )
 
 # Base class for models
@@ -179,7 +182,7 @@ def get_worker_session_maker():
             class_=AsyncSession,
             expire_on_commit=False,
             autocommit=False,
-            autoflush=False
+            autoflush=False,
         )
 
     return _worker_session_maker

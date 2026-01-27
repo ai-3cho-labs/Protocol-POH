@@ -30,7 +30,7 @@ router = APIRouter(prefix="/api", tags=["api"])
 # ===========================================
 
 # Solana wallet address: 32-44 base58 characters
-WALLET_REGEX = re.compile(r'^[1-9A-HJ-NP-Za-km-z]{32,44}$')
+WALLET_REGEX = re.compile(r"^[1-9A-HJ-NP-Za-km-z]{32,44}$")
 
 
 def validate_wallet_address(wallet: str) -> str:
@@ -38,26 +38,31 @@ def validate_wallet_address(wallet: str) -> str:
     if not wallet or not WALLET_REGEX.match(wallet):
         raise HTTPException(
             status_code=400,
-            detail="Invalid wallet address format. Must be 32-44 base58 characters."
+            detail="Invalid wallet address format. Must be 32-44 base58 characters.",
         )
     return wallet
 
 
 # Type alias for validated wallet parameter
-ValidatedWallet = Annotated[str, Path(
-    min_length=32,
-    max_length=44,
-    pattern=r'^[1-9A-HJ-NP-Za-km-z]{32,44}$',
-    description="Solana wallet address (base58)"
-)]
+ValidatedWallet = Annotated[
+    str,
+    Path(
+        min_length=32,
+        max_length=44,
+        pattern=r"^[1-9A-HJ-NP-Za-km-z]{32,44}$",
+        description="Solana wallet address (base58)",
+    ),
+]
 
 
 # ===========================================
 # Response Models
 # ===========================================
 
+
 class GlobalStatsResponse(BaseModel):
     """Global system statistics."""
+
     total_holders: int
     total_volume_24h: float
     total_buybacks_sol: float
@@ -68,6 +73,7 @@ class GlobalStatsResponse(BaseModel):
 
 class TierInfo(BaseModel):
     """Tier information."""
+
     tier: int
     name: str
     emoji: str
@@ -76,6 +82,7 @@ class TierInfo(BaseModel):
 
 class UserStatsResponse(BaseModel):
     """User mining statistics."""
+
     wallet: str
     balance: float  # Token balance
     balance_raw: int
@@ -98,6 +105,7 @@ class UserStatsResponse(BaseModel):
 
 class DistributionHistoryItem(BaseModel):
     """Distribution history item."""
+
     distribution_id: str
     executed_at: datetime
     twab: float
@@ -109,6 +117,7 @@ class DistributionHistoryItem(BaseModel):
 
 class LeaderboardEntry(BaseModel):
     """Leaderboard entry."""
+
     rank: int
     wallet: str
     wallet_short: str
@@ -119,6 +128,7 @@ class LeaderboardEntry(BaseModel):
 
 class PoolStatusResponse(BaseModel):
     """Reward pool status."""
+
     balance: float
     balance_raw: int
     value_usd: float
@@ -132,6 +142,7 @@ class PoolStatusResponse(BaseModel):
 
 class DistributionItem(BaseModel):
     """Distribution record."""
+
     id: str
     pool_amount: float
     pool_value_usd: Optional[float]
@@ -144,6 +155,7 @@ class DistributionItem(BaseModel):
 # ===========================================
 # Helper Functions
 # ===========================================
+
 
 def utc_now() -> datetime:
     """Get current UTC time (timezone-aware)."""
@@ -164,13 +176,14 @@ def tier_to_info(tier: int) -> TierInfo:
         tier=tier,
         name=config["name"],
         emoji=config["emoji"],
-        multiplier=config["multiplier"]
+        multiplier=config["multiplier"],
     )
 
 
 # ===========================================
 # Endpoints
 # ===========================================
+
 
 @router.get("/stats", response_model=GlobalStatsResponse)
 @limiter.limit("60/minute")
@@ -179,9 +192,7 @@ async def get_global_stats(request: Request, db: AsyncSession = Depends(get_db))
     from app.models import SystemStats
     from sqlalchemy import select
 
-    result = await db.execute(
-        select(SystemStats).where(SystemStats.id == 1)
-    )
+    result = await db.execute(select(SystemStats).where(SystemStats.id == 1))
     stats = result.scalar_one_or_none()
 
     if not stats:
@@ -191,25 +202,25 @@ async def get_global_stats(request: Request, db: AsyncSession = Depends(get_db))
             total_buybacks_sol=0,
             total_distributed=0,
             last_snapshot_at=None,
-            last_distribution_at=None
+            last_distribution_at=None,
         )
 
     return GlobalStatsResponse(
         total_holders=stats.total_holders or 0,
         total_volume_24h=float(stats.total_volume_24h or 0),
         total_buybacks_sol=float(stats.total_buybacks or 0),
-        total_distributed=float(Decimal(stats.total_distributed or 0) / TOKEN_MULTIPLIER),
+        total_distributed=float(
+            Decimal(stats.total_distributed or 0) / TOKEN_MULTIPLIER
+        ),
         last_snapshot_at=stats.last_snapshot_at,
-        last_distribution_at=stats.last_distribution_at
+        last_distribution_at=stats.last_distribution_at,
     )
 
 
 @router.get("/user/{wallet}", response_model=UserStatsResponse)
 @limiter.limit("30/minute")
 async def get_user_stats(
-    request: Request,
-    wallet: ValidatedWallet,
-    db: AsyncSession = Depends(get_db)
+    request: Request, wallet: ValidatedWallet, db: AsyncSession = Depends(get_db)
 ):
     """Get mining statistics for a specific wallet."""
     # Additional validation
@@ -225,7 +236,12 @@ async def get_user_stats(
             balance_raw=int(settings.test_user_balance * TOKEN_MULTIPLIER),
             twab=settings.test_user_twab,
             twab_raw=int(settings.test_user_twab * TOKEN_MULTIPLIER),
-            tier=TierInfo(tier=4, name="Industrial", emoji="🏭", multiplier=settings.test_user_multiplier),
+            tier=TierInfo(
+                tier=4,
+                name="Industrial",
+                emoji="🏭",
+                multiplier=settings.test_user_multiplier,
+            ),
             multiplier=settings.test_user_multiplier,
             hash_power=settings.test_user_hash_power,
             streak_hours=96.0,  # 4 days
@@ -233,7 +249,7 @@ async def get_user_stats(
             next_tier=TierInfo(tier=5, name="Master Miner", emoji="👑", multiplier=3.5),
             hours_to_next_tier=72.0,  # 3 days to next tier
             rank=42,
-            pending_reward_estimate=pending
+            pending_reward_estimate=pending,
         )
 
     streak_service = StreakService(db)
@@ -260,10 +276,11 @@ async def get_user_stats(
         from sqlalchemy import select, and_
 
         result = await db.execute(
-            select(Balance.balance).where(and_(
-                Balance.snapshot_id == latest_snapshot.id,
-                Balance.wallet == wallet
-            ))
+            select(Balance.balance).where(
+                and_(
+                    Balance.snapshot_id == latest_snapshot.id, Balance.wallet == wallet
+                )
+            )
         )
         balance_raw = result.scalar_one_or_none() or 0
 
@@ -298,7 +315,9 @@ async def get_user_stats(
                 share_ratio = float(effective_hash_power / projected_total)
                 pool_share_percent = share_ratio * 100
                 pending_estimate = float(
-                    Decimal(pool_status.balance) * Decimal(str(share_ratio)) / TOKEN_MULTIPLIER
+                    Decimal(pool_status.balance)
+                    * Decimal(str(share_ratio))
+                    / TOKEN_MULTIPLIER
                 )
         else:
             estimate, share_percent = await twab_service.estimate_reward_share(
@@ -331,7 +350,7 @@ async def get_user_stats(
         pending_reward_estimate=pending_estimate,
         is_new_holder=is_new_holder,
         is_projected=is_projected,
-        pool_share_percent=pool_share_percent
+        pool_share_percent=pool_share_percent,
     )
 
 
@@ -341,7 +360,7 @@ async def get_user_history(
     request: Request,
     wallet: ValidatedWallet,
     limit: int = Query(default=10, ge=1, le=50),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """Get distribution history for a wallet."""
     validate_wallet_address(wallet)
@@ -357,7 +376,7 @@ async def get_user_history(
             multiplier=float(r.multiplier),
             hash_power=float(r.hash_power / TOKEN_MULTIPLIER),
             amount_received=float(Decimal(r.amount_received) / TOKEN_MULTIPLIER),
-            tx_signature=r.tx_signature
+            tx_signature=r.tx_signature,
         )
         for r in recipients
     ]
@@ -368,7 +387,7 @@ async def get_user_history(
 async def get_leaderboard(
     request: Request,
     limit: int = Query(default=10, ge=1, le=100),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """Get top miners by hash power."""
     twab_service = TWABService(db)
@@ -382,7 +401,7 @@ async def get_leaderboard(
             wallet_short=format_wallet(hp.wallet),
             hash_power=float(hp.hash_power / TOKEN_MULTIPLIER),
             tier=tier_to_info(hp.tier),
-            multiplier=hp.multiplier
+            multiplier=hp.multiplier,
         )
         for i, hp in enumerate(leaders)
     ]
@@ -393,6 +412,7 @@ async def get_leaderboard(
 async def get_pool_status(request: Request, db: AsyncSession = Depends(get_db)):
     """Get reward pool status."""
     from app.config import get_settings
+
     settings = get_settings()
 
     distribution_service = DistributionService(db)
@@ -402,8 +422,7 @@ async def get_pool_status(request: Request, db: AsyncSession = Depends(get_db)):
     hours_until_time = None
     if status.hours_since_last is not None:
         hours_until_time = max(
-            0,
-            settings.distribution_max_hours - status.hours_since_last
+            0, settings.distribution_max_hours - status.hours_since_last
         )
 
     # Determine next trigger
@@ -423,7 +442,7 @@ async def get_pool_status(request: Request, db: AsyncSession = Depends(get_db)):
         hours_until_time_trigger=hours_until_time,
         threshold_met=status.threshold_met,
         time_trigger_met=status.time_trigger_met,
-        next_trigger=next_trigger
+        next_trigger=next_trigger,
     )
 
 
@@ -432,7 +451,7 @@ async def get_pool_status(request: Request, db: AsyncSession = Depends(get_db)):
 async def get_distributions(
     request: Request,
     limit: int = Query(default=10, ge=1, le=50),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """Get recent mining reward payouts."""
     distribution_service = DistributionService(db)
@@ -447,7 +466,7 @@ async def get_distributions(
             total_hashpower=float(d.total_hashpower / TOKEN_MULTIPLIER),
             recipient_count=d.recipient_count,
             trigger_type=d.trigger_type,
-            executed_at=d.executed_at
+            executed_at=d.executed_at,
         )
         for d in distributions
     ]
@@ -463,7 +482,7 @@ async def get_tiers(request: Request):
             "name": config["name"],
             "emoji": config["emoji"],
             "multiplier": config["multiplier"],
-            "min_hours": config["min_hours"]
+            "min_hours": config["min_hours"],
         }
         for tier, config in TIER_CONFIG.items()
     ]

@@ -8,7 +8,6 @@ import hmac
 import logging
 import re
 import time
-from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Request, HTTPException, Depends, Header
@@ -27,7 +26,7 @@ settings = get_settings()
 router = APIRouter(prefix="/api/webhook", tags=["webhook"])
 
 # Solana wallet address validation: 32-44 base58 characters
-WALLET_REGEX = re.compile(r'^[1-9A-HJ-NP-Za-km-z]{32,44}$')
+WALLET_REGEX = re.compile(r"^[1-9A-HJ-NP-Za-km-z]{32,44}$")
 
 # Maximum age for webhook timestamps to prevent replay attacks
 # Production: 5 minutes (strict)
@@ -38,15 +37,13 @@ WEBHOOK_MAX_AGE_SECONDS_DEVELOPMENT = 1800
 
 class WebhookResponse(BaseModel):
     """Webhook response."""
+
     success: bool
     message: str
     processed: int = 0
 
 
-def verify_webhook_auth(
-    auth_header: Optional[str],
-    secret: str
-) -> bool:
+def verify_webhook_auth(auth_header: Optional[str], secret: str) -> bool:
     """
     Verify Helius webhook authorization.
 
@@ -87,12 +84,14 @@ def validate_webhook_timestamp(timestamp: Optional[int]) -> bool:
     age = abs(current_time - timestamp)
 
     # Use stricter window in production
-    max_age = WEBHOOK_MAX_AGE_SECONDS_PRODUCTION if settings.is_production else WEBHOOK_MAX_AGE_SECONDS_DEVELOPMENT
+    max_age = (
+        WEBHOOK_MAX_AGE_SECONDS_PRODUCTION
+        if settings.is_production
+        else WEBHOOK_MAX_AGE_SECONDS_DEVELOPMENT
+    )
 
     if age > max_age:
-        logger.warning(
-            f"Webhook timestamp too old: {age}s (max: {max_age}s)"
-        )
+        logger.warning(f"Webhook timestamp too old: {age}s (max: {max_age}s)")
         return False
 
     return True
@@ -118,7 +117,7 @@ def validate_wallet_address(wallet: str) -> bool:
 async def helius_webhook(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    authorization: Optional[str] = Header(None)
+    authorization: Optional[str] = Header(None),
 ):
     """
     Handle Helius webhook for transaction monitoring.
@@ -134,13 +133,10 @@ async def helius_webhook(
         logger.error("HELIUS_WEBHOOK_SECRET not configured - rejecting webhook")
         raise HTTPException(
             status_code=503,
-            detail="Webhook endpoint not configured. Set HELIUS_WEBHOOK_SECRET."
+            detail="Webhook endpoint not configured. Set HELIUS_WEBHOOK_SECRET.",
         )
 
-    if not verify_webhook_auth(
-        authorization,
-        settings.helius_webhook_secret
-    ):
+    if not verify_webhook_auth(authorization, settings.helius_webhook_secret):
         logger.warning(
             f"Invalid webhook authorization from {request.client.host if request.client else 'unknown'}"
         )
@@ -160,7 +156,7 @@ async def helius_webhook(
         logger.warning(f"Webhook batch too large: {len(transactions)} transactions")
         raise HTTPException(
             status_code=400,
-            detail="Batch too large. Maximum 100 transactions per request."
+            detail="Batch too large. Maximum 100 transactions per request.",
         )
 
     # Validate webhook timestamp from first transaction
@@ -172,7 +168,7 @@ async def helius_webhook(
         if not validate_webhook_timestamp(tx_timestamp):
             raise HTTPException(
                 status_code=400,
-                detail="Webhook timestamp missing or too old. Possible replay attack."
+                detail="Webhook timestamp missing or too old. Possible replay attack.",
             )
 
     helius = get_helius_service()
@@ -190,7 +186,9 @@ async def helius_webhook(
                 # Validate wallet address format before processing
                 wallet = parsed.source_wallet
                 if not validate_wallet_address(wallet):
-                    logger.warning(f"Invalid wallet address in webhook: {wallet[:20] if wallet else 'None'}...")
+                    logger.warning(
+                        f"Invalid wallet address in webhook: {wallet[:20] if wallet else 'None'}..."
+                    )
                     skipped_invalid_wallet += 1
                     continue
 
@@ -224,7 +222,7 @@ async def helius_webhook(
     return WebhookResponse(
         success=True,
         message=f"Processed {processed} sell transactions{detail_str}",
-        processed=processed
+        processed=processed,
     )
 
 
@@ -241,7 +239,7 @@ async def webhook_status():
     if not secret_configured:
         return {
             "configured": False,
-            "error": "HELIUS_WEBHOOK_SECRET not set. Webhook endpoint is disabled."
+            "error": "HELIUS_WEBHOOK_SECRET not set. Webhook endpoint is disabled.",
         }
 
     helius = get_helius_service()
@@ -260,5 +258,5 @@ async def webhook_status():
             "configured": True,
             "signature_verification": "enabled",
             "registered_webhooks": "unknown",
-            "note": "Could not fetch webhook list from Helius"
+            "note": "Could not fetch webhook list from Helius",
         }

@@ -8,7 +8,7 @@ import asyncio
 import logging
 from typing import TypeVar, Coroutine, Any, Optional
 
-T = TypeVar('T')
+T = TypeVar("T")
 logger = logging.getLogger(__name__)
 
 # Persistent event loop for worker process

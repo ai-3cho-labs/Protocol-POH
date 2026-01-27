@@ -10,8 +10,16 @@ from decimal import Decimal
 from typing import Optional, List
 
 from sqlalchemy import (
-    String, Integer, BigInteger, Boolean, DateTime, Numeric,
-    ForeignKey, CheckConstraint, UniqueConstraint, Index, Text
+    String,
+    Integer,
+    BigInteger,
+    Boolean,
+    DateTime,
+    Numeric,
+    ForeignKey,
+    CheckConstraint,
+    UniqueConstraint,
+    Index,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
@@ -26,6 +34,7 @@ def utc_now() -> datetime:
 
 class Snapshot(Base):
     """Balance snapshot metadata."""
+
     __tablename__ = "snapshots"
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -48,6 +57,7 @@ class Snapshot(Base):
 
 class Balance(Base):
     """Wallet balance at a specific snapshot."""
+
     __tablename__ = "balances"
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -73,6 +83,7 @@ class Balance(Base):
 
 class HoldStreak(Base):
     """Wallet holding streak and tier tracking."""
+
     __tablename__ = "hold_streaks"
 
     wallet: Mapped[str] = mapped_column(String(44), primary_key=True)
@@ -88,9 +99,7 @@ class HoldStreak(Base):
     )
 
     __table_args__ = (
-        CheckConstraint(
-            "current_tier >= 1 AND current_tier <= 6", name="valid_tier"
-        ),
+        CheckConstraint("current_tier >= 1 AND current_tier <= 6", name="valid_tier"),
         Index("idx_hold_streaks_tier", "current_tier"),
         Index("idx_hold_streaks_updated", "updated_at"),
     )
@@ -98,14 +107,13 @@ class HoldStreak(Base):
 
 class CreatorReward(Base):
     """Incoming Pump.fun creator rewards."""
+
     __tablename__ = "creator_rewards"
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    amount_sol: Mapped[Decimal] = mapped_column(
-        Numeric(18, 9), nullable=False
-    )
+    amount_sol: Mapped[Decimal] = mapped_column(Numeric(18, 9), nullable=False)
     source: Mapped[str] = mapped_column(String(20), nullable=False)
     tx_signature: Mapped[Optional[str]] = mapped_column(String(88), nullable=True)
     received_at: Mapped[datetime] = mapped_column(
@@ -118,10 +126,12 @@ class CreatorReward(Base):
 
     __table_args__ = (
         CheckConstraint("amount_sol > 0", name="positive_amount"),
-        CheckConstraint(
-            "source IN ('pumpfun', 'pumpswap')", name="valid_source"
+        CheckConstraint("source IN ('pumpfun', 'pumpswap')", name="valid_source"),
+        Index(
+            "idx_creator_rewards_processed",
+            "processed",
+            postgresql_where="processed = FALSE",
         ),
-        Index("idx_creator_rewards_processed", "processed", postgresql_where="processed = FALSE"),
         Index("idx_creator_rewards_received", "received_at"),
         # Partial unique index on tx_signature (excludes NULL values)
         # Prevents duplicate transactions from webhook retries
@@ -129,13 +139,14 @@ class CreatorReward(Base):
             "idx_creator_rewards_tx_signature_unique",
             "tx_signature",
             unique=True,
-            postgresql_where="tx_signature IS NOT NULL"
+            postgresql_where="tx_signature IS NOT NULL",
         ),
     )
 
 
 class Buyback(Base):
     """Jupiter swap buyback transactions."""
+
     __tablename__ = "buybacks"
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -154,13 +165,12 @@ class Buyback(Base):
         DateTime(timezone=True), default=utc_now
     )
 
-    __table_args__ = (
-        Index("idx_buybacks_executed", "executed_at"),
-    )
+    __table_args__ = (Index("idx_buybacks_executed", "executed_at"),)
 
 
 class Distribution(Base):
     """Airdrop distribution cycles."""
+
     __tablename__ = "distributions"
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -170,9 +180,7 @@ class Distribution(Base):
     pool_value_usd: Mapped[Optional[Decimal]] = mapped_column(
         Numeric(18, 2), nullable=True
     )
-    total_hashpower: Mapped[Decimal] = mapped_column(
-        Numeric(24, 2), nullable=False
-    )
+    total_hashpower: Mapped[Decimal] = mapped_column(Numeric(24, 2), nullable=False)
     recipient_count: Mapped[int] = mapped_column(Integer, nullable=False)
     trigger_type: Mapped[str] = mapped_column(String(20), nullable=False)
     executed_at: Mapped[datetime] = mapped_column(
@@ -184,22 +192,23 @@ class Distribution(Base):
 
     # Relationships
     recipients: Mapped[List["DistributionRecipient"]] = relationship(
-        "DistributionRecipient", back_populates="distribution", cascade="all, delete-orphan"
+        "DistributionRecipient",
+        back_populates="distribution",
+        cascade="all, delete-orphan",
     )
 
     __table_args__ = (
         CheckConstraint("pool_amount > 0", name="positive_pool"),
         CheckConstraint("total_hashpower > 0", name="positive_hashpower"),
         CheckConstraint("recipient_count > 0", name="positive_recipients"),
-        CheckConstraint(
-            "trigger_type IN ('threshold', 'time')", name="valid_trigger"
-        ),
+        CheckConstraint("trigger_type IN ('threshold', 'time')", name="valid_trigger"),
         Index("idx_distributions_executed", "executed_at"),
     )
 
 
 class DistributionRecipient(Base):
     """Per-wallet distribution records."""
+
     __tablename__ = "distribution_recipients"
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -221,9 +230,7 @@ class DistributionRecipient(Base):
     )
 
     __table_args__ = (
-        UniqueConstraint(
-            "distribution_id", "wallet", name="uq_distribution_recipient"
-        ),
+        UniqueConstraint("distribution_id", "wallet", name="uq_distribution_recipient"),
         Index("idx_distribution_recipients_wallet", "wallet"),
         Index("idx_distribution_recipients_dist", "distribution_id"),
     )
@@ -231,17 +238,17 @@ class DistributionRecipient(Base):
 
 class ExcludedWallet(Base):
     """Wallets excluded from distributions."""
+
     __tablename__ = "excluded_wallets"
 
     wallet: Mapped[str] = mapped_column(String(44), primary_key=True)
     reason: Mapped[str] = mapped_column(String(100), nullable=False)
-    added_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=utc_now
-    )
+    added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
 class SystemStats(Base):
     """Cached global statistics (single row)."""
+
     __tablename__ = "system_stats"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
@@ -259,9 +266,7 @@ class SystemStats(Base):
         DateTime(timezone=True), default=utc_now, onupdate=utc_now
     )
 
-    __table_args__ = (
-        CheckConstraint("id = 1", name="single_row"),
-    )
+    __table_args__ = (CheckConstraint("id = 1", name="single_row"),)
 
 
 class DistributionLock(Base):
@@ -272,6 +277,7 @@ class DistributionLock(Base):
     race conditions where multiple Celery workers could execute
     the same distribution twice.
     """
+
     __tablename__ = "distribution_lock"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
@@ -283,6 +289,4 @@ class DistributionLock(Base):
         DateTime(timezone=True), default=utc_now, onupdate=utc_now
     )
 
-    __table_args__ = (
-        CheckConstraint("id = 1", name="distribution_lock_single_row"),
-    )
+    __table_args__ = (CheckConstraint("id = 1", name="distribution_lock_single_row"),)

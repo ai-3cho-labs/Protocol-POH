@@ -60,6 +60,7 @@ async def broadcast_to_wallet(wallet: str, event: str, data: dict) -> None:
 # Global Room Event Emitters
 # ============================================================================
 
+
 async def emit_distribution_executed(
     distribution_id: str,
     pool_amount: int,
@@ -88,8 +89,7 @@ async def emit_distribution_executed(
         recipient_count=recipient_count,
         trigger_type=trigger_type,
         top_recipients=[
-            TopRecipient(wallet=w, amount=a, rank=r)
-            for w, a, r in top_recipients
+            TopRecipient(wallet=w, amount=a, rank=r) for w, a, r in top_recipients
         ],
         executed_at=executed_at.isoformat(),
     )
@@ -149,6 +149,7 @@ async def emit_snapshot_taken(snapshot_at: datetime) -> None:
 # ============================================================================
 # Wallet Room Event Emitters
 # ============================================================================
+
 
 async def emit_tier_changed(
     wallet: str,

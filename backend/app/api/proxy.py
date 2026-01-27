@@ -67,38 +67,27 @@ async def rpc_proxy(request: Request) -> Dict[str, Any]:
     settings = get_settings()
 
     if not settings.helius_api_key:
-        raise HTTPException(
-            status_code=503,
-            detail="RPC not configured"
-        )
+        raise HTTPException(status_code=503, detail="RPC not configured")
 
     try:
         body = await request.json()
     except Exception:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid JSON body"
-        )
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
 
     # Validate JSON-RPC structure
     if not isinstance(body, dict):
         raise HTTPException(
-            status_code=400,
-            detail="Request body must be a JSON object"
+            status_code=400, detail="Request body must be a JSON object"
         )
 
     method = body.get("method")
     if not method:
-        raise HTTPException(
-            status_code=400,
-            detail="Missing 'method' field"
-        )
+        raise HTTPException(status_code=400, detail="Missing 'method' field")
 
     # Check if method is blocked
     if method in BLOCKED_RPC_METHODS:
         raise HTTPException(
-            status_code=403,
-            detail=f"Method '{method}' is not allowed through proxy"
+            status_code=403, detail=f"Method '{method}' is not allowed through proxy"
         )
 
     # Check if method is in allowlist (if configured for strict mode)
@@ -114,19 +103,12 @@ async def rpc_proxy(request: Request) -> Dict[str, Any]:
 
     try:
         client = await get_http_client()
-        response = await client.post(
-            settings.helius_rpc_url,
-            json=body,
-            timeout=30.0
-        )
+        response = await client.post(settings.helius_rpc_url, json=body, timeout=30.0)
         response.raise_for_status()
         return response.json()
     except Exception as e:
         logger.error(f"RPC proxy error: {e}")
-        raise HTTPException(
-            status_code=502,
-            detail="RPC request failed"
-        )
+        raise HTTPException(status_code=502, detail="RPC request failed")
 
 
 @router.get("/health")

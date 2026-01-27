@@ -41,7 +41,9 @@ async def setup_redis_adapter() -> None:
     Called during application startup if Redis is configured.
     """
     if not settings.redis_url:
-        logger.warning("No Redis URL configured, WebSocket will run in single-worker mode")
+        logger.warning(
+            "No Redis URL configured, WebSocket will run in single-worker mode"
+        )
         return
 
     # Skip Redis adapter in development to avoid SSL issues with Upstash
@@ -55,6 +57,7 @@ async def setup_redis_adapter() -> None:
         # Must set server reference for manager to work properly
         # For Upstash (rediss://), we need proper SSL config
         import ssl
+
         redis_url = settings.redis_url
 
         # Create SSL context for Upstash TLS connections
@@ -63,8 +66,7 @@ async def setup_redis_adapter() -> None:
             ssl_context.check_hostname = True
             ssl_context.verify_mode = ssl.CERT_REQUIRED
             mgr = socketio.AsyncRedisManager(
-                redis_url,
-                redis_options={"ssl": ssl_context}
+                redis_url, redis_options={"ssl": ssl_context}
             )
         else:
             mgr = socketio.AsyncRedisManager(redis_url)

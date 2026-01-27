@@ -48,7 +48,7 @@ async def _check_distribution_triggers() -> dict:
                     "status": "skipped",
                     "pool_value_usd": float(status.value_usd),
                     "threshold_met": status.threshold_met,
-                    "time_trigger_met": status.time_trigger_met
+                    "time_trigger_met": status.time_trigger_met,
                 }
 
             # Execute distribution
@@ -60,20 +60,14 @@ async def _check_distribution_triggers() -> dict:
                     "distribution_id": str(distribution.id),
                     "pool_amount": distribution.pool_amount,
                     "recipient_count": distribution.recipient_count,
-                    "trigger_type": distribution.trigger_type
+                    "trigger_type": distribution.trigger_type,
                 }
             else:
-                return {
-                    "status": "failed",
-                    "reason": "distribution_error"
-                }
+                return {"status": "failed", "reason": "distribution_error"}
 
         except Exception as e:
             logger.error(f"Error in distribution check: {e}")
-            return {
-                "status": "error",
-                "error": str(e)
-            }
+            return {"status": "error", "error": str(e)}
 
 
 @celery_app.task(name="app.tasks.distribution_task.force_distribution")
@@ -97,10 +91,7 @@ async def _force_distribution() -> dict:
             plan = await service.calculate_distribution()
 
             if not plan:
-                return {
-                    "status": "failed",
-                    "reason": "no_eligible_recipients"
-                }
+                return {"status": "failed", "reason": "no_eligible_recipients"}
 
             # Execute
             distribution = await service.execute_distribution(plan)
@@ -111,20 +102,14 @@ async def _force_distribution() -> dict:
                     "distribution_id": str(distribution.id),
                     "pool_amount": distribution.pool_amount,
                     "recipient_count": distribution.recipient_count,
-                    "trigger_type": "manual"
+                    "trigger_type": "manual",
                 }
             else:
-                return {
-                    "status": "failed",
-                    "reason": "execution_error"
-                }
+                return {"status": "failed", "reason": "execution_error"}
 
         except Exception as e:
             logger.error(f"Error in forced distribution: {e}")
-            return {
-                "status": "error",
-                "error": str(e)
-            }
+            return {"status": "error", "error": str(e)}
 
 
 @celery_app.task(name="app.tasks.distribution_task.get_distribution_preview")
@@ -147,17 +132,14 @@ async def _get_distribution_preview() -> dict:
             plan = await service.calculate_distribution()
 
             if not plan:
-                return {
-                    "status": "no_distribution",
-                    "reason": "no_eligible_recipients"
-                }
+                return {"status": "no_distribution", "reason": "no_eligible_recipients"}
 
             # Return top recipients preview
             top_recipients = [
                 {
                     "wallet": r.wallet[:8] + "...",
                     "share_pct": float(r.share_percentage),
-                    "amount": r.amount
+                    "amount": r.amount,
                 }
                 for r in plan.recipients[:10]
             ]
@@ -169,15 +151,12 @@ async def _get_distribution_preview() -> dict:
                 "total_hashpower": float(plan.total_hashpower),
                 "recipient_count": plan.recipient_count,
                 "trigger_type": plan.trigger_type,
-                "top_recipients": top_recipients
+                "top_recipients": top_recipients,
             }
 
         except Exception as e:
             logger.error(f"Error in distribution preview: {e}")
-            return {
-                "status": "error",
-                "error": str(e)
-            }
+            return {"status": "error", "error": str(e)}
 
 
 @celery_app.task(name="app.tasks.distribution_task.get_pool_status")
@@ -197,11 +176,13 @@ async def _get_pool_status() -> dict:
             "balance": status.balance_formatted,
             "balance_raw": status.balance,
             "value_usd": float(status.value_usd),
-            "last_distribution": status.last_distribution.isoformat() if status.last_distribution else None,
+            "last_distribution": status.last_distribution.isoformat()
+            if status.last_distribution
+            else None,
             "hours_since_last": status.hours_since_last,
             "threshold_met": status.threshold_met,
             "time_trigger_met": status.time_trigger_met,
-            "should_distribute": status.should_distribute
+            "should_distribute": status.should_distribute,
         }
 
 

@@ -19,12 +19,16 @@ settings = get_settings()
 _redis_url = settings.redis_url or ""
 _uses_ssl = _redis_url.startswith("rediss://")
 
-REDIS_SSL_CONFIG = {
-    "ssl_cert_reqs": ssl.CERT_NONE,
-    "ssl_ca_certs": None,
-    "ssl_certfile": None,
-    "ssl_keyfile": None,
-} if _uses_ssl else None
+REDIS_SSL_CONFIG = (
+    {
+        "ssl_cert_reqs": ssl.CERT_NONE,
+        "ssl_ca_certs": None,
+        "ssl_certfile": None,
+        "ssl_keyfile": None,
+    }
+    if _uses_ssl
+    else None
+)
 
 
 class BaseTaskWithRetry(Task):
@@ -34,6 +38,7 @@ class BaseTaskWithRetry(Task):
     Provides exponential backoff retry for transient errors like
     network timeouts, API rate limits, and database connection issues.
     """
+
     # Retry on common transient errors
     autoretry_for = (
         ConnectionError,

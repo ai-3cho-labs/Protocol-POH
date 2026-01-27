@@ -17,8 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 async def verify_api_key(
-    request: Request,
-    x_api_key: Optional[str] = Header(None, alias="X-API-Key")
+    request: Request, x_api_key: Optional[str] = Header(None, alias="X-API-Key")
 ) -> str:
     """
     Verify API key for protected endpoints.
@@ -39,20 +38,14 @@ async def verify_api_key(
     if not settings.api_keys_list:
         if settings.is_production:
             logger.error("API key required but none configured")
-            raise HTTPException(
-                status_code=500,
-                detail="Server configuration error"
-            )
+            raise HTTPException(status_code=500, detail="Server configuration error")
         # In development without API keys, allow access with warning
         logger.warning("No API keys configured - allowing unauthenticated access")
         return ""
 
     # Check if API key provided
     if not x_api_key:
-        raise HTTPException(
-            status_code=401,
-            detail="API key required"
-        )
+        raise HTTPException(status_code=401, detail="API key required")
 
     # Constant-time comparison to prevent timing attacks
     for valid_key in settings.api_keys_list:
@@ -63,15 +56,11 @@ async def verify_api_key(
     logger.warning(
         f"Invalid API key attempt from {request.client.host if request.client else 'unknown'}"
     )
-    raise HTTPException(
-        status_code=401,
-        detail="Invalid API key"
-    )
+    raise HTTPException(status_code=401, detail="Invalid API key")
 
 
 async def get_optional_api_key(
-    request: Request,
-    x_api_key: Optional[str] = Header(None, alias="X-API-Key")
+    request: Request, x_api_key: Optional[str] = Header(None, alias="X-API-Key")
 ) -> Optional[str]:
     """
     Get API key if provided, but don't require it.

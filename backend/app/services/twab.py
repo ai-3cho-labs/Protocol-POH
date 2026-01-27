@@ -46,6 +46,7 @@ def ensure_utc(dt: datetime) -> datetime:
 @dataclass
 class HashPowerInfo:
     """Complete hash power breakdown for a wallet."""
+
     wallet: str
     twab: int  # Time-weighted average balance (raw tokens)
     multiplier: float
@@ -60,12 +61,7 @@ class TWABService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def calculate_twab(
-        self,
-        wallet: str,
-        start: datetime,
-        end: datetime
-    ) -> int:
+    async def calculate_twab(self, wallet: str, start: datetime, end: datetime) -> int:
         """
         Calculate Time-Weighted Average Balance for a single wallet.
 
@@ -76,11 +72,13 @@ class TWABService:
         result = await self.db.execute(
             select(Snapshot.timestamp, Balance.balance)
             .join(Balance, Balance.snapshot_id == Snapshot.id)
-            .where(and_(
-                Balance.wallet == wallet,
-                Snapshot.timestamp >= start,
-                Snapshot.timestamp <= end
-            ))
+            .where(
+                and_(
+                    Balance.wallet == wallet,
+                    Snapshot.timestamp >= start,
+                    Snapshot.timestamp <= end,
+                )
+            )
             .order_by(Snapshot.timestamp.asc())
         )
         balances = [(row[0], row[1]) for row in result.fetchall()]
@@ -88,10 +86,7 @@ class TWABService:
         return self._compute_twab(balances, start, end)
 
     def _compute_twab(
-        self,
-        balances: list[tuple[datetime, int]],
-        start: datetime,
-        end: datetime
+        self, balances: list[tuple[datetime, int]], start: datetime, end: datetime
     ) -> int:
         """
         Compute TWAB from balance snapshots.
@@ -164,10 +159,7 @@ class TWABService:
         return int(twab)
 
     async def calculate_hash_power(
-        self,
-        wallet: str,
-        start: datetime,
-        end: datetime
+        self, wallet: str, start: datetime, end: datetime
     ) -> HashPowerInfo:
         """
         Calculate Hash Power for a single wallet.
@@ -199,7 +191,7 @@ class TWABService:
             multiplier=multiplier,
             hash_power=hash_power,
             tier=tier,
-            tier_name=tier_name
+            tier_name=tier_name,
         )
 
     def _compute_hash_powers_sync(
@@ -208,7 +200,7 @@ class TWABService:
         wallet_tiers: dict[str, int],
         start: datetime,
         end: datetime,
-        min_balance: int
+        min_balance: int,
     ) -> list[HashPowerInfo]:
         """
         Synchronous CPU-bound hash power calculation.
@@ -234,14 +226,16 @@ class TWABService:
             # Calculate hash power
             hash_power = Decimal(twab) * Decimal(str(multiplier))
 
-            hash_powers.append(HashPowerInfo(
-                wallet=wallet,
-                twab=twab,
-                multiplier=multiplier,
-                hash_power=hash_power,
-                tier=tier,
-                tier_name=tier_name
-            ))
+            hash_powers.append(
+                HashPowerInfo(
+                    wallet=wallet,
+                    twab=twab,
+                    multiplier=multiplier,
+                    hash_power=hash_power,
+                    tier=tier,
+                    tier_name=tier_name,
+                )
+            )
 
         # Sort by hash power descending
         hash_powers.sort(key=lambda x: x.hash_power, reverse=True)
@@ -253,7 +247,7 @@ class TWABService:
         start: datetime,
         end: datetime,
         min_balance: int = 0,
-        limit: Optional[int] = None
+        limit: Optional[int] = None,
     ) -> list[HashPowerInfo]:
         """
         Calculate hash power for all eligible wallets using ATOMIC batch query.
@@ -273,9 +267,7 @@ class TWABService:
             List of HashPowerInfo sorted by hash power descending.
         """
         # First, get excluded wallets to filter them out
-        excluded_result = await self.db.execute(
-            select(ExcludedWallet.wallet)
-        )
+        excluded_result = await self.db.execute(select(ExcludedWallet.wallet))
         excluded_wallets = {row[0] for row in excluded_result.fetchall()}
 
         # ATOMIC QUERY: Get ALL balances WITH tiers in single query
@@ -288,14 +280,11 @@ class TWABService:
                 Balance.wallet,
                 Snapshot.timestamp,
                 Balance.balance,
-                HoldStreak.current_tier
+                HoldStreak.current_tier,
             )
             .join(Snapshot, Balance.snapshot_id == Snapshot.id)
             .outerjoin(HoldStreak, Balance.wallet == HoldStreak.wallet)
-            .where(and_(
-                Snapshot.timestamp >= start,
-                Snapshot.timestamp <= end
-            ))
+            .where(and_(Snapshot.timestamp >= start, Snapshot.timestamp <= end))
             .order_by(Balance.wallet, Snapshot.timestamp.asc())
         )
 
@@ -336,7 +325,7 @@ class TWABService:
             wallet_tiers,
             start,
             end,
-            min_balance
+            min_balance,
         )
 
         # Apply limit if specified
@@ -346,10 +335,7 @@ class TWABService:
         return hash_powers
 
     async def get_total_hash_power(
-        self,
-        start: datetime,
-        end: datetime,
-        min_balance: int = 0
+        self, start: datetime, end: datetime, min_balance: int = 0
     ) -> Decimal:
         """
         Calculate total hash power across all eligible wallets.
@@ -358,9 +344,7 @@ class TWABService:
         return sum(hp.hash_power for hp in hash_powers)
 
     async def get_leaderboard(
-        self,
-        limit: int = 10,
-        hours: int = 24
+        self, limit: int = 10, hours: int = 24
     ) -> list[HashPowerInfo]:
         """
         Get top wallets by hash power.
@@ -372,11 +356,7 @@ class TWABService:
 
         return await self.calculate_all_hash_powers(start, end, limit=limit)
 
-    async def get_wallet_rank(
-        self,
-        wallet: str,
-        hours: int = 24
-    ) -> Optional[int]:
+    async def get_wallet_rank(self, wallet: str, hours: int = 24) -> Optional[int]:
         """
         Get a wallet's rank on the leaderboard.
 
@@ -399,7 +379,7 @@ class TWABService:
         wallet: str,
         pool_amount: int,
         start: Optional[datetime] = None,
-        end: Optional[datetime] = None
+        end: Optional[datetime] = None,
     ) -> tuple[int, Decimal]:
         """
         Estimate a wallet's share of a distribution pool.

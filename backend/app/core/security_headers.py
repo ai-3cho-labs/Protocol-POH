@@ -46,8 +46,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Add HSTS only on HTTPS connections
         # This tells browsers to only use HTTPS for future requests
         if request.url.scheme == "https":
-            response.headers["Strict-Transport-Security"] = (
-                "max-age=31536000; includeSubDomains"
-            )
+            response.headers[
+                "Strict-Transport-Security"
+            ] = "max-age=31536000; includeSubDomains"
 
         return response

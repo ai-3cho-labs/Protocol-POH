@@ -11,20 +11,23 @@ from decimal import Decimal
 from typing import Optional
 from dataclasses import dataclass
 
-from sqlalchemy import select, func, insert, text
+from sqlalchemy import select, func, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import OperationalError
 
 from app.models import (
-    Distribution, DistributionRecipient, DistributionLock, SystemStats, ExcludedWallet
+    Distribution,
+    DistributionRecipient,
+    DistributionLock,
+    SystemStats,
 )
-from app.services.twab import TWABService, HashPowerInfo
+from app.services.twab import TWABService
 from app.services.helius import get_helius_service
 from app.utils.http_client import get_http_client
 from app.utils.solana_tx import send_spl_token_transfer, confirm_transaction
 from app.utils.price_cache import get_gold_price_usd as get_cached_gold_price
-from app.config import get_settings, GOLD_DECIMALS, GOLD_MULTIPLIER, TOKEN_MULTIPLIER
+from app.config import get_settings, GOLD_MULTIPLIER, TOKEN_MULTIPLIER
 from app.websocket import emit_distribution_executed
 
 logger = logging.getLogger(__name__)
@@ -39,6 +42,7 @@ def utc_now() -> datetime:
 @dataclass
 class DistributionPlan:
     """Planned distribution before execution."""
+
     pool_amount: int  # Raw token amount
     pool_value_usd: Decimal
     total_hashpower: Decimal
@@ -50,6 +54,7 @@ class DistributionPlan:
 @dataclass
 class RecipientShare:
     """Individual recipient's share in a distribution."""
+
     wallet: str
     twab: int
     multiplier: float
@@ -61,6 +66,7 @@ class RecipientShare:
 @dataclass
 class PoolStatus:
     """Current pool status."""
+
     balance: int  # Raw token amount
     balance_formatted: float  # Human readable
     value_usd: Decimal
@@ -127,6 +133,7 @@ class DistributionService:
 
         try:
             from app.utils.solana_tx import keypair_from_base58
+
             keypair = keypair_from_base58(settings.airdrop_pool_private_key)
             return str(keypair.pubkey())
         except Exception as e:
@@ -180,9 +187,7 @@ class DistributionService:
             Last Distribution record, or None.
         """
         result = await self.db.execute(
-            select(Distribution)
-            .order_by(Distribution.executed_at.desc())
-            .limit(1)
+            select(Distribution).order_by(Distribution.executed_at.desc()).limit(1)
         )
         return result.scalar_one_or_none()
 
@@ -209,8 +214,7 @@ class DistributionService:
         # Check triggers
         threshold_met = value_usd >= settings.distribution_threshold_usd
         time_trigger_met = (
-            hours_since is None or
-            hours_since >= settings.distribution_max_hours
+            hours_since is None or hours_since >= settings.distribution_max_hours
         )
 
         return PoolStatus(
@@ -221,7 +225,7 @@ class DistributionService:
             hours_since_last=hours_since,
             threshold_met=threshold_met,
             time_trigger_met=time_trigger_met,
-            should_distribute=threshold_met or time_trigger_met
+            should_distribute=threshold_met or time_trigger_met,
         )
 
     async def should_distribute(self) -> tuple[bool, str]:
@@ -241,8 +245,7 @@ class DistributionService:
         return False, ""
 
     async def calculate_distribution(
-        self,
-        pool_amount: Optional[int] = None
+        self, pool_amount: Optional[int] = None
     ) -> Optional[DistributionPlan]:
         """
         Calculate distribution shares for all eligible wallets.
@@ -300,7 +303,9 @@ class DistributionService:
         # SAFETY: Guard against division by zero
         # This can happen if all wallets have 0 hash power (no TWAB or all at tier 1 with 0 balance)
         if total_hp <= 0:
-            logger.warning("Total hash power is zero or negative, cannot calculate distribution shares")
+            logger.warning(
+                "Total hash power is zero or negative, cannot calculate distribution shares"
+            )
             return None
 
         # Calculate shares with precision remainder distribution
@@ -313,14 +318,16 @@ class DistributionService:
 
             # Include all recipients, even with 0 amount initially
             # (they may receive remainder tokens)
-            recipients.append(RecipientShare(
-                wallet=hp.wallet,
-                twab=hp.twab,
-                multiplier=hp.multiplier,
-                hash_power=hp.hash_power,
-                share_percentage=share_pct * 100,
-                amount=amount
-            ))
+            recipients.append(
+                RecipientShare(
+                    wallet=hp.wallet,
+                    twab=hp.twab,
+                    multiplier=hp.multiplier,
+                    hash_power=hp.hash_power,
+                    share_percentage=share_pct * 100,
+                    amount=amount,
+                )
+            )
 
         # Second pass: distribute remainder to largest holder(s)
         # Truncation loses ~1 token per recipient on average
@@ -342,10 +349,12 @@ class DistributionService:
                     multiplier=r.multiplier,
                     hash_power=r.hash_power,
                     share_percentage=r.share_percentage,
-                    amount=r.amount + 1
+                    amount=r.amount + 1,
                 )
 
-            logger.debug(f"Distributed {remainder} remainder tokens to top {min(remainder, len(recipients))} holders")
+            logger.debug(
+                f"Distributed {remainder} remainder tokens to top {min(remainder, len(recipients))} holders"
+            )
 
         # Filter out recipients with 0 amount
         recipients = [r for r in recipients if r.amount > 0]
@@ -356,12 +365,11 @@ class DistributionService:
             total_hashpower=total_hp,
             recipient_count=len(recipients),
             trigger_type=trigger_type,
-            recipients=recipients
+            recipients=recipients,
         )
 
     async def execute_distribution(
-        self,
-        plan: DistributionPlan
+        self, plan: DistributionPlan
     ) -> Optional[Distribution]:
         """
         Execute a distribution plan (send tokens to recipients).
@@ -380,7 +388,7 @@ class DistributionService:
                 total_hashpower=plan.total_hashpower,
                 recipient_count=plan.recipient_count,
                 trigger_type=plan.trigger_type,
-                executed_at=utc_now()
+                executed_at=utc_now(),
             )
             self.db.add(distribution)
             await self.db.flush()
@@ -405,15 +413,21 @@ class DistributionService:
                         "twab": r.twab,
                         "multiplier": Decimal(str(r.multiplier)),
                         "hash_power": r.hash_power,
-                        "amount_received": r.amount if transfer_results.get(r.wallet) else 0,
-                        "tx_signature": transfer_results.get(r.wallet)
+                        "amount_received": r.amount
+                        if transfer_results.get(r.wallet)
+                        else 0,
+                        "tx_signature": transfer_results.get(r.wallet),
                     }
                     for r in plan.recipients
                 ]
                 await self.db.execute(insert(DistributionRecipient), recipient_data)
 
                 # Log failed transfers for reconciliation
-                failed_transfers = [r.wallet for r in plan.recipients if not transfer_results.get(r.wallet)]
+                failed_transfers = [
+                    r.wallet
+                    for r in plan.recipients
+                    if not transfer_results.get(r.wallet)
+                ]
                 if failed_transfers:
                     logger.warning(
                         f"Distribution {distribution.id}: {len(failed_transfers)} transfers failed, "
@@ -437,11 +451,9 @@ class DistributionService:
             # Emit WebSocket event (after commit)
             top_5 = [
                 (r.wallet, r.amount, i + 1)
-                for i, r in enumerate(sorted(
-                    plan.recipients,
-                    key=lambda x: x.amount,
-                    reverse=True
-                )[:5])
+                for i, r in enumerate(
+                    sorted(plan.recipients, key=lambda x: x.amount, reverse=True)[:5]
+                )
             ]
             await emit_distribution_executed(
                 distribution_id=str(distribution.id),
@@ -461,9 +473,7 @@ class DistributionService:
             return None
 
     async def _execute_token_transfers(
-        self,
-        recipients: list[RecipientShare],
-        batch_size: int = 10
+        self, recipients: list[RecipientShare], batch_size: int = 10
     ) -> dict[str, Optional[str]]:
         """
         Execute token transfers to all recipients.
@@ -484,30 +494,45 @@ class DistributionService:
         private_key = settings.airdrop_pool_private_key
 
         if not token_mint or not private_key:
-            logger.error("Cannot execute transfers: missing gold_token_mint or private_key")
+            logger.error(
+                "Cannot execute transfers: missing gold_token_mint or private_key"
+            )
             return results
 
-        async def transfer_to_recipient(recipient: RecipientShare) -> tuple[str, Optional[str]]:
+        async def transfer_to_recipient(
+            recipient: RecipientShare,
+        ) -> tuple[str, Optional[str]]:
             """Transfer tokens to a single recipient."""
             try:
                 result = await send_spl_token_transfer(
                     from_private_key=private_key,
                     to_address=recipient.wallet,
                     token_mint=token_mint,
-                    amount=recipient.amount
+                    amount=recipient.amount,
                 )
 
                 if result.success:
                     # Wait for confirmation (short timeout for batch processing)
-                    confirmed = await confirm_transaction(result.signature, timeout_seconds=15)
+                    confirmed = await confirm_transaction(
+                        result.signature, timeout_seconds=15
+                    )
                     if confirmed:
-                        logger.debug(f"Transfer confirmed: {recipient.wallet} -> {result.signature}")
+                        logger.debug(
+                            f"Transfer confirmed: {recipient.wallet} -> {result.signature}"
+                        )
                         return (recipient.wallet, result.signature)
                     else:
-                        logger.warning(f"Transfer sent but unconfirmed: {recipient.wallet}")
-                        return (recipient.wallet, result.signature)  # Still return signature
+                        logger.warning(
+                            f"Transfer sent but unconfirmed: {recipient.wallet}"
+                        )
+                        return (
+                            recipient.wallet,
+                            result.signature,
+                        )  # Still return signature
                 else:
-                    logger.error(f"Transfer failed to {recipient.wallet}: {result.error}")
+                    logger.error(
+                        f"Transfer failed to {recipient.wallet}: {result.error}"
+                    )
                     return (recipient.wallet, None)
 
             except Exception as e:
@@ -516,8 +541,10 @@ class DistributionService:
 
         # Process in batches
         for batch_start in range(0, len(recipients), batch_size):
-            batch = recipients[batch_start:batch_start + batch_size]
-            logger.info(f"Processing transfer batch {batch_start // batch_size + 1}, size={len(batch)}")
+            batch = recipients[batch_start : batch_start + batch_size]
+            logger.info(
+                f"Processing transfer batch {batch_start // batch_size + 1}, size={len(batch)}"
+            )
 
             # Execute batch concurrently
             tasks = [transfer_to_recipient(r) for r in batch]
@@ -526,8 +553,14 @@ class DistributionService:
             for result_idx, result in enumerate(batch_results):
                 if isinstance(result, Exception):
                     # Track failed wallet explicitly for reconciliation
-                    failed_wallet = batch[result_idx].wallet if result_idx < len(batch) else "unknown"
-                    logger.error(f"Batch transfer exception for {failed_wallet}: {result}")
+                    failed_wallet = (
+                        batch[result_idx].wallet
+                        if result_idx < len(batch)
+                        else "unknown"
+                    )
+                    logger.error(
+                        f"Batch transfer exception for {failed_wallet}: {result}"
+                    )
                     results[failed_wallet] = None  # Explicitly track failure
                 elif isinstance(result, tuple):
                     wallet, signature = result
@@ -538,14 +571,13 @@ class DistributionService:
                 await asyncio.sleep(0.5)
 
         successful = sum(1 for v in results.values() if v)
-        logger.info(f"Token transfers complete: {successful}/{len(recipients)} successful")
+        logger.info(
+            f"Token transfers complete: {successful}/{len(recipients)} successful"
+        )
 
         return results
 
-    async def get_recent_distributions(
-        self,
-        limit: int = 10
-    ) -> list[Distribution]:
+    async def get_recent_distributions(self, limit: int = 10) -> list[Distribution]:
         """
         Get recent distributions.
 
@@ -556,16 +588,12 @@ class DistributionService:
             List of recent Distribution records.
         """
         result = await self.db.execute(
-            select(Distribution)
-            .order_by(Distribution.executed_at.desc())
-            .limit(limit)
+            select(Distribution).order_by(Distribution.executed_at.desc()).limit(limit)
         )
         return list(result.scalars().all())
 
     async def get_wallet_distributions(
-        self,
-        wallet: str,
-        limit: int = 10
+        self, wallet: str, limit: int = 10
     ) -> list[DistributionRecipient]:
         """
         Get distribution history for a wallet.
@@ -594,9 +622,7 @@ class DistributionService:
         Returns:
             Total raw token amount distributed.
         """
-        result = await self.db.execute(
-            select(func.sum(Distribution.pool_amount))
-        )
+        result = await self.db.execute(select(func.sum(Distribution.pool_amount)))
         total = result.scalar_one_or_none()
         return int(total) if total else 0
 
@@ -611,7 +637,7 @@ class DistributionService:
             select(
                 func.count(Distribution.id),
                 func.sum(Distribution.pool_amount),
-                func.sum(Distribution.recipient_count)
+                func.sum(Distribution.recipient_count),
             )
         )
         row = result.one()
@@ -619,12 +645,11 @@ class DistributionService:
         return {
             "total_distributions": row[0] or 0,
             "total_distributed": row[1] or 0,
-            "total_recipients": row[2] or 0
+            "total_recipients": row[2] or 0,
         }
 
     async def get_failed_transfers(
-        self,
-        distribution_id: Optional[str] = None
+        self, distribution_id: Optional[str] = None
     ) -> list[DistributionRecipient]:
         """
         Get distribution recipients with failed transfers for reconciliation.
@@ -640,18 +665,19 @@ class DistributionService:
         )
 
         if distribution_id:
-            query = query.where(DistributionRecipient.distribution_id == distribution_id)
+            query = query.where(
+                DistributionRecipient.distribution_id == distribution_id
+            )
 
         result = await self.db.execute(
-            query.options(selectinload(DistributionRecipient.distribution))
-            .order_by(DistributionRecipient.id.asc())
+            query.options(selectinload(DistributionRecipient.distribution)).order_by(
+                DistributionRecipient.id.asc()
+            )
         )
         return list(result.scalars().all())
 
     async def retry_failed_transfer(
-        self,
-        recipient: DistributionRecipient,
-        planned_amount: int
+        self, recipient: DistributionRecipient, planned_amount: int
     ) -> bool:
         """
         Retry a failed transfer for reconciliation.
@@ -668,7 +694,9 @@ class DistributionService:
             return True
 
         if not settings.airdrop_pool_private_key or not settings.gold_token_mint:
-            logger.error("Cannot retry transfer: missing airdrop_pool_private_key or gold_token_mint")
+            logger.error(
+                "Cannot retry transfer: missing airdrop_pool_private_key or gold_token_mint"
+            )
             return False
 
         try:
@@ -676,20 +704,26 @@ class DistributionService:
                 from_private_key=settings.airdrop_pool_private_key,
                 to_address=recipient.wallet,
                 token_mint=settings.gold_token_mint,  # Distribute GOLD tokens
-                amount=planned_amount
+                amount=planned_amount,
             )
 
             if result.success:
-                confirmed = await confirm_transaction(result.signature, timeout_seconds=30)
+                confirmed = await confirm_transaction(
+                    result.signature, timeout_seconds=30
+                )
                 if confirmed or result.signature:
                     # Update the recipient record
                     recipient.tx_signature = result.signature
                     recipient.amount_received = planned_amount
                     await self.db.commit()
-                    logger.info(f"Reconciliation transfer confirmed: {recipient.wallet} -> {result.signature}")
+                    logger.info(
+                        f"Reconciliation transfer confirmed: {recipient.wallet} -> {result.signature}"
+                    )
                     return True
 
-            logger.error(f"Reconciliation transfer failed for {recipient.wallet}: {result.error}")
+            logger.error(
+                f"Reconciliation transfer failed for {recipient.wallet}: {result.error}"
+            )
             return False
 
         except Exception as e:
@@ -705,14 +739,17 @@ class DistributionService:
             update(SystemStats)
             .where(SystemStats.id == 1)
             .values(
-                total_distributed=func.coalesce(SystemStats.total_distributed, 0) + distribution.pool_amount,
+                total_distributed=func.coalesce(SystemStats.total_distributed, 0)
+                + distribution.pool_amount,
                 last_distribution_at=distribution.executed_at,
-                updated_at=utc_now()
+                updated_at=utc_now(),
             )
         )
 
 
-async def acquire_distribution_lock(db: AsyncSession, worker_id: str = "celery") -> bool:
+async def acquire_distribution_lock(
+    db: AsyncSession, worker_id: str = "celery"
+) -> bool:
     """
     Acquire exclusive lock for distribution execution.
 
@@ -734,7 +771,7 @@ async def acquire_distribution_lock(db: AsyncSession, worker_id: str = "celery")
         # This handles the case where migration hasn't been run yet
         try:
             stmt = pg_insert(DistributionLock).values(id=1)
-            stmt = stmt.on_conflict_do_nothing(index_elements=['id'])
+            stmt = stmt.on_conflict_do_nothing(index_elements=["id"])
             await db.execute(stmt)
             await db.flush()
         except IntegrityError:
@@ -751,7 +788,9 @@ async def acquire_distribution_lock(db: AsyncSession, worker_id: str = "celery")
 
         if lock is None:
             # This should not happen after the upsert above
-            logger.error("Distribution lock row not found after upsert - database issue")
+            logger.error(
+                "Distribution lock row not found after upsert - database issue"
+            )
             return False
 
         # Update lock metadata for debugging/monitoring
@@ -765,7 +804,7 @@ async def acquire_distribution_lock(db: AsyncSession, worker_id: str = "celery")
         # NOWAIT raises OperationalError if row is locked
         # PostgreSQL error code 55P03 = lock_not_available
         if "could not obtain lock" in str(e) or "55P03" in str(e):
-            logger.info(f"Distribution lock held by another worker, skipping")
+            logger.info("Distribution lock held by another worker, skipping")
             return False
         # Re-raise other operational errors
         raise
@@ -785,6 +824,7 @@ async def check_and_distribute(db: AsyncSession) -> Optional[Distribution]:
         Distribution record if executed, None otherwise.
     """
     import socket
+
     worker_id = f"celery@{socket.gethostname()}"
 
     # Acquire exclusive lock to prevent double distribution

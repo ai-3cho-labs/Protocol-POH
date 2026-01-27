@@ -38,6 +38,7 @@ async def _check_idempotency(task_id: str) -> bool:
 
     try:
         import redis.asyncio as redis
+
         client = redis.from_url(settings.redis_url)
         key = f"buyback:processed:{task_id}"
 
@@ -73,11 +74,7 @@ async def _process_creator_rewards(task_id: Optional[str] = None) -> dict:
     """Async implementation of process_creator_rewards."""
     # Idempotency check to prevent double-processing on retries
     if task_id and not await _check_idempotency(task_id):
-        return {
-            "status": "skipped",
-            "reason": "already_processed",
-            "task_id": task_id
-        }
+        return {"status": "skipped", "reason": "already_processed", "task_id": task_id}
 
     session_maker = get_worker_session_maker()
     async with session_maker() as db:
@@ -89,10 +86,7 @@ async def _process_creator_rewards(task_id: Optional[str] = None) -> dict:
 
             if total_pending == 0:
                 logger.info("No pending rewards to process")
-                return {
-                    "status": "skipped",
-                    "reason": "no_pending_rewards"
-                }
+                return {"status": "skipped", "reason": "no_pending_rewards"}
 
             # Process rewards
             result = await process_pending_rewards(db)
@@ -102,32 +96,21 @@ async def _process_creator_rewards(task_id: Optional[str] = None) -> dict:
                     "status": "success",
                     "sol_spent": float(result.sol_spent),
                     "copper_received": result.copper_received,
-                    "tx_signature": result.tx_signature
+                    "tx_signature": result.tx_signature,
                 }
             elif result:
-                return {
-                    "status": "failed",
-                    "error": result.error
-                }
+                return {"status": "failed", "error": result.error}
             else:
-                return {
-                    "status": "skipped",
-                    "reason": "no_result"
-                }
+                return {"status": "skipped", "reason": "no_result"}
 
         except Exception as e:
             logger.error(f"Error processing rewards: {e}")
-            return {
-                "status": "error",
-                "error": str(e)
-            }
+            return {"status": "error", "error": str(e)}
 
 
 @celery_app.task(name="app.tasks.buyback_task.record_incoming_reward")
 def record_incoming_reward(
-    amount_sol: float,
-    source: str,
-    tx_signature: str = None
+    amount_sol: float, source: str, tx_signature: str = None
 ) -> dict:
     """
     Record an incoming creator reward.
@@ -138,9 +121,7 @@ def record_incoming_reward(
 
 
 async def _record_incoming_reward(
-    amount_sol: float,
-    source: str,
-    tx_signature: str
+    amount_sol: float, source: str, tx_signature: str
 ) -> dict:
     """Async implementation of record_incoming_reward."""
     session_maker = get_worker_session_maker()
@@ -148,16 +129,14 @@ async def _record_incoming_reward(
         service = BuybackService(db)
 
         reward = await service.record_creator_reward(
-            Decimal(str(amount_sol)),
-            source,
-            tx_signature
+            Decimal(str(amount_sol)), source, tx_signature
         )
 
         return {
             "status": "success",
             "reward_id": str(reward.id),
             "amount_sol": amount_sol,
-            "source": source
+            "source": source,
         }
 
 
@@ -179,7 +158,7 @@ async def _get_buyback_stats() -> dict:
         return {
             "total_sol_spent": float(total_sol),
             "total_copper_bought": total_copper,
-            "pending_sol": float(pending_sol)
+            "pending_sol": float(pending_sol),
         }
 
 

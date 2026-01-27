@@ -5,7 +5,6 @@ Background tasks for balance snapshot collection.
 """
 
 import logging
-from typing import Optional
 
 from app.tasks.celery_app import celery_app
 from app.database import get_worker_session_maker
@@ -36,10 +35,7 @@ async def _maybe_take_snapshot() -> dict:
         # RNG check
         if not service.should_take_snapshot():
             logger.info("Snapshot RNG: skipping this hour")
-            return {
-                "status": "skipped",
-                "reason": "rng"
-            }
+            return {"status": "skipped", "reason": "rng"}
 
         # Take snapshot
         snapshot = await service.take_snapshot()
@@ -52,13 +48,10 @@ async def _maybe_take_snapshot() -> dict:
                 "status": "success",
                 "snapshot_id": str(snapshot.id),
                 "holders": snapshot.total_holders,
-                "supply": snapshot.total_supply
+                "supply": snapshot.total_supply,
             }
         else:
-            return {
-                "status": "failed",
-                "reason": "snapshot_error"
-            }
+            return {"status": "failed", "reason": "snapshot_error"}
 
 
 @celery_app.task(name="app.tasks.snapshot_task.force_snapshot")
@@ -86,13 +79,10 @@ async def _force_snapshot() -> dict:
                 "status": "success",
                 "snapshot_id": str(snapshot.id),
                 "holders": snapshot.total_holders,
-                "supply": snapshot.total_supply
+                "supply": snapshot.total_supply,
             }
         else:
-            return {
-                "status": "failed",
-                "reason": "snapshot_error"
-            }
+            return {"status": "failed", "reason": "snapshot_error"}
 
 
 @celery_app.task(name="app.tasks.snapshot_task.update_all_tiers")
@@ -123,11 +113,7 @@ async def _update_all_tiers() -> dict:
 
         logger.info(f"Tier update complete: {updated} wallets upgraded")
 
-        return {
-            "status": "success",
-            "total_checked": len(streaks),
-            "upgraded": updated
-        }
+        return {"status": "success", "total_checked": len(streaks), "upgraded": updated}
 
 
 # Allow running as script for testing

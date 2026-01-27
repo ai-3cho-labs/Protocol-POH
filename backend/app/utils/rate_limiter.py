@@ -88,7 +88,7 @@ def _create_limiter() -> Limiter:
         key_func=get_remote_address,
         storage_uri=storage_uri,
         default_limits=["200/minute"],
-        strategy="fixed-window"
+        strategy="fixed-window",
     )
 
 
@@ -104,9 +104,7 @@ def validate_rate_limiter_config() -> bool:
         True if properly configured, False otherwise.
     """
     if settings.is_production and not settings.redis_url:
-        logger.error(
-            "Rate limiter validation failed: Redis required in production"
-        )
+        logger.error("Rate limiter validation failed: Redis required in production")
         return False
 
     return True

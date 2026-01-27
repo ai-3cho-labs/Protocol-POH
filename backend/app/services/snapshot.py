@@ -84,22 +84,19 @@ class SnapshotService:
             total_supply = await self.helius.get_token_supply()
 
             # Get excluded wallets
-            excluded_result = await self.db.execute(
-                select(ExcludedWallet.wallet)
-            )
+            excluded_result = await self.db.execute(select(ExcludedWallet.wallet))
             excluded_wallets = {row[0] for row in excluded_result.fetchall()}
 
             # Filter out excluded wallets
             valid_accounts = [
-                acc for acc in token_accounts
-                if acc.wallet not in excluded_wallets
+                acc for acc in token_accounts if acc.wallet not in excluded_wallets
             ]
 
             # Create snapshot
             snapshot = Snapshot(
                 timestamp=utc_now(),
                 total_holders=len(valid_accounts),
-                total_supply=total_supply
+                total_supply=total_supply,
             )
             self.db.add(snapshot)
             await self.db.flush()  # Get snapshot ID
@@ -110,15 +107,12 @@ class SnapshotService:
                     {
                         "snapshot_id": snapshot.id,
                         "wallet": account.wallet,
-                        "balance": account.balance
+                        "balance": account.balance,
                     }
                     for account in valid_accounts
                 ]
 
-                await self.db.execute(
-                    insert(Balance),
-                    balance_data
-                )
+                await self.db.execute(insert(Balance), balance_data)
 
                 # Ensure all holders have streak records (for tier tracking)
                 await self._ensure_streaks_exist(valid_accounts)
@@ -149,43 +143,35 @@ class SnapshotService:
     async def get_latest_snapshot(self) -> Optional[Snapshot]:
         """Get the most recent snapshot."""
         result = await self.db.execute(
-            select(Snapshot)
-            .order_by(Snapshot.timestamp.desc())
-            .limit(1)
+            select(Snapshot).order_by(Snapshot.timestamp.desc()).limit(1)
         )
         return result.scalar_one_or_none()
 
     async def get_snapshots_in_range(
-        self,
-        start: datetime,
-        end: datetime
+        self, start: datetime, end: datetime
     ) -> list[Snapshot]:
         """Get all snapshots within a time range."""
         result = await self.db.execute(
             select(Snapshot)
-            .where(and_(
-                Snapshot.timestamp >= start,
-                Snapshot.timestamp <= end
-            ))
+            .where(and_(Snapshot.timestamp >= start, Snapshot.timestamp <= end))
             .order_by(Snapshot.timestamp.asc())
         )
         return list(result.scalars().all())
 
     async def get_wallet_balances_in_range(
-        self,
-        wallet: str,
-        start: datetime,
-        end: datetime
+        self, wallet: str, start: datetime, end: datetime
     ) -> list[tuple[datetime, int]]:
         """Get all balance records for a wallet within a time range."""
         result = await self.db.execute(
             select(Snapshot.timestamp, Balance.balance)
             .join(Balance, Balance.snapshot_id == Snapshot.id)
-            .where(and_(
-                Balance.wallet == wallet,
-                Snapshot.timestamp >= start,
-                Snapshot.timestamp <= end
-            ))
+            .where(
+                and_(
+                    Balance.wallet == wallet,
+                    Snapshot.timestamp >= start,
+                    Snapshot.timestamp <= end,
+                )
+            )
             .order_by(Snapshot.timestamp.asc())
         )
         return [(row[0], row[1]) for row in result.fetchall()]
@@ -194,16 +180,12 @@ class SnapshotService:
         """Get number of snapshots taken in the last N hours."""
         cutoff = utc_now() - timedelta(hours=hours)
         result = await self.db.execute(
-            select(func.count(Snapshot.id))
-            .where(Snapshot.timestamp >= cutoff)
+            select(func.count(Snapshot.id)).where(Snapshot.timestamp >= cutoff)
         )
         return result.scalar_one()
 
     async def interpolate_balance(
-        self,
-        wallet: str,
-        target_time: datetime,
-        snapshots: list[Snapshot]
+        self, wallet: str, target_time: datetime, snapshots: list[Snapshot]
     ) -> int:
         """
         Interpolate wallet balance at a specific time.
@@ -230,21 +212,17 @@ class SnapshotService:
 
         if before:
             result = await self.db.execute(
-                select(Balance.balance)
-                .where(and_(
-                    Balance.snapshot_id == before.id,
-                    Balance.wallet == wallet
-                ))
+                select(Balance.balance).where(
+                    and_(Balance.snapshot_id == before.id, Balance.wallet == wallet)
+                )
             )
             before_balance = result.scalar_one_or_none() or 0
 
         if after:
             result = await self.db.execute(
-                select(Balance.balance)
-                .where(and_(
-                    Balance.snapshot_id == after.id,
-                    Balance.wallet == wallet
-                ))
+                select(Balance.balance).where(
+                    and_(Balance.snapshot_id == after.id, Balance.wallet == wallet)
+                )
             )
             after_balance = result.scalar_one_or_none() or 0
 
@@ -303,10 +281,7 @@ class SnapshotService:
                 for wallet in new_wallets
             ]
 
-            await self.db.execute(
-                insert(HoldStreak),
-                streak_data
-            )
+            await self.db.execute(insert(HoldStreak), streak_data)
 
             logger.info(f"Created {len(new_wallets)} new streak records for holders")
 
@@ -314,9 +289,7 @@ class SnapshotService:
 
     async def _update_system_stats(self, snapshot: Snapshot):
         """Update system stats with latest snapshot info."""
-        result = await self.db.execute(
-            select(SystemStats).where(SystemStats.id == 1)
-        )
+        result = await self.db.execute(select(SystemStats).where(SystemStats.id == 1))
         stats = result.scalar_one_or_none()
 
         if stats:
@@ -327,7 +300,7 @@ class SnapshotService:
             stats = SystemStats(
                 id=1,
                 total_holders=snapshot.total_holders,
-                last_snapshot_at=snapshot.timestamp
+                last_snapshot_at=snapshot.timestamp,
             )
             self.db.add(stats)
 

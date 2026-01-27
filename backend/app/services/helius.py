@@ -6,13 +6,18 @@ CPU = Token users hold (determines mining eligibility)
 """
 
 import logging
-from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional
 from dataclasses import dataclass
 
 from app.utils.http_client import get_http_client
-from app.config import get_settings, SOL_MINT, USDC_MINT, TOKEN_MULTIPLIER, LAMPORTS_PER_SOL
+from app.config import (
+    get_settings,
+    SOL_MINT,
+    USDC_MINT,
+    TOKEN_MULTIPLIER,
+    LAMPORTS_PER_SOL,
+)
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -28,6 +33,7 @@ def _get_rpc_url() -> str:
 @dataclass
 class TokenAccount:
     """Token account holder data."""
+
     wallet: str
     balance: int  # Raw token amount (with decimals)
 
@@ -35,6 +41,7 @@ class TokenAccount:
 @dataclass
 class ParsedTransaction:
     """Parsed webhook transaction data."""
+
     signature: str
     tx_type: str  # SWAP, TRANSFER, etc.
     source_wallet: str
@@ -58,7 +65,9 @@ class HeliusService:
         """Get shared HTTP client."""
         return get_http_client()
 
-    async def get_token_accounts(self, mint: Optional[str] = None) -> list[TokenAccount]:
+    async def get_token_accounts(
+        self, mint: Optional[str] = None
+    ) -> list[TokenAccount]:
         """
         Fetch all token holders for the given mint.
 
@@ -94,11 +103,9 @@ class HeliusService:
                             "mint": mint,
                             "page": page,
                             "limit": 1000,
-                            "displayOptions": {
-                                "showZeroBalance": False
-                            }
-                        }
-                    }
+                            "displayOptions": {"showZeroBalance": False},
+                        },
+                    },
                 )
                 response.raise_for_status()
                 data = response.json()
@@ -119,10 +126,7 @@ class HeliusService:
                     amount = account.get("amount")
 
                     if owner and amount and int(amount) > 0:
-                        holders.append(TokenAccount(
-                            wallet=owner,
-                            balance=int(amount)
-                        ))
+                        holders.append(TokenAccount(wallet=owner, balance=int(amount)))
 
                 # Check if more pages
                 if len(accounts) < 1000:
@@ -161,8 +165,8 @@ class HeliusService:
                     "jsonrpc": "2.0",
                     "id": "copper-supply",
                     "method": "getTokenSupply",
-                    "params": [mint]
-                }
+                    "params": [mint],
+                },
             )
             response.raise_for_status()
             data = response.json()
@@ -224,16 +228,22 @@ class HeliusService:
                 if mint == self.token_mint and from_user == fee_payer:
                     cpu_out = {
                         "wallet": from_user,
-                        "amount": int(Decimal(str(amount)) * Decimal(str(TOKEN_MULTIPLIER)))
+                        "amount": int(
+                            Decimal(str(amount)) * Decimal(str(TOKEN_MULTIPLIER))
+                        ),
                     }
 
                 # SOL or USDC being received BY the fee payer
                 # SOL uses 9 decimals (1e9), USDC uses 6 decimals (1e6)
                 if mint in [SOL_MINT, USDC_MINT] and to_user == fee_payer:
-                    multiplier = Decimal(str(LAMPORTS_PER_SOL)) if mint == SOL_MINT else Decimal("1e6")
+                    multiplier = (
+                        Decimal(str(LAMPORTS_PER_SOL))
+                        if mint == SOL_MINT
+                        else Decimal("1e6")
+                    )
                     sol_or_usdc_in = {
                         "mint": mint,
-                        "amount": int(Decimal(str(amount)) * multiplier)
+                        "amount": int(Decimal(str(amount)) * multiplier),
                     }
 
             # Check native SOL transfers to the fee payer
@@ -244,10 +254,7 @@ class HeliusService:
 
                 # SOL being received BY the fee payer (the seller)
                 if to_user == fee_payer and cpu_out:
-                    sol_or_usdc_in = {
-                        "mint": SOL_MINT,
-                        "amount": int(amount)
-                    }
+                    sol_or_usdc_in = {"mint": SOL_MINT, "amount": int(amount)}
 
             # Determine if this is a sell:
             # Fee payer sent CPU out AND received SOL/USDC back
@@ -262,7 +269,7 @@ class HeliusService:
                     token_out=self.token_mint,
                     amount_in=sol_or_usdc_in["amount"] if sol_or_usdc_in else None,
                     amount_out=cpu_out["amount"] if cpu_out else None,
-                    is_sell=True
+                    is_sell=True,
                 )
 
             return None
@@ -302,8 +309,8 @@ class HeliusService:
                     "transactionTypes": ["SWAP"],
                     "accountAddresses": [self.token_mint],
                     "webhookType": "enhanced",
-                    "txnStatus": "success"
-                }
+                    "txnStatus": "success",
+                },
             )
             response.raise_for_status()
             data = response.json()
@@ -325,8 +332,7 @@ class HeliusService:
         """
         try:
             response = await self.client.get(
-                f"{HELIUS_API_BASE}/webhooks",
-                headers=self._get_auth_headers()
+                f"{HELIUS_API_BASE}/webhooks", headers=self._get_auth_headers()
             )
             response.raise_for_status()
             return response.json()
@@ -347,7 +353,7 @@ class HeliusService:
         try:
             response = await self.client.delete(
                 f"{HELIUS_API_BASE}/webhooks/{webhook_id}",
-                headers=self._get_auth_headers()
+                headers=self._get_auth_headers(),
             )
             response.raise_for_status()
             logger.info(f"Webhook deleted: {webhook_id}")
@@ -363,6 +369,7 @@ _lock = None
 
 try:
     import threading
+
     _lock = threading.Lock()
 except ImportError:
     pass

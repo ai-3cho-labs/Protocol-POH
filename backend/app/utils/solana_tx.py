@@ -12,7 +12,6 @@ from dataclasses import dataclass
 
 from solders.keypair import Keypair
 from solders.transaction import VersionedTransaction
-from solders.signature import Signature
 
 from app.utils.http_client import get_http_client
 from app.config import get_settings
@@ -35,6 +34,7 @@ MAX_BLOCKHASH_RETRIES = 2
 @dataclass
 class TransactionResult:
     """Result of a transaction send."""
+
     success: bool
     signature: Optional[str] = None
     error: Optional[str] = None
@@ -77,8 +77,8 @@ async def get_recent_blockhash() -> Optional[str]:
                 "jsonrpc": "2.0",
                 "id": "copper-blockhash",
                 "method": "getLatestBlockhash",
-                "params": [{"commitment": "finalized"}]
-            }
+                "params": [{"commitment": "finalized"}],
+            },
         )
         response.raise_for_status()
         data = response.json()
@@ -94,9 +94,7 @@ async def get_recent_blockhash() -> Optional[str]:
 
 
 async def sign_and_send_transaction(
-    serialized_tx: str,
-    private_key: str,
-    skip_preflight: bool = False
+    serialized_tx: str, private_key: str, skip_preflight: bool = False
 ) -> TransactionResult:
     """
     Sign and send a serialized transaction.
@@ -118,10 +116,7 @@ async def sign_and_send_transaction(
         keypair = keypair_from_base58(private_key)
 
         # Sign the transaction
-        signed_tx = VersionedTransaction(
-            transaction.message,
-            [keypair]
-        )
+        signed_tx = VersionedTransaction(transaction.message, [keypair])
 
         # Serialize for sending
         signed_bytes = bytes(signed_tx)
@@ -141,10 +136,10 @@ async def sign_and_send_transaction(
                         "encoding": "base64",
                         "skipPreflight": skip_preflight,
                         "preflightCommitment": "confirmed",
-                        "maxRetries": 3
-                    }
-                ]
-            }
+                        "maxRetries": 3,
+                    },
+                ],
+            },
         )
         response.raise_for_status()
         data = response.json()
@@ -152,37 +147,23 @@ async def sign_and_send_transaction(
         if "error" in data:
             error_msg = data["error"].get("message", str(data["error"]))
             logger.error(f"Transaction send error: {error_msg}")
-            return TransactionResult(
-                success=False,
-                error=error_msg
-            )
+            return TransactionResult(success=False, error=error_msg)
 
         signature = data.get("result")
         if signature:
             logger.info(f"Transaction sent: {signature}")
-            return TransactionResult(
-                success=True,
-                signature=signature
-            )
+            return TransactionResult(success=True, signature=signature)
 
-        return TransactionResult(
-            success=False,
-            error="No signature returned"
-        )
+        return TransactionResult(success=False, error="No signature returned")
 
     except Exception as e:
         # SECURITY: Do not use exc_info=True to avoid exposing private key bytes in stack traces
         logger.error(f"Error signing/sending transaction: {type(e).__name__}: {e}")
-        return TransactionResult(
-            success=False,
-            error=str(e)
-        )
+        return TransactionResult(success=False, error=str(e))
 
 
 async def send_sol_transfer(
-    from_private_key: str,
-    to_address: str,
-    amount_lamports: int
+    from_private_key: str, to_address: str, amount_lamports: int
 ) -> TransactionResult:
     """
     Send SOL from one wallet to another.
@@ -209,9 +190,7 @@ async def send_sol_transfer(
     # Create transfer instruction (reusable across retries)
     transfer_ix = transfer(
         TransferParams(
-            from_pubkey=keypair.pubkey(),
-            to_pubkey=to_pubkey,
-            lamports=amount_lamports
+            from_pubkey=keypair.pubkey(), to_pubkey=to_pubkey, lamports=amount_lamports
         )
     )
 
@@ -222,10 +201,7 @@ async def send_sol_transfer(
             # Fetch fresh blockhash for each attempt (fixes race condition)
             blockhash_str = await get_recent_blockhash()
             if not blockhash_str:
-                return TransactionResult(
-                    success=False,
-                    error="Failed to get blockhash"
-                )
+                return TransactionResult(success=False, error="Failed to get blockhash")
 
             recent_blockhash = Hash.from_string(blockhash_str)
 
@@ -234,7 +210,7 @@ async def send_sol_transfer(
                 payer=keypair.pubkey(),
                 instructions=[transfer_ix],
                 address_lookup_table_accounts=[],
-                recent_blockhash=recent_blockhash
+                recent_blockhash=recent_blockhash,
             )
 
             transaction = VersionedTransaction(message, [keypair])
@@ -256,10 +232,10 @@ async def send_sol_transfer(
                             "encoding": "base64",
                             "skipPreflight": False,
                             "preflightCommitment": "confirmed",
-                            "maxRetries": 3
-                        }
-                    ]
-                }
+                            "maxRetries": 3,
+                        },
+                    ],
+                },
             )
             response.raise_for_status()
             data = response.json()
@@ -276,23 +252,14 @@ async def send_sol_transfer(
                     continue
 
                 logger.error(f"SOL transfer error: {error_msg}")
-                return TransactionResult(
-                    success=False,
-                    error=error_msg
-                )
+                return TransactionResult(success=False, error=error_msg)
 
             signature = data.get("result")
             if signature:
                 logger.info(f"SOL transfer sent: {signature}")
-                return TransactionResult(
-                    success=True,
-                    signature=signature
-                )
+                return TransactionResult(success=True, signature=signature)
 
-            return TransactionResult(
-                success=False,
-                error="No signature returned"
-            )
+            return TransactionResult(success=False, error="No signature returned")
 
         except Exception as e:
             last_error = str(e)
@@ -305,16 +272,12 @@ async def send_sol_transfer(
             logger.error(f"Error sending SOL transfer: {type(e).__name__}: {e}")
 
     return TransactionResult(
-        success=False,
-        error=last_error or "Transaction failed after retries"
+        success=False, error=last_error or "Transaction failed after retries"
     )
 
 
 async def send_spl_token_transfer(
-    from_private_key: str,
-    to_address: str,
-    token_mint: str,
-    amount: int
+    from_private_key: str, to_address: str, token_mint: str, amount: int
 ) -> TransactionResult:
     """
     Send SPL tokens from one wallet to another.
@@ -337,7 +300,9 @@ async def send_spl_token_transfer(
 
     # SPL Token Program ID
     TOKEN_PROGRAM_ID = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
-    ASSOCIATED_TOKEN_PROGRAM_ID = Pubkey.from_string("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL")
+    ASSOCIATED_TOKEN_PROGRAM_ID = Pubkey.from_string(
+        "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+    )
 
     # Create keypair and addresses (done once, outside retry loop)
     keypair = keypair_from_base58(from_private_key)
@@ -362,8 +327,8 @@ async def send_spl_token_transfer(
                 "jsonrpc": "2.0",
                 "id": "copper-ata-check",
                 "method": "getAccountInfo",
-                "params": [str(to_ata), {"encoding": "base64"}]
-            }
+                "params": [str(to_ata), {"encoding": "base64"}],
+            },
         )
         ata_check_response.raise_for_status()
         ata_check_data = ata_check_response.json()
@@ -380,14 +345,22 @@ async def send_spl_token_transfer(
         create_ata_ix = Instruction(
             program_id=ASSOCIATED_TOKEN_PROGRAM_ID,
             accounts=[
-                AccountMeta(keypair.pubkey(), is_signer=True, is_writable=True),  # Payer
+                AccountMeta(
+                    keypair.pubkey(), is_signer=True, is_writable=True
+                ),  # Payer
                 AccountMeta(to_ata, is_signer=False, is_writable=True),  # ATA
                 AccountMeta(to_pubkey, is_signer=False, is_writable=False),  # Owner
                 AccountMeta(mint_pubkey, is_signer=False, is_writable=False),  # Mint
-                AccountMeta(Pubkey.from_string("11111111111111111111111111111111"), is_signer=False, is_writable=False),  # System
-                AccountMeta(TOKEN_PROGRAM_ID, is_signer=False, is_writable=False),  # Token Program
+                AccountMeta(
+                    Pubkey.from_string("11111111111111111111111111111111"),
+                    is_signer=False,
+                    is_writable=False,
+                ),  # System
+                AccountMeta(
+                    TOKEN_PROGRAM_ID, is_signer=False, is_writable=False
+                ),  # Token Program
             ],
-            data=bytes()  # No data for create ATA
+            data=bytes(),  # No data for create ATA
         )
         instructions.append(create_ata_ix)
 
@@ -399,9 +372,11 @@ async def send_spl_token_transfer(
         accounts=[
             AccountMeta(from_ata, is_signer=False, is_writable=True),  # Source
             AccountMeta(to_ata, is_signer=False, is_writable=True),  # Destination
-            AccountMeta(keypair.pubkey(), is_signer=True, is_writable=False),  # Authority
+            AccountMeta(
+                keypair.pubkey(), is_signer=True, is_writable=False
+            ),  # Authority
         ],
-        data=transfer_data
+        data=transfer_data,
     )
     instructions.append(transfer_ix)
 
@@ -412,10 +387,7 @@ async def send_spl_token_transfer(
             # Fetch fresh blockhash for each attempt (fixes race condition)
             blockhash_str = await get_recent_blockhash()
             if not blockhash_str:
-                return TransactionResult(
-                    success=False,
-                    error="Failed to get blockhash"
-                )
+                return TransactionResult(success=False, error="Failed to get blockhash")
 
             recent_blockhash = Hash.from_string(blockhash_str)
 
@@ -424,7 +396,7 @@ async def send_spl_token_transfer(
                 payer=keypair.pubkey(),
                 instructions=instructions,
                 address_lookup_table_accounts=[],
-                recent_blockhash=recent_blockhash
+                recent_blockhash=recent_blockhash,
             )
 
             transaction = VersionedTransaction(message, [keypair])
@@ -445,10 +417,10 @@ async def send_spl_token_transfer(
                             "encoding": "base64",
                             "skipPreflight": False,
                             "preflightCommitment": "confirmed",
-                            "maxRetries": 3
-                        }
-                    ]
-                }
+                            "maxRetries": 3,
+                        },
+                    ],
+                },
             )
             response.raise_for_status()
             data = response.json()
@@ -465,23 +437,14 @@ async def send_spl_token_transfer(
                     continue
 
                 logger.error(f"Token transfer error: {error_msg}")
-                return TransactionResult(
-                    success=False,
-                    error=error_msg
-                )
+                return TransactionResult(success=False, error=error_msg)
 
             signature = data.get("result")
             if signature:
                 logger.info(f"Token transfer sent: {signature}")
-                return TransactionResult(
-                    success=True,
-                    signature=signature
-                )
+                return TransactionResult(success=True, signature=signature)
 
-            return TransactionResult(
-                success=False,
-                error="No signature returned"
-            )
+            return TransactionResult(success=False, error="No signature returned")
 
         except Exception as e:
             last_error = str(e)
@@ -494,15 +457,11 @@ async def send_spl_token_transfer(
             logger.error(f"Error sending token transfer: {type(e).__name__}: {e}")
 
     return TransactionResult(
-        success=False,
-        error=last_error or "Transaction failed after retries"
+        success=False, error=last_error or "Transaction failed after retries"
     )
 
 
-async def confirm_transaction(
-    signature: str,
-    timeout_seconds: int = 60
-) -> bool:
+async def confirm_transaction(signature: str, timeout_seconds: int = 60) -> bool:
     """
     Wait for transaction confirmation.
 
@@ -526,8 +485,8 @@ async def confirm_transaction(
                     "jsonrpc": "2.0",
                     "id": "copper-confirm",
                     "method": "getSignatureStatuses",
-                    "params": [[signature]]
-                }
+                    "params": [[signature]],
+                },
             )
             response.raise_for_status()
             data = response.json()

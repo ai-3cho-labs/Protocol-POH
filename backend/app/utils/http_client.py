@@ -59,9 +59,9 @@ class HTTPClientManager:
                 limits=httpx.Limits(
                     max_keepalive_connections=20,
                     max_connections=100,
-                    keepalive_expiry=30.0
+                    keepalive_expiry=30.0,
                 ),
-                follow_redirects=True
+                follow_redirects=True,
             )
             self._loop_id = current_loop_id
             logger.info("HTTP client initialized")

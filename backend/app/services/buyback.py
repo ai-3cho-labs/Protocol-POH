@@ -13,13 +13,17 @@ from decimal import Decimal
 from typing import Optional
 from dataclasses import dataclass
 
-from sqlalchemy import select, and_, func
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import CreatorReward, Buyback, SystemStats
 from app.config import get_settings, LAMPORTS_PER_SOL, SOL_MINT
 from app.utils.http_client import get_http_client
-from app.utils.solana_tx import sign_and_send_transaction, send_sol_transfer, confirm_transaction
+from app.utils.solana_tx import (
+    sign_and_send_transaction,
+    send_sol_transfer,
+    confirm_transaction,
+)
 from app.websocket.broadcaster import emit_pool_updated
 
 logger = logging.getLogger(__name__)
@@ -40,6 +44,7 @@ JUPITER_QUOTE_MAX_AGE_SECONDS = 50
 @dataclass
 class JupiterQuote:
     """Jupiter swap quote with timestamp for freshness tracking."""
+
     data: dict
     fetched_at: datetime
 
@@ -56,6 +61,7 @@ class JupiterQuote:
 @dataclass
 class BuybackResult:
     """Result of a buyback execution."""
+
     success: bool
     tx_signature: Optional[str]
     sol_spent: Decimal
@@ -67,6 +73,7 @@ class BuybackResult:
 @dataclass
 class RewardSplit:
     """40/40/20 split of creator rewards."""
+
     total_sol: Decimal
     buyback_sol: Decimal  # 40% → Reward pool
     algo_bot_sol: Decimal  # 40% → Algo bot
@@ -108,8 +115,9 @@ class BuybackService:
             Total unprocessed SOL amount.
         """
         result = await self.db.execute(
-            select(func.sum(CreatorReward.amount_sol))
-            .where(CreatorReward.processed == False)
+            select(func.sum(CreatorReward.amount_sol)).where(
+                CreatorReward.processed == False
+            )
         )
         total = result.scalar_one_or_none()
         return Decimal(total) if total else Decimal(0)
@@ -132,12 +140,11 @@ class BuybackService:
             total_sol=total_sol,
             buyback_sol=buyback_sol,
             algo_bot_sol=algo_bot_sol,
-            team_sol=team_sol
+            team_sol=team_sol,
         )
 
     async def get_jupiter_quote(
-        self,
-        sol_amount_lamports: int
+        self, sol_amount_lamports: int
     ) -> Optional[JupiterQuote]:
         """
         Get swap quote from Jupiter with timestamp for freshness tracking.
@@ -162,8 +169,8 @@ class BuybackService:
                     "amount": str(sol_amount_lamports),
                     "slippageBps": settings.safe_slippage_bps,  # Capped slippage (max 2% to prevent MEV)
                     "onlyDirectRoutes": False,
-                    "asLegacyTransaction": False
-                }
+                    "asLegacyTransaction": False,
+                },
             )
             response.raise_for_status()
             return JupiterQuote(data=response.json(), fetched_at=fetch_time)
@@ -173,9 +180,7 @@ class BuybackService:
             return None
 
     async def execute_swap(
-        self,
-        sol_amount: Decimal,
-        wallet_private_key: str
+        self, sol_amount: Decimal, wallet_private_key: str
     ) -> BuybackResult:
         """
         Execute a Jupiter swap (SOL → GOLD).
@@ -197,7 +202,7 @@ class BuybackService:
                 sol_spent=Decimal(0),
                 copper_received=0,
                 price_per_token=None,
-                error="Wallet private key not configured"
+                error="Wallet private key not configured",
             )
 
         lamports = int(sol_amount * LAMPORTS_PER_SOL)
@@ -211,12 +216,13 @@ class BuybackService:
                 sol_spent=Decimal(0),
                 copper_received=0,
                 price_per_token=None,
-                error="Failed to get Jupiter quote"
+                error="Failed to get Jupiter quote",
             )
 
         try:
             # Get the public key from private key for the swap
             from app.utils.solana_tx import keypair_from_base58
+
             keypair = keypair_from_base58(wallet_private_key)
             user_public_key = str(keypair.pubkey())
 
@@ -234,7 +240,7 @@ class BuybackService:
                         sol_spent=Decimal(0),
                         copper_received=0,
                         price_per_token=None,
-                        error="Failed to re-fetch Jupiter quote after expiration"
+                        error="Failed to re-fetch Jupiter quote after expiration",
                     )
 
             # Get swap transaction from Jupiter
@@ -245,8 +251,8 @@ class BuybackService:
                     "userPublicKey": user_public_key,
                     "wrapAndUnwrapSol": True,
                     "dynamicComputeUnitLimit": True,
-                    "prioritizationFeeLamports": "auto"
-                }
+                    "prioritizationFeeLamports": "auto",
+                },
             )
             swap_response.raise_for_status()
             swap_data = swap_response.json()
@@ -259,14 +265,14 @@ class BuybackService:
                     sol_spent=Decimal(0),
                     copper_received=0,
                     price_per_token=None,
-                    error="No swap transaction returned from Jupiter"
+                    error="No swap transaction returned from Jupiter",
                 )
 
             # Sign and send the transaction
             tx_result = await sign_and_send_transaction(
                 serialized_tx=swap_tx,
                 private_key=wallet_private_key,
-                skip_preflight=False
+                skip_preflight=False,
             )
 
             if not tx_result.success:
@@ -276,13 +282,17 @@ class BuybackService:
                     sol_spent=Decimal(0),
                     copper_received=0,
                     price_per_token=None,
-                    error=tx_result.error or "Transaction failed"
+                    error=tx_result.error or "Transaction failed",
                 )
 
             # Wait for confirmation
-            confirmed = await confirm_transaction(tx_result.signature, timeout_seconds=30)
+            confirmed = await confirm_transaction(
+                tx_result.signature, timeout_seconds=30
+            )
             if not confirmed:
-                logger.warning(f"Transaction sent but not confirmed: {tx_result.signature}")
+                logger.warning(
+                    f"Transaction sent but not confirmed: {tx_result.signature}"
+                )
 
             # Calculate results from quote
             out_amount = int(quote.data.get("outAmount", 0))
@@ -300,7 +310,7 @@ class BuybackService:
                 tx_signature=tx_result.signature,
                 sol_spent=sol_amount,
                 copper_received=out_amount,
-                price_per_token=price_per_token
+                price_per_token=price_per_token,
             )
 
         except Exception as e:
@@ -312,7 +322,7 @@ class BuybackService:
                 sol_spent=Decimal(0),
                 copper_received=0,
                 price_per_token=None,
-                error=str(e)
+                error=str(e),
             )
 
     async def record_buyback(
@@ -320,7 +330,7 @@ class BuybackService:
         tx_signature: str,
         sol_amount: Decimal,
         gold_amount: int,
-        price_per_token: Optional[Decimal] = None
+        price_per_token: Optional[Decimal] = None,
     ) -> Buyback:
         """
         Record a buyback transaction in the database.
@@ -339,7 +349,7 @@ class BuybackService:
             sol_amount=sol_amount,
             gold_amount=gold_amount,
             price_per_token=price_per_token,
-            executed_at=utc_now()
+            executed_at=utc_now(),
         )
         self.db.add(buyback)
 
@@ -362,8 +372,7 @@ class BuybackService:
             reward_ids: List of reward IDs to mark.
         """
         result = await self.db.execute(
-            select(CreatorReward)
-            .where(CreatorReward.id.in_(reward_ids))
+            select(CreatorReward).where(CreatorReward.id.in_(reward_ids))
         )
         rewards = result.scalars().all()
 
@@ -374,10 +383,7 @@ class BuybackService:
         logger.info(f"Marked {len(reward_ids)} rewards as processed")
 
     async def record_creator_reward(
-        self,
-        amount_sol: Decimal,
-        source: str,
-        tx_signature: Optional[str] = None
+        self, amount_sol: Decimal, source: str, tx_signature: Optional[str] = None
     ) -> Optional[CreatorReward]:
         """
         Record an incoming creator reward with idempotency check.
@@ -396,24 +402,27 @@ class BuybackService:
         # Idempotency check: if tx_signature exists, return existing record
         if tx_signature:
             result = await self.db.execute(
-                select(CreatorReward)
-                .where(CreatorReward.tx_signature == tx_signature)
+                select(CreatorReward).where(CreatorReward.tx_signature == tx_signature)
             )
             existing = result.scalar_one_or_none()
             if existing:
-                logger.info(f"Creator reward already exists for tx {tx_signature}, skipping duplicate")
+                logger.info(
+                    f"Creator reward already exists for tx {tx_signature}, skipping duplicate"
+                )
                 return existing
 
         reward = CreatorReward(
             amount_sol=amount_sol,
             source=source,
             tx_signature=tx_signature,
-            received_at=utc_now()
+            received_at=utc_now(),
         )
         self.db.add(reward)
         await self.db.commit()
 
-        logger.info(f"Recorded creator reward: {amount_sol} SOL from {source} (tx: {tx_signature})")
+        logger.info(
+            f"Recorded creator reward: {amount_sol} SOL from {source} (tx: {tx_signature})"
+        )
         return reward
 
     async def get_recent_buybacks(self, limit: int = 10) -> list[Buyback]:
@@ -427,9 +436,7 @@ class BuybackService:
             List of recent Buyback records.
         """
         result = await self.db.execute(
-            select(Buyback)
-            .order_by(Buyback.executed_at.desc())
-            .limit(limit)
+            select(Buyback).order_by(Buyback.executed_at.desc()).limit(limit)
         )
         return list(result.scalars().all())
 
@@ -441,16 +448,10 @@ class BuybackService:
             Tuple of (total_sol_spent, total_copper_bought).
         """
         result = await self.db.execute(
-            select(
-                func.sum(Buyback.sol_amount),
-                func.sum(Buyback.gold_amount)
-            )
+            select(func.sum(Buyback.sol_amount), func.sum(Buyback.gold_amount))
         )
         row = result.one()
-        return (
-            Decimal(row[0]) if row[0] else Decimal(0),
-            int(row[1]) if row[1] else 0
-        )
+        return (Decimal(row[0]) if row[0] else Decimal(0), int(row[1]) if row[1] else 0)
 
     async def _update_system_stats(self, sol_amount: Decimal):
         """Update system stats with buyback amount using atomic UPDATE."""
@@ -461,16 +462,15 @@ class BuybackService:
             update(SystemStats)
             .where(SystemStats.id == 1)
             .values(
-                total_buybacks=func.coalesce(SystemStats.total_buybacks, 0) + sol_amount,
-                updated_at=utc_now()
+                total_buybacks=func.coalesce(SystemStats.total_buybacks, 0)
+                + sol_amount,
+                updated_at=utc_now(),
             )
         )
 
 
 async def transfer_to_team_wallet(
-    amount_sol: Decimal,
-    from_private_key: str,
-    to_address: str
+    amount_sol: Decimal, from_private_key: str, to_address: str
 ) -> Optional[str]:
     """
     Transfer SOL to team wallet (20% of creator rewards).
@@ -496,7 +496,7 @@ async def transfer_to_team_wallet(
     result = await send_sol_transfer(
         from_private_key=from_private_key,
         to_address=to_address,
-        amount_lamports=lamports
+        amount_lamports=lamports,
     )
 
     if result.success:
@@ -543,8 +543,7 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
 
     # Execute buyback (40% → reward pool)
     result = await service.execute_swap(
-        split.buyback_sol,
-        settings.creator_wallet_private_key
+        split.buyback_sol, settings.creator_wallet_private_key
     )
 
     buyback_success = result.success and result.tx_signature
@@ -555,24 +554,31 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
             result.tx_signature,
             result.sol_spent,
             result.copper_received,
-            result.price_per_token
+            result.price_per_token,
         )
         logger.info(f"Buyback recorded: {result.tx_signature}")
 
         # Emit pool:updated WebSocket event
         try:
             from app.services.distribution import DistributionService
+
             dist_service = DistributionService(db)
             pool_status = await dist_service.get_pool_status()
 
             # Calculate progress to threshold
             threshold_usd = settings.distribution_threshold_usd
-            progress = min(100.0, float(pool_status.value_usd / threshold_usd * 100)) if threshold_usd > 0 else 0.0
+            progress = (
+                min(100.0, float(pool_status.value_usd / threshold_usd * 100))
+                if threshold_usd > 0
+                else 0.0
+            )
 
             # Calculate hours until time trigger
             hours_until = None
             if pool_status.hours_since_last is not None:
-                hours_until = max(0.0, settings.distribution_max_hours - pool_status.hours_since_last)
+                hours_until = max(
+                    0.0, settings.distribution_max_hours - pool_status.hours_since_last
+                )
 
             await emit_pool_updated(
                 balance=pool_status.balance,
@@ -594,7 +600,7 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
         algo_bot_tx = await transfer_to_team_wallet(
             amount_sol=split.algo_bot_sol,
             from_private_key=settings.creator_wallet_private_key,
-            to_address=settings.algo_bot_wallet_public_key
+            to_address=settings.algo_bot_wallet_public_key,
         )
         if algo_bot_tx:
             logger.info(f"Algo bot wallet transfer: {algo_bot_tx}")
@@ -609,7 +615,7 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
         team_tx = await transfer_to_team_wallet(
             amount_sol=split.team_sol,
             from_private_key=settings.creator_wallet_private_key,
-            to_address=settings.team_wallet_public_key
+            to_address=settings.team_wallet_public_key,
         )
         if team_tx:
             logger.info(f"Team wallet transfer: {team_tx}")

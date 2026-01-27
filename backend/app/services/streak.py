@@ -7,7 +7,6 @@ Sells drop tier by one and reset streak to that tier's minimum.
 
 import logging
 from datetime import datetime, timedelta, timezone
-from decimal import Decimal
 from typing import Optional
 from dataclasses import dataclass
 
@@ -29,6 +28,7 @@ def utc_now() -> datetime:
 @dataclass
 class StreakInfo:
     """Complete streak information for a wallet."""
+
     wallet: str
     tier: int
     tier_name: str
@@ -107,7 +107,7 @@ class StreakService:
             next_tier=next_tier,
             next_tier_name=next_tier_name,
             hours_to_next_tier=hours_to_next,
-            last_sell_at=streak.last_sell_at
+            last_sell_at=streak.last_sell_at,
         )
 
     async def start_streak(self, wallet: str) -> HoldStreak:
@@ -120,11 +120,7 @@ class StreakService:
         Returns:
             Created HoldStreak record.
         """
-        streak = HoldStreak(
-            wallet=wallet,
-            streak_start=utc_now(),
-            current_tier=1
-        )
+        streak = HoldStreak(wallet=wallet, streak_start=utc_now(), current_tier=1)
         self.db.add(streak)
         await self.db.commit()
 
