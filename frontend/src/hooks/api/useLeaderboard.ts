@@ -37,8 +37,9 @@ export function useLeaderboard(limit = 10, currentWallet: string | null = null) 
   const query = useQuery<LeaderboardEntry[], Error>({
     queryKey: leaderboardQueryKey(limit),
     queryFn: () => getLeaderboard(limit),
-    staleTime: 30 * 1000, // 30 seconds
-    refetchInterval: 60 * 1000, // 1 minute
+    staleTime: Infinity, // Never stale - WebSocket handles live updates
+    refetchOnMount: false, // Use cache, WebSocket invalidates when needed
+    refetchOnWindowFocus: false, // WebSocket keeps data fresh
   });
 
   // Transform data with current user highlighting

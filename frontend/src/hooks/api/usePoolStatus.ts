@@ -3,7 +3,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { getPoolStatus } from '@/lib/api';
-import { POOL_REFETCH_INTERVAL } from '@/lib/constants';
 import { DISTRIBUTION_THRESHOLD_USD } from '@/types/models';
 import type { PoolStatusResponse } from '@/types/api';
 import type { PoolInfo } from '@/types/models';
@@ -41,8 +40,9 @@ export function usePoolStatus() {
   const query = useQuery<PoolStatusResponse, Error>({
     queryKey: POOL_STATUS_QUERY_KEY,
     queryFn: getPoolStatus,
-    staleTime: 15 * 1000, // 15 seconds
-    refetchInterval: POOL_REFETCH_INTERVAL, // 30 seconds
+    staleTime: Infinity, // Never stale - WebSocket handles live updates
+    refetchOnMount: false, // Use cache, WebSocket invalidates when needed
+    refetchOnWindowFocus: false, // WebSocket keeps data fresh
   });
 
   // Transform data for UI consumption

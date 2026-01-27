@@ -3,7 +3,7 @@
 /**
  * WebSocket hook for real-time updates
  *
- * Connects when wallet is connected, disconnects when wallet disconnects.
+ * Connects when address is set, disconnects when cleared.
  * Updates React Query cache on WebSocket events.
  */
 
@@ -231,13 +231,15 @@ export function useWebSocket(): UseWebSocketReturn {
     };
 
     const onReconnect = () => {
-      console.log('[WebSocket] Reconnected, refetching queries...');
-      // Refetch all queries on reconnect
-      queryClient.refetchQueries();
+      console.log('[WebSocket] Reconnected');
       // Resubscribe to wallet room (use ref for fresh value)
       const currentWallet = walletAddressRef.current;
       if (currentWallet) {
         subscribeToWallet(currentWallet);
+        // Invalidate user stats to fetch fresh data (may have missed events)
+        queryClient.invalidateQueries({
+          queryKey: userStatsQueryKey(currentWallet),
+        });
       }
     };
 

@@ -3,7 +3,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { getUserStats } from '@/lib/api';
-import { USER_STATS_REFETCH_INTERVAL } from '@/lib/constants';
 import { calculateTierProgress } from '@/lib/utils';
 import type { UserStatsResponse } from '@/types/api';
 import type { UserMiningStats } from '@/types/models';
@@ -37,6 +36,9 @@ function transformUserStats(data: UserStatsResponse): UserMiningStats {
     progressToNextTier,
     rank: data.rank,
     pendingReward: data.pending_reward_estimate,
+    isNewHolder: data.is_new_holder ?? false,
+    isProjected: data.is_projected ?? false,
+    poolSharePercent: data.pool_share_percent ?? 0,
   };
 }
 
@@ -49,8 +51,9 @@ export function useUserStats(wallet: string | null) {
     queryKey: userStatsQueryKey(wallet || ''),
     queryFn: () => getUserStats(wallet!),
     enabled: !!wallet, // Only run if wallet is provided
-    staleTime: 15 * 1000, // 15 seconds
-    refetchInterval: USER_STATS_REFETCH_INTERVAL, // 30 seconds
+    staleTime: 5 * 60 * 1000, // 5 minutes - refetch periodically for tier updates
+    refetchOnMount: true, // Always fetch fresh data on mount
+    refetchOnWindowFocus: false, // WebSocket handles focus updates
   });
 
   // Transform data for UI consumption

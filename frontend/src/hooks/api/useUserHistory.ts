@@ -18,6 +18,7 @@ export function useUserHistory(wallet: string | null, limit = 10) {
     queryKey: userHistoryQueryKey(wallet || '', limit),
     queryFn: () => getUserHistory(wallet!, limit),
     enabled: !!wallet,
-    staleTime: 60 * 1000, // 1 minute
+    staleTime: 10 * 1000, // 10 seconds - history changes after distributions
+    refetchOnWindowFocus: true,
   });
 }
