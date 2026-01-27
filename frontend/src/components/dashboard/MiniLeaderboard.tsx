@@ -76,6 +76,7 @@ export function MiniLeaderboard({
         showViewAll && (
           <Link
             href="/leaderboard"
+            prefetch={false}
             className="text-xs text-white hover:text-gray-300 transition-colors lg:font-mono"
           >
             View All →

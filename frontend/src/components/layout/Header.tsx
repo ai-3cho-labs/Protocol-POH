@@ -24,7 +24,7 @@ export function Header() {
       <div className="container mx-auto px-6">
         <div className="relative flex items-center justify-between h-16">
           {/* Logo - Left */}
-          <Link href="/" className="flex items-center group">
+          <Link href="/" prefetch={false} className="flex items-center group">
             <Image
               src="/logo.jpg"
               alt="CPU"
@@ -43,6 +43,7 @@ export function Header() {
                 <Link
                   key={link.href}
                   href={link.href}
+                  prefetch={false}
                   className={cn(
                     'px-4 py-2 text-sm font-mono rounded transition-colors',
                     isActive
