@@ -55,7 +55,6 @@ async def setup_redis_adapter() -> None:
     try:
         # Use Redis manager for pub/sub across workers
         # The rediss:// scheme automatically handles SSL/TLS
-        # No need for explicit ssl_context - redis-py handles it
         mgr = socketio.AsyncRedisManager(settings.redis_url)
         mgr.set_server(sio)
         sio.manager = mgr
@@ -154,8 +153,8 @@ def get_client_ip(environ: dict) -> str:
 
 
 # WebSocket namespace
-# Use default namespace since the mount point /ws already separates WebSocket traffic
-WS_NAMESPACE = "/"
+# Use /ws namespace to match frontend Socket.IO client connection
+WS_NAMESPACE = "/ws"
 
 # Room names
 GLOBAL_ROOM = "global"
