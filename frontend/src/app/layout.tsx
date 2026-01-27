@@ -3,7 +3,7 @@ import { Providers } from '@/components/providers/Providers';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'CPU - Hold CPU, Mine $GOLD',
+  title: 'Copper Processing Unit',
   description:
     'Hold CPU tokens to mine $GOLD rewards. Trading fees fund the pool. Build streaks, get paid.',
   keywords: ['solana', 'memecoin', 'mining', 'crypto', 'rewards', 'defi', 'cpu', 'gold'],
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     apple: '/icon.jpg',
   },
   openGraph: {
-    title: 'CPU - Hold CPU, Mine $GOLD',
+    title: 'Copper Processing Unit',
     description:
       'Hold CPU tokens to mine $GOLD rewards. Trading fees fund the pool. Build streaks, get paid.',
     type: 'website',
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'CPU - Hold CPU, Mine $GOLD',
+    title: 'Copper Processing Unit',
     description:
       'Hold CPU tokens to mine $GOLD rewards. Trading fees fund the pool. Build streaks, get paid.',
     images: ['/logo.jpg'],
