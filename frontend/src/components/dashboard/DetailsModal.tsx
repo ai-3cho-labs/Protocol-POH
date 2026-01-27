@@ -270,6 +270,7 @@ export function DetailsModal({ open, onClose }: DetailsModalProps) {
               <PendingRewards
                 pendingReward={stats?.pendingReward ?? 0}
                 pool={pool ?? null}
+                poolSharePercent={stats?.poolSharePercent ?? 0}
                 isLoading={poolLoading || statsLoading}
               />
             )}

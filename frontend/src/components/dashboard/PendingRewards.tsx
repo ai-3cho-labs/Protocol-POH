@@ -16,6 +16,8 @@ export interface PendingRewardsProps {
   pendingReward: number;
   /** Pool information */
   pool: PoolInfo | null;
+  /** User's pool share percentage */
+  poolSharePercent?: number;
   /** Is data loading */
   isLoading?: boolean;
   /** Show compact version */
@@ -25,11 +27,19 @@ export interface PendingRewardsProps {
 }
 
 /**
- * PendingRewards - Live counter showing pending reward with pool progress
+ * Calculate USD value of earned GOLD based on pool share
+ */
+function calculateEarnedUsd(poolSharePercent: number, poolValueUsd: number): number {
+  return (poolSharePercent / 100) * poolValueUsd;
+}
+
+/**
+ * PendingRewards - Live counter showing earned rewards with pool progress
  */
 export function PendingRewards({
   pendingReward,
   pool,
+  poolSharePercent = 0,
   isLoading = false,
   compact = false,
   className,
@@ -37,6 +47,9 @@ export function PendingRewards({
   const earningRate = calculateEarningRate(pendingReward, pool?.hoursSinceLast ?? null);
   const tickingReward = useTickingCounter(pendingReward, earningRate);
   const countdown = useCountdown(pool?.hoursUntilTrigger ?? null);
+
+  // Calculate USD value based on pool share
+  const earnedUsd = pool ? calculateEarnedUsd(poolSharePercent, pool.valueUsd) : 0;
 
   if (isLoading) {
     return <PendingRewardsSkeleton compact={compact} className={className} />;
@@ -47,6 +60,7 @@ export function PendingRewards({
       <PendingRewardsCompact
         pendingReward={pendingReward}
         pool={pool}
+        poolSharePercent={poolSharePercent}
         countdown={countdown}
         className={className}
       />
@@ -54,17 +68,20 @@ export function PendingRewards({
   }
 
   return (
-    <TerminalCard title="PENDING REWARDS" className={className}>
+    <TerminalCard title="EARNED REWARDS" className={className}>
       <div className="space-y-4">
-        {/* Pending Reward Amount */}
+        {/* Earned Reward Amount */}
         <div className="text-center py-4">
           <div className="text-xs text-zinc-500 mb-1 lg:font-mono lg:text-gray-500">
-            YOUR ESTIMATED REWARD
+            YOUR EARNED GOLD
           </div>
           <div className="text-3xl sm:text-4xl lg:text-4xl font-bold text-white glow-white lg:font-mono tabular-nums">
             +{formatCompactNumber(Math.floor(tickingReward))}
           </div>
           <div className="text-sm text-zinc-500 mt-1">$GOLD</div>
+          <div className="text-lg text-amber-400 mt-1 lg:font-mono">
+            {formatUSD(earnedUsd)}
+          </div>
           {earningRate !== null && (
             <div className="text-sm text-amber-400/80 mt-2 lg:font-mono">
               {formatEarningRate(earningRate)}
@@ -164,29 +181,35 @@ function CountdownDisplay({
 function PendingRewardsCompact({
   pendingReward,
   pool,
+  poolSharePercent = 0,
   countdown,
   className,
 }: {
   pendingReward: number;
   pool: PoolInfo | null;
+  poolSharePercent?: number;
   countdown: ReturnType<typeof useCountdown>;
   className?: string;
 }) {
   const earningRate = calculateEarningRate(pendingReward, pool?.hoursSinceLast ?? null);
   const tickingReward = useTickingCounter(pendingReward, earningRate);
+  const earnedUsd = pool ? calculateEarnedUsd(poolSharePercent, pool.valueUsd) : 0;
 
   return (
     <TerminalCard className={className}>
       <div className="flex items-center justify-between">
         <div>
           <div className="text-xs text-zinc-500 flex items-center gap-2">
-            <span>Pending</span>
+            <span>Earned</span>
             {earningRate !== null && (
               <span className="text-amber-400/70">{formatEarningRate(earningRate)}</span>
             )}
           </div>
           <div className="text-lg font-bold text-white glow-white tabular-nums">
             +{formatCompactNumber(Math.floor(tickingReward))}
+          </div>
+          <div className="text-xs text-amber-400">
+            {formatUSD(earnedUsd)}
           </div>
         </div>
         <div className="text-right">
@@ -240,12 +263,13 @@ function PendingRewardsSkeleton({
   }
 
   return (
-    <TerminalCard title="PENDING REWARDS" className={className}>
+    <TerminalCard title="EARNED REWARDS" className={className}>
       <div className="space-y-4">
         <div className="text-center py-2">
           <Skeleton className="h-3 w-32 mx-auto mb-2" />
           <Skeleton className="h-10 w-28 mx-auto" />
           <Skeleton className="h-4 w-16 mx-auto mt-1" />
+          <Skeleton className="h-5 w-20 mx-auto mt-1" />
         </div>
         <div className="space-y-3">
           <div className="flex justify-between">

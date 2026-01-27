@@ -113,11 +113,12 @@ export function MinerDisplay({ onViewDetails, className }: MinerDisplayProps) {
           </div>
         )}
 
-        {/* Pending Rewards - Hero Section */}
+        {/* Earned Rewards - Hero Section */}
         <RewardsHeroMobile
           tickingReward={tickingReward}
           earningRate={earningRate}
           stats={stats}
+          pool={pool}
           isLoading={isLoading}
         />
 
@@ -423,15 +424,18 @@ function RightPanel({
 
   return (
     <>
-      {/* Pending Rewards - Hero */}
+      {/* Earned Rewards - Hero */}
       <PanelCard glow className="text-center py-6">
         <div className="text-xs text-amber-400/70 uppercase tracking-wider mb-2">
-          Pending Rewards
+          Earned Rewards
         </div>
         <div className="text-5xl font-bold text-amber-400 font-mono tabular-nums drop-shadow-[0_0_20px_rgba(251,191,36,0.5)]">
           +{formatCompactNumber(Math.floor(tickingReward))}
         </div>
         <div className="text-lg text-amber-400/80 mt-1">$GOLD</div>
+        <div className="text-xl text-white mt-1 font-mono">
+          {formatUSD((poolSharePercent / 100) * (pool?.valueUsd ?? 0))}
+        </div>
 
         {/* Pool Share & Earning Rate */}
         <div className="mt-3 flex items-center justify-center gap-3">
@@ -574,11 +578,13 @@ function RewardsHeroMobile({
   tickingReward,
   earningRate,
   stats,
+  pool,
   isLoading,
 }: {
   tickingReward: number;
   earningRate: number | null;
   stats: ReturnType<typeof useUserStats>['data'];
+  pool: ReturnType<typeof usePoolStatus>['data'];
   isLoading: boolean;
 }) {
   if (isLoading) {
@@ -587,21 +593,26 @@ function RewardsHeroMobile({
         <Skeleton className="h-3 w-24 mx-auto mb-3" />
         <Skeleton className="h-10 w-32 mx-auto mb-2" />
         <Skeleton className="h-4 w-16 mx-auto" />
+        <Skeleton className="h-5 w-20 mx-auto mt-1" />
       </div>
     );
   }
 
   const poolSharePercent = stats?.poolSharePercent ?? 0;
+  const earnedUsd = (poolSharePercent / 100) * (pool?.valueUsd ?? 0);
 
   return (
     <div className="w-full p-6 rounded-2xl bg-gradient-to-b from-amber-500/10 to-amber-500/[0.02] border border-amber-500/20 text-center">
       <div className="text-xs text-amber-400/70 uppercase tracking-wider mb-2">
-        Pending Rewards
+        Earned Rewards
       </div>
       <div className="text-4xl font-bold text-amber-400 font-mono tabular-nums drop-shadow-[0_0_16px_rgba(251,191,36,0.5)]">
         +{formatCompactNumber(Math.floor(tickingReward))}
       </div>
       <div className="text-base text-amber-400/80 mt-1">$GOLD</div>
+      <div className="text-lg text-white mt-1 font-mono">
+        {formatUSD(earnedUsd)}
+      </div>
 
       {/* Pool Share & Earning Rate */}
       <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
