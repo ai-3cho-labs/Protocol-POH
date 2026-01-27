@@ -100,6 +100,10 @@ class Settings(BaseSettings):
     # Maximum allowed slippage (security cap to prevent MEV attacks)
     jupiter_max_slippage_bps: int = 200  # 2% maximum
 
+    # Emergency fallback price for GOLD token when all price APIs fail
+    # Used to prevent distribution failures; set conservatively low
+    emergency_gold_price_usd: float = 0.0001  # $0.0001 per GOLD token
+
     @property
     def safe_slippage_bps(self) -> int:
         """Get slippage capped at maximum safe value to prevent MEV exploitation."""

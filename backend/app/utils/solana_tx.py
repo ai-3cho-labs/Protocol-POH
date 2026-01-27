@@ -530,3 +530,94 @@ async def confirm_transaction(signature: str, timeout_seconds: int = 60) -> bool
 
     logger.warning(f"Transaction confirmation timeout: {signature}")
     return False
+
+
+async def batch_confirm_transactions(
+    signatures: list[str],
+    timeout_seconds: int = 30,
+    poll_interval: float = 2.0,
+) -> dict[str, bool]:
+    """
+    Batch confirm multiple transactions with single RPC call per poll.
+
+    Uses getSignatureStatuses to check all signatures at once, reducing
+    RPC calls from N*polls to just polls (e.g., 150 -> 15 for 10 transactions).
+
+    Args:
+        signatures: List of transaction signatures to confirm.
+        timeout_seconds: Maximum wait time for all confirmations.
+        poll_interval: Time between poll attempts in seconds.
+
+    Returns:
+        Dict mapping signature to confirmation status (True=confirmed, False=failed/timeout).
+    """
+    import asyncio
+
+    if not signatures:
+        return {}
+
+    client = get_http_client()
+    results: dict[str, bool] = {sig: False for sig in signatures}
+    pending = set(signatures)
+    start_time = asyncio.get_event_loop().time()
+
+    logger.info(f"Batch confirming {len(signatures)} transactions (timeout={timeout_seconds}s)")
+
+    while pending and (asyncio.get_event_loop().time() - start_time) < timeout_seconds:
+        try:
+            # Single RPC call for all pending signatures
+            response = await client.post(
+                settings.helius_rpc_url,
+                json={
+                    "jsonrpc": "2.0",
+                    "id": "copper-batch-confirm",
+                    "method": "getSignatureStatuses",
+                    "params": [list(pending)],
+                },
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            statuses = data.get("result", {}).get("value", [])
+            pending_list = list(pending)
+
+            for i, status in enumerate(statuses):
+                if i >= len(pending_list):
+                    break
+
+                sig = pending_list[i]
+
+                if status is None:
+                    # Transaction not yet processed
+                    continue
+
+                confirmation = status.get("confirmationStatus")
+                err = status.get("err")
+
+                if confirmation in ["confirmed", "finalized"]:
+                    if err is None:
+                        results[sig] = True
+                        pending.discard(sig)
+                        logger.debug(f"Batch confirm: {sig[:16]}... confirmed")
+                    else:
+                        # Transaction failed on-chain
+                        results[sig] = False
+                        pending.discard(sig)
+                        logger.warning(f"Batch confirm: {sig[:16]}... failed: {err}")
+
+            if pending:
+                await asyncio.sleep(poll_interval)
+
+        except Exception as e:
+            logger.error(f"Error in batch confirmation poll: {e}")
+            await asyncio.sleep(poll_interval)
+
+    # Log summary
+    confirmed = sum(1 for v in results.values() if v)
+    timed_out = len(pending)
+    logger.info(
+        f"Batch confirmation complete: {confirmed}/{len(signatures)} confirmed, "
+        f"{timed_out} timed out"
+    )
+
+    return results

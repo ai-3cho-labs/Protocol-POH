@@ -8,7 +8,7 @@ import logging
 
 from app.tasks.celery_app import celery_app
 from app.database import get_worker_session_maker
-from app.services.distribution import DistributionService
+from app.services.distribution import DistributionService, acquire_distribution_lock
 from app.utils.async_utils import run_async
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,13 @@ def check_distribution_triggers() -> dict:
 
 
 async def _check_distribution_triggers() -> dict:
-    """Async implementation of check_distribution_triggers (hourly distribution)."""
+    """
+    Async implementation of check_distribution_triggers (hourly distribution).
+
+    Distributes ALL GOLD in pool every hour if pool > 0.
+    NO threshold or time triggers - just hourly distribution.
+    Uses distribution lock to prevent double payouts.
+    """
     session_maker = get_worker_session_maker()
     async with session_maker() as db:
         service = DistributionService(db)
@@ -49,11 +55,21 @@ async def _check_distribution_triggers() -> dict:
                     "pool_balance": status.balance,
                 }
 
-            # Calculate distribution plan
+            # Acquire distribution lock to prevent double payouts
+            if not await acquire_distribution_lock(db, "celery-hourly"):
+                logger.info("Hourly distribution: skipped (another worker has lock)")
+                return {
+                    "status": "skipped",
+                    "reason": "locked",
+                    "pool_balance": status.balance,
+                }
+
+            # Calculate distribution plan (NO threshold check - always distribute if pool > 0)
             plan = await service.calculate_distribution()
 
             if not plan:
                 logger.info("Hourly distribution: skipped (no eligible recipients)")
+                await db.commit()  # Release lock
                 return {
                     "status": "skipped",
                     "reason": "no_eligible_recipients",

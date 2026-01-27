@@ -2,7 +2,9 @@
 $GOLD Buyback Service
 
 Processes creator rewards and executes Jupiter swaps.
-80% → Buybacks (SOL → GOLD) → Airdrop Pool
+80% → Airdrop Pool (SOL)
+      └── 20% swapped to GOLD (buyback)
+      └── 80% kept as SOL (reserves/fees)
 10% → Algo Bot (trading operations)
 10% → Team Operations (maintenance)
 """
@@ -512,7 +514,9 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
     Process all pending creator rewards.
 
     Main entry point for the buyback task.
-    - 80% goes to Jupiter swap (SOL → GOLD) for airdrop pool
+    - 80% goes to airdrop pool:
+      - 20% of that swapped to GOLD (buyback)
+      - 80% of that kept as SOL (reserves/fees)
     - 10% goes to algo bot wallet for trading operations
     - 10% goes to team wallet for maintenance
 
@@ -581,8 +585,8 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
     )
 
     if pool_transfer_confirmed:
-        # Swap 95% of transferred SOL, keep 5% for tx fees
-        swap_amount = split.buyback_sol * Decimal("0.95")
+        # Swap 20% of transferred SOL to GOLD, keep 80% as SOL reserves
+        swap_amount = split.buyback_sol * Decimal("0.20")
         result = await service.execute_swap(
             swap_amount, settings.airdrop_pool_private_key
         )

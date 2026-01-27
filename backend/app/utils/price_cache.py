@@ -109,6 +109,18 @@ async def get_gold_price_usd(use_fallback: bool = True) -> Decimal:
             )
             return cached.price
 
+    # Use emergency fallback price if configured and use_fallback is enabled
+    if use_fallback and settings.emergency_gold_price_usd > 0:
+        emergency_price = Decimal(str(settings.emergency_gold_price_usd))
+        logger.warning(
+            f"All price APIs failed - using emergency fallback: ${emergency_price}"
+        )
+        # Cache the emergency price to prevent repeated warnings
+        _price_cache[cache_key] = CachedPrice(
+            price=emergency_price, timestamp=now, source="emergency_fallback"
+        )
+        return emergency_price
+
     logger.error("All price feeds failed and no valid cache available")
     return Decimal(0)
 
