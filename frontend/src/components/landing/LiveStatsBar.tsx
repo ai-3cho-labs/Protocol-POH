@@ -4,10 +4,14 @@ import { cn } from '@/lib/cn';
 import { formatCompactNumber, formatUSD } from '@/lib/utils';
 import { Skeleton } from '@/components/ui';
 import { useCountdown, useAnimatedNumber } from '@/hooks/useCountdown';
+import { useSocketContext } from '@/components/providers/SocketProvider';
+import { useIsConnected } from '@/hooks/useWallet';
 
 export interface LiveStatsBarProps {
   /** Total holders */
   holders: number;
+  /** Total GOLD distributed */
+  totalDistributed: number;
   /** 24h volume (USD) */
   volume24h: number;
   /** Pool value (USD) */
@@ -22,9 +26,11 @@ export interface LiveStatsBarProps {
 
 /**
  * LiveStatsBar - Real-time ticker of global stats with count-up animation
+ * Shows actual WebSocket connection status when wallet is connected
  */
 export function LiveStatsBar({
   holders,
+  totalDistributed,
   volume24h,
   poolValueUsd,
   hoursUntilNext,
@@ -32,9 +38,12 @@ export function LiveStatsBar({
   className,
 }: LiveStatsBarProps) {
   const countdown = useCountdown(hoursUntilNext);
+  const { status: socketStatus } = useSocketContext();
+  const isWalletConnected = useIsConnected();
 
   // Animated number values for smooth count-up effect
   const animatedHolders = useAnimatedNumber(holders, 800);
+  const animatedDistributed = useAnimatedNumber(totalDistributed, 800);
   const animatedVolume = useAnimatedNumber(volume24h, 800);
   const animatedPool = useAnimatedNumber(poolValueUsd, 800);
 
@@ -56,9 +65,20 @@ export function LiveStatsBar({
       <div className="max-w-6xl mx-auto">
         {/* Desktop Layout - Horizontal */}
         <div className="hidden lg:flex items-center justify-center gap-8 font-mono text-sm">
+          {/* Connection-aware Live Indicator */}
+          <ConnectionIndicator
+            socketStatus={socketStatus}
+            isWalletConnected={isWalletConnected}
+          />
+          <Divider />
           <StatItem
             label="MINERS"
             value={formatCompactNumber(Math.round(animatedHolders))}
+          />
+          <Divider />
+          <StatItem
+            label="DISTRIBUTED"
+            value={`${formatCompactNumber(Math.round(animatedDistributed))} $GOLD`}
           />
           <Divider />
           <StatItem
@@ -79,20 +99,32 @@ export function LiveStatsBar({
           />
         </div>
 
-        {/* Mobile Layout - 2x2 Grid */}
-        <div className="lg:hidden grid grid-cols-4 gap-2">
-          <MobileStatItem label="Miners" value={formatCompactNumber(Math.round(animatedHolders))} />
-          <MobileStatItem label="Volume" value={formatUSD(animatedVolume, true)} />
-          <MobileStatItem
-            label="Pool"
-            value={formatUSD(animatedPool)}
-            highlight={poolValueUsd >= 250}
-          />
-          <MobileStatItem
-            label="Next"
-            value={countdown.formattedCompact}
-            highlight={countdown.isComplete}
-          />
+        {/* Mobile Layout - 2x2 Grid with Live indicator */}
+        <div className="lg:hidden">
+          {/* Live indicator row */}
+          <div className="flex items-center justify-center mb-2">
+            <ConnectionIndicator
+              socketStatus={socketStatus}
+              isWalletConnected={isWalletConnected}
+              compact
+            />
+          </div>
+          {/* Stats grid */}
+          <div className="grid grid-cols-5 gap-1">
+            <MobileStatItem label="Miners" value={formatCompactNumber(Math.round(animatedHolders))} />
+            <MobileStatItem label="Distributed" value={`${formatCompactNumber(Math.round(animatedDistributed))}`} />
+            <MobileStatItem label="Volume" value={formatUSD(animatedVolume, true)} />
+            <MobileStatItem
+              label="Pool"
+              value={formatUSD(animatedPool)}
+              highlight={poolValueUsd >= 250}
+            />
+            <MobileStatItem
+              label="Next"
+              value={countdown.formattedCompact}
+              highlight={countdown.isComplete}
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -100,8 +132,94 @@ export function LiveStatsBar({
 }
 
 /**
- * Desktop stat item
- * Monochrome design
+ * Connection-aware indicator component
+ * Shows different states based on wallet and WebSocket connection
+ */
+function ConnectionIndicator({
+  socketStatus,
+  isWalletConnected,
+  compact = false,
+}: {
+  socketStatus: 'connected' | 'connecting' | 'disconnected';
+  isWalletConnected: boolean;
+  compact?: boolean;
+}) {
+  // Determine display state
+  // If wallet is connected, show WebSocket status
+  // If wallet is not connected, show "cached" state (data is from API, not live)
+  const isLive = isWalletConnected && socketStatus === 'connected';
+  const isConnecting = isWalletConnected && socketStatus === 'connecting';
+  const isCached = !isWalletConnected;
+
+  // Colors and labels based on state
+  let dotColor: string;
+  let label: string;
+  let showPing: boolean;
+
+  if (isLive) {
+    dotColor = 'bg-green-400';
+    label = 'Live';
+    showPing = true;
+  } else if (isConnecting) {
+    dotColor = 'bg-amber-400';
+    label = 'Connecting';
+    showPing = false;
+  } else if (isCached) {
+    dotColor = 'bg-blue-400';
+    label = 'Cached';
+    showPing = false;
+  } else {
+    // Disconnected (wallet connected but WebSocket disconnected)
+    dotColor = 'bg-gray-400';
+    label = 'Offline';
+    showPing = false;
+  }
+
+  const dotSize = compact ? 'w-1.5 h-1.5' : 'w-2 h-2';
+  const textSize = compact ? 'text-[10px]' : 'text-xs';
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="relative flex items-center justify-center">
+        {/* Core dot */}
+        <span
+          className={cn(
+            dotSize,
+            'rounded-full',
+            dotColor,
+            isConnecting && 'animate-pulse'
+          )}
+        />
+        {/* Ping animation for live status */}
+        {showPing && (
+          <span
+            className={cn(
+              'absolute',
+              dotSize,
+              'rounded-full animate-ping',
+              'bg-green-400/50'
+            )}
+          />
+        )}
+      </div>
+      <span
+        className={cn(
+          textSize,
+          'font-medium uppercase tracking-wider',
+          isLive && 'text-green-400',
+          isConnecting && 'text-amber-400',
+          isCached && 'text-blue-400',
+          !isLive && !isConnecting && !isCached && 'text-gray-400'
+        )}
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Desktop stat item with hover effect
  */
 function StatItem({
   label,
@@ -113,12 +231,13 @@ function StatItem({
   highlight?: boolean;
 }) {
   return (
-    <div>
+    <div className="group cursor-default transition-all duration-200 hover:scale-105">
       <div className="text-caption text-gray-500 uppercase tracking-wider">{label}</div>
       <div
         className={cn(
-          'font-terminal text-lg tabular-nums',
-          highlight ? 'text-white glow-white' : 'text-gray-200'
+          'font-terminal text-lg tabular-nums transition-all duration-200',
+          highlight ? 'text-white glow-white' : 'text-gray-200',
+          'group-hover:text-white'
         )}
       >
         {value}
@@ -128,8 +247,7 @@ function StatItem({
 }
 
 /**
- * Mobile stat item
- * Monochrome design
+ * Mobile stat item with hover effect
  */
 function MobileStatItem({
   label,
@@ -141,10 +259,10 @@ function MobileStatItem({
   highlight?: boolean;
 }) {
   return (
-    <div className="text-center">
+    <div className="text-center group">
       <div
         className={cn(
-          'text-sm font-medium tabular-nums',
+          'text-sm font-medium tabular-nums transition-colors duration-200',
           highlight ? 'text-white glow-white' : 'text-gray-200'
         )}
       >
@@ -156,10 +274,16 @@ function MobileStatItem({
 }
 
 /**
- * Vertical divider
+ * Enhanced vertical divider
  */
 function Divider() {
-  return <div className="w-px h-8 bg-gray-700" />;
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div className="w-px h-2 bg-gray-700" />
+      <div className="w-1 h-1 rounded-full bg-gray-700" />
+      <div className="w-px h-2 bg-gray-700" />
+    </div>
+  );
 }
 
 /**
@@ -178,24 +302,35 @@ function LiveStatsBarSkeleton({ className }: { className?: string }) {
       <div className="max-w-6xl mx-auto">
         {/* Desktop */}
         <div className="hidden lg:flex items-center justify-center gap-8">
-          {[1, 2, 3, 4].map((i) => (
+          {/* Live indicator skeleton */}
+          <div className="flex items-center gap-2">
+            <Skeleton className="w-2 h-2 rounded-full" />
+            <Skeleton className="h-3 w-12" />
+          </div>
+          <div className="w-px h-8 bg-terminal-border" />
+          {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="flex items-center gap-8">
               <div className="space-y-1">
                 <Skeleton className="h-3 w-16" />
                 <Skeleton className="h-5 w-20" />
               </div>
-              {i < 4 && <div className="w-px h-8 bg-terminal-border" />}
+              {i < 5 && <div className="w-px h-8 bg-terminal-border" />}
             </div>
           ))}
         </div>
         {/* Mobile */}
-        <div className="lg:hidden grid grid-cols-4 gap-2">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="text-center space-y-1">
-              <Skeleton className="h-5 w-full" />
-              <Skeleton className="h-3 w-8 mx-auto" />
-            </div>
-          ))}
+        <div className="lg:hidden">
+          <div className="flex justify-center mb-2">
+            <Skeleton className="h-3 w-16" />
+          </div>
+          <div className="grid grid-cols-5 gap-1">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="text-center space-y-1">
+                <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-3 w-8 mx-auto" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
