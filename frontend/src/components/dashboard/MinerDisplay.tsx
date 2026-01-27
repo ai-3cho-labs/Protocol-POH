@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useWalletAddress } from '@/hooks/useWallet';
 import { useUserStats, usePoolStatus, useGlobalStats, useUserHistory } from '@/hooks/api';
-import { useTickingCounter, useCountdown } from '@/hooks/useCountdown';
+import { useTickingCounter } from '@/hooks/useCountdown';
 import {
   formatCompactNumber,
   formatGOLD,
@@ -40,13 +40,23 @@ export function MinerDisplay({ onViewDetails, className }: MinerDisplayProps) {
   const isLoading = statsLoading || poolLoading;
   const earningRate = calculateEarningRate(stats?.pendingReward ?? 0, pool?.hoursSinceLast ?? null);
   const tickingReward = useTickingCounter(stats?.pendingReward ?? 0, earningRate);
-  const countdown = useCountdown(pool?.hoursUntilTrigger ?? null);
 
   // Calculate lifetime earnings from history
   const lifetimeEarnings = useMemo(() => {
     if (!history || history.length === 0) return undefined;
     return history.reduce((sum, item) => sum + item.amount_received, 0);
   }, [history]);
+
+  // Calculate USD values for share card
+  const pendingRewardUsd = useMemo(() => {
+    const poolSharePercent = stats?.poolSharePercent ?? 0;
+    return (poolSharePercent / 100) * (pool?.valueUsd ?? 0);
+  }, [stats?.poolSharePercent, pool?.valueUsd]);
+
+  const lifetimeEarningsUsd = useMemo(() => {
+    if (!lifetimeEarnings || !pool?.balance || pool.balance <= 0) return 0;
+    return (lifetimeEarnings / pool.balance) * pool.valueUsd;
+  }, [lifetimeEarnings, pool?.balance, pool?.valueUsd]);
 
   return (
     <div className={cn('px-4 py-6 lg:py-8', className)}>
@@ -78,6 +88,8 @@ export function MinerDisplay({ onViewDetails, className }: MinerDisplayProps) {
               stats={stats}
               totalHolders={globalStats?.total_holders}
               lifetimeEarnings={lifetimeEarnings}
+              lifetimeEarningsUsd={lifetimeEarningsUsd}
+              pendingRewardUsd={pendingRewardUsd}
             />
           </div>
         </div>
@@ -88,8 +100,8 @@ export function MinerDisplay({ onViewDetails, className }: MinerDisplayProps) {
             tickingReward={tickingReward}
             earningRate={earningRate}
             pool={pool}
-            countdown={countdown}
             stats={stats}
+            lifetimeEarnings={lifetimeEarnings}
             isLoading={isLoading}
           />
         </div>
@@ -120,6 +132,7 @@ export function MinerDisplay({ onViewDetails, className }: MinerDisplayProps) {
           earningRate={earningRate}
           stats={stats}
           pool={pool}
+          lifetimeEarnings={lifetimeEarnings}
           isLoading={isLoading}
         />
 
@@ -180,6 +193,8 @@ export function MinerDisplay({ onViewDetails, className }: MinerDisplayProps) {
             stats={stats}
             totalHolders={globalStats?.total_holders}
             lifetimeEarnings={lifetimeEarnings}
+            lifetimeEarningsUsd={lifetimeEarningsUsd}
+            pendingRewardUsd={pendingRewardUsd}
             className="px-6 py-4 active:scale-[0.98]"
           />
         </div>
@@ -393,15 +408,15 @@ function RightPanel({
   tickingReward,
   earningRate,
   pool,
-  countdown,
   stats,
+  lifetimeEarnings,
   isLoading,
 }: {
   tickingReward: number;
   earningRate: number | null;
   pool: ReturnType<typeof usePoolStatus>['data'];
-  countdown: ReturnType<typeof useCountdown>;
   stats: ReturnType<typeof useUserStats>['data'];
+  lifetimeEarnings: number | undefined;
   isLoading: boolean;
 }) {
   if (isLoading) {
@@ -425,21 +440,47 @@ function RightPanel({
 
   return (
     <>
-      {/* Earned Rewards - Hero */}
-      <PanelCard glow className="text-center py-6">
-        <div className="text-xs text-amber-400/70 uppercase tracking-wider mb-2">
-          Pending Rewards
-        </div>
-        <div className="text-5xl font-bold text-amber-400 font-mono tabular-nums drop-shadow-[0_0_20px_rgba(251,191,36,0.5)]">
-          +{formatGOLD(tickingReward)}
-        </div>
-        <div className="text-lg text-amber-400/80 mt-1">$GOLD</div>
-        <div className="text-xl text-white mt-1 font-mono">
-          {formatUSD((poolSharePercent / 100) * (pool?.valueUsd ?? 0))}
+      {/* Rewards - Hero */}
+      <PanelCard glow className="py-6">
+        <div className="flex justify-between items-start">
+          {/* Pending Rewards */}
+          <div className="text-center flex-1">
+            <div className="text-xs text-amber-400/70 uppercase tracking-wider mb-2">
+              Pending Rewards
+            </div>
+            <div className="text-4xl font-bold text-amber-400 font-mono tabular-nums drop-shadow-[0_0_20px_rgba(251,191,36,0.5)]">
+              +{formatGOLD(tickingReward)}
+            </div>
+            <div className="text-sm text-amber-400/80 mt-1">$GOLD</div>
+            <div className="text-lg text-white mt-1 font-mono">
+              {formatUSD((poolSharePercent / 100) * (pool?.valueUsd ?? 0))}
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="w-px h-24 bg-white/10 mx-4 self-center" />
+
+          {/* Total Mined */}
+          <div className="text-center flex-1">
+            <div className="text-xs text-gray-400 uppercase tracking-wider mb-2">
+              Total Mined
+            </div>
+            <div className="text-4xl font-bold text-white font-mono tabular-nums">
+              {lifetimeEarnings !== undefined && lifetimeEarnings > 0
+                ? formatGOLD(lifetimeEarnings)
+                : '0.00'}
+            </div>
+            <div className="text-sm text-gray-400 mt-1">$GOLD</div>
+            <div className="text-lg text-gray-500 mt-1 font-mono">
+              {lifetimeEarnings !== undefined && lifetimeEarnings > 0 && pool?.balance && pool.balance > 0
+                ? formatUSD((lifetimeEarnings / pool.balance) * pool.valueUsd)
+                : formatUSD(0)}
+            </div>
+          </div>
         </div>
 
         {/* Pool Share & Earning Rate */}
-        <div className="mt-3 flex items-center justify-center gap-3">
+        <div className="mt-4 flex items-center justify-center gap-3">
           {poolSharePercent > 0 && (
             <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
               <span className="text-xs text-gray-400">Your share:</span>
@@ -460,7 +501,7 @@ function RightPanel({
 
         {/* Projected indicator for new holders */}
         {stats?.isProjected && (
-          <div className="mt-2 text-xs text-gray-500">
+          <div className="mt-2 text-xs text-gray-500 text-center">
             Projected based on current balance
           </div>
         )}
@@ -472,13 +513,9 @@ function RightPanel({
           <div className="text-xs text-gray-400 uppercase tracking-wider">
             Reward Pool
           </div>
-          {pool?.thresholdMet || pool?.timeTriggerMet ? (
+          {(pool?.thresholdMet || pool?.timeTriggerMet) && (
             <span className="text-xs font-medium text-amber-400 animate-pulse">
               READY
-            </span>
-          ) : (
-            <span className="text-xs text-gray-500 font-mono">
-              {countdown.formattedCompact}
             </span>
           )}
         </div>
@@ -505,15 +542,8 @@ function RightPanel({
             style={{ width: `${pool?.progressToThreshold ?? 0}%` }}
           />
         </div>
-        <div className="flex justify-between text-xs text-gray-500 mt-2">
+        <div className="text-xs text-gray-500 mt-2">
           <span>{pool?.progressToThreshold.toFixed(0)}% filled</span>
-          <span>
-            {pool?.nextTrigger === 'threshold'
-              ? 'Threshold trigger'
-              : pool?.nextTrigger === 'time'
-              ? 'Time trigger'
-              : 'Next payout'}
-          </span>
         </div>
       </PanelCard>
 
@@ -580,21 +610,24 @@ function RewardsHeroMobile({
   earningRate,
   stats,
   pool,
+  lifetimeEarnings,
   isLoading,
 }: {
   tickingReward: number;
   earningRate: number | null;
   stats: ReturnType<typeof useUserStats>['data'];
   pool: ReturnType<typeof usePoolStatus>['data'];
+  lifetimeEarnings: number | undefined;
   isLoading: boolean;
 }) {
   if (isLoading) {
     return (
       <div className="w-full p-6 rounded-2xl bg-gradient-to-b from-amber-500/10 to-amber-500/[0.02] border border-amber-500/20">
-        <Skeleton className="h-3 w-24 mx-auto mb-3" />
-        <Skeleton className="h-10 w-32 mx-auto mb-2" />
-        <Skeleton className="h-4 w-16 mx-auto" />
-        <Skeleton className="h-5 w-20 mx-auto mt-1" />
+        <div className="flex justify-between">
+          <Skeleton className="h-16 w-28" />
+          <Skeleton className="h-16 w-28" />
+        </div>
+        <Skeleton className="h-5 w-32 mx-auto mt-3" />
       </div>
     );
   }
@@ -603,16 +636,42 @@ function RewardsHeroMobile({
   const earnedUsd = (poolSharePercent / 100) * (pool?.valueUsd ?? 0);
 
   return (
-    <div className="w-full p-6 rounded-2xl bg-gradient-to-b from-amber-500/10 to-amber-500/[0.02] border border-amber-500/20 text-center">
-      <div className="text-xs text-amber-400/70 uppercase tracking-wider mb-2">
-        Pending Rewards
-      </div>
-      <div className="text-4xl font-bold text-amber-400 font-mono tabular-nums drop-shadow-[0_0_16px_rgba(251,191,36,0.5)]">
-        +{formatGOLD(tickingReward)}
-      </div>
-      <div className="text-base text-amber-400/80 mt-1">$GOLD</div>
-      <div className="text-lg text-white mt-1 font-mono">
-        {formatUSD(earnedUsd)}
+    <div className="w-full p-5 rounded-2xl bg-gradient-to-b from-amber-500/10 to-amber-500/[0.02] border border-amber-500/20">
+      <div className="flex justify-between items-start">
+        {/* Pending Rewards */}
+        <div className="text-center flex-1">
+          <div className="text-[10px] text-amber-400/70 uppercase tracking-wider mb-1">
+            Pending Rewards
+          </div>
+          <div className="text-2xl font-bold text-amber-400 font-mono tabular-nums drop-shadow-[0_0_16px_rgba(251,191,36,0.5)]">
+            +{formatGOLD(tickingReward)}
+          </div>
+          <div className="text-xs text-amber-400/80">$GOLD</div>
+          <div className="text-sm text-white font-mono">
+            {formatUSD(earnedUsd)}
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="w-px h-16 bg-white/10 mx-3 self-center" />
+
+        {/* Total Mined */}
+        <div className="text-center flex-1">
+          <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">
+            Total Mined
+          </div>
+          <div className="text-2xl font-bold text-white font-mono tabular-nums">
+            {lifetimeEarnings !== undefined && lifetimeEarnings > 0
+              ? formatGOLD(lifetimeEarnings)
+              : '0.00'}
+          </div>
+          <div className="text-xs text-gray-400">$GOLD</div>
+          <div className="text-sm text-gray-500 font-mono">
+            {lifetimeEarnings !== undefined && lifetimeEarnings > 0 && pool?.balance && pool.balance > 0
+              ? formatUSD((lifetimeEarnings / pool.balance) * pool.valueUsd)
+              : formatUSD(0)}
+          </div>
+        </div>
       </div>
 
       {/* Pool Share & Earning Rate */}
@@ -637,7 +696,7 @@ function RewardsHeroMobile({
 
       {/* Projected indicator */}
       {stats?.isProjected && (
-        <div className="mt-2 text-[10px] text-gray-500">
+        <div className="mt-2 text-[10px] text-gray-500 text-center">
           Projected based on current balance
         </div>
       )}

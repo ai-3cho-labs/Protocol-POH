@@ -4,11 +4,11 @@
  */
 
 import type { UserMiningStats } from '@/types/models';
-import { formatCompactNumber, formatGOLD, formatMultiplier, shortenAddress } from './utils';
+import { formatCompactNumber, formatGOLD, shortenAddress } from './utils';
 
 // Card dimensions (optimized for social sharing)
 const CARD_WIDTH = 800;
-const CARD_HEIGHT = 400;
+const CARD_HEIGHT = 280;
 
 // Colors matching the app theme
 const COLORS = {
@@ -31,6 +31,10 @@ export interface ShareCardExtras {
   totalHolders?: number;
   /** Lifetime earnings in $GOLD */
   lifetimeEarnings?: number;
+  /** Lifetime earnings in USD */
+  lifetimeEarningsUsd?: number;
+  /** Pending reward in USD */
+  pendingRewardUsd?: number;
 }
 
 /**
@@ -69,16 +73,6 @@ function getPercentile(rank: number, total: number): string {
   if (percentile <= 25) return 'Top 25%';
   if (percentile <= 50) return 'Top 50%';
   return '';
-}
-
-/**
- * Format date as "Jan 2024" or "Jan 15, 2024"
- */
-function formatMiningDate(date: Date): string {
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    year: 'numeric',
-  });
 }
 
 /**
@@ -132,250 +126,133 @@ export async function generateShareCard(
   drawGridPattern(ctx);
 
   // === HEADER ===
-  const headerY = 40;
+  const headerY = 36;
 
   // CPU Logo/Brand
   ctx.fillStyle = COLORS.white;
-  ctx.font = 'bold 32px Inter, system-ui, sans-serif';
+  ctx.font = 'bold 28px Inter, system-ui, sans-serif';
   ctx.textAlign = 'left';
-  ctx.fillText('CPU', 40, headerY + 8);
+  ctx.fillText('CPU', 40, headerY + 6);
 
   // Tagline
   ctx.fillStyle = COLORS.gray500;
-  ctx.font = '500 14px Inter, system-ui, sans-serif';
-  ctx.fillText('Mining Stats', 110, headerY + 6);
+  ctx.font = '500 13px Inter, system-ui, sans-serif';
+  ctx.fillText('Mining Stats', 100, headerY + 4);
 
   // User wallet address
   ctx.fillStyle = COLORS.amber;
-  ctx.font = '600 14px Inter, system-ui, sans-serif';
+  ctx.font = '600 13px Inter, system-ui, sans-serif';
   ctx.textAlign = 'right';
-  ctx.fillText(shortenAddress(stats.wallet, 4), CARD_WIDTH - 40, headerY + 6);
+  ctx.fillText(shortenAddress(stats.wallet, 4), CARD_WIDTH - 40, headerY + 4);
 
-  // === MAIN CONTENT AREA ===
-  const contentY = 70;
-  const contentHeight = 270;
+  // === MAIN CONTENT - 3 Stat Cards ===
+  const cardY = 70;
+  const cardHeight = 130;
+  const cardGap = 16;
+  const totalWidth = CARD_WIDTH - 80; // 40px padding each side
+  const cardWidth = (totalWidth - cardGap * 2) / 3;
+  const startX = 40;
 
-  // Left section - Tier & Balance
-  const leftWidth = 260;
-  const leftX = 40;
-
-  // Tier card background
-  roundRect(ctx, leftX, contentY, leftWidth, contentHeight, 16);
-  ctx.fillStyle = COLORS.cardBg;
+  // Card 1: Pending Rewards (amber glow)
+  roundRect(ctx, startX, cardY, cardWidth, cardHeight, 16);
+  ctx.fillStyle = 'rgba(245, 158, 11, 0.08)';
   ctx.fill();
-  ctx.strokeStyle = COLORS.cardBorder;
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  // Tier label
-  ctx.textAlign = 'center';
-  ctx.fillStyle = COLORS.gray500;
-  ctx.font = '600 11px Inter, system-ui, sans-serif';
-  ctx.fillText('TIER', leftX + leftWidth / 2, contentY + 35);
-
-  // Tier name
-  ctx.fillStyle = COLORS.white;
-  ctx.font = 'bold 32px Inter, system-ui, sans-serif';
-  ctx.fillText(stats.tier.name, leftX + leftWidth / 2, contentY + 75);
-
-  // Multiplier badge
-  const multBadgeWidth = 80;
-  const multBadgeHeight = 30;
-  const multBadgeX = leftX + (leftWidth - multBadgeWidth) / 2;
-  const multBadgeY = contentY + 90;
-
-  roundRect(ctx, multBadgeX, multBadgeY, multBadgeWidth, multBadgeHeight, 15);
-  ctx.fillStyle = 'rgba(245, 158, 11, 0.12)';
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(245, 158, 11, 0.25)';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  ctx.fillStyle = COLORS.amber;
-  ctx.font = 'bold 15px Inter, system-ui, sans-serif';
-  ctx.fillText(formatMultiplier(stats.multiplier), leftX + leftWidth / 2, multBadgeY + 20);
-
-  // Streak info
-  ctx.fillStyle = COLORS.gray500;
-  ctx.font = '500 12px Inter, system-ui, sans-serif';
-  const streakText = stats.streakDays >= 1
-    ? `${Math.floor(stats.streakDays)}d streak`
-    : `${Math.round(stats.streakHours)}h streak`;
-  ctx.fillText(streakText, leftX + leftWidth / 2, contentY + 150);
-
-  // Divider
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(leftX + 24, contentY + 170);
-  ctx.lineTo(leftX + leftWidth - 24, contentY + 170);
-  ctx.stroke();
-
-  // Balance
-  ctx.fillStyle = COLORS.gray500;
-  ctx.font = '600 11px Inter, system-ui, sans-serif';
-  ctx.fillText('BALANCE', leftX + leftWidth / 2, contentY + 200);
-
-  ctx.fillStyle = COLORS.white;
-  ctx.font = 'bold 28px Inter, system-ui, sans-serif';
-  ctx.fillText(formatCompactNumber(stats.balance), leftX + leftWidth / 2, contentY + 235);
-
-  ctx.fillStyle = COLORS.gray500;
-  ctx.font = '500 13px Inter, system-ui, sans-serif';
-  ctx.fillText('CPU', leftX + leftWidth / 2, contentY + 255);
-
-  // Mining since (OG flex)
-  if (stats.streakStart) {
-    ctx.fillStyle = COLORS.gray600;
-    ctx.font = '500 11px Inter, system-ui, sans-serif';
-    ctx.fillText(`Mining since ${formatMiningDate(stats.streakStart)}`, leftX + leftWidth / 2, contentY + 285);
-  }
-
-  // === RIGHT SECTION - Stats ===
-  const rightX = leftX + leftWidth + 20;
-  const rightWidth = CARD_WIDTH - rightX - 40;
-
-  // Hash Power card
-  const hashCardHeight = 115;
-  roundRect(ctx, rightX, contentY, rightWidth, hashCardHeight, 16);
-  ctx.fillStyle = 'rgba(245, 158, 11, 0.06)';
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(245, 158, 11, 0.15)';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  // Hash Power label
-  ctx.textAlign = 'left';
-  ctx.fillStyle = COLORS.amberMuted;
-  ctx.font = '600 11px Inter, system-ui, sans-serif';
-  ctx.fillText('HASH POWER', rightX + 20, contentY + 30);
-
-  // Hash Power value
-  const hashValueStr = formatCompactNumber(stats.hashPower);
-  ctx.font = 'bold 44px Inter, system-ui, sans-serif';
-  const hashWidth = ctx.measureText(hashValueStr).width;
-
-  ctx.fillStyle = COLORS.amber;
-  ctx.fillText(hashValueStr, rightX + 20, contentY + 75);
-
-  // H/s unit
-  ctx.fillStyle = COLORS.amberMuted;
-  ctx.font = '600 16px Inter, system-ui, sans-serif';
-  ctx.fillText('H/s', rightX + 20 + hashWidth + 10, contentY + 75);
-
-  // TWAB breakdown
-  ctx.fillStyle = COLORS.gray500;
-  ctx.font = '500 11px Inter, system-ui, sans-serif';
-  ctx.fillText(
-    `TWAB ${formatCompactNumber(stats.twab)} × ${formatMultiplier(stats.multiplier)}`,
-    rightX + 20,
-    contentY + 100
-  );
-
-  // Bottom row - 3 compact cards
-  const bottomRowY = contentY + hashCardHeight + 10;
-  const bottomCardHeight = 72;
-  const cardGap = 8;
-  const bottomCardWidth = (rightWidth - cardGap * 2) / 3;
-
-  // Card 1: Earned Rewards
-  roundRect(ctx, rightX, bottomRowY, bottomCardWidth, bottomCardHeight, 10);
-  ctx.fillStyle = COLORS.cardBg;
-  ctx.fill();
-  ctx.strokeStyle = COLORS.cardBorder;
+  ctx.strokeStyle = 'rgba(245, 158, 11, 0.2)';
   ctx.lineWidth = 1;
   ctx.stroke();
 
   ctx.textAlign = 'center';
-  ctx.fillStyle = COLORS.gray500;
-  ctx.font = '600 9px Inter, system-ui, sans-serif';
-  ctx.fillText('EARNED', rightX + bottomCardWidth / 2, bottomRowY + 18);
+  ctx.fillStyle = COLORS.gray400;
+  ctx.font = '600 11px Inter, system-ui, sans-serif';
+  ctx.fillText('PENDING REWARDS', startX + cardWidth / 2, cardY + 28);
 
   ctx.fillStyle = COLORS.amberLight;
-  ctx.font = 'bold 20px Inter, system-ui, sans-serif';
+  ctx.font = 'bold 32px Inter, system-ui, sans-serif';
   const pendingValue = stats.pendingReward >= 1
     ? `+${formatCompactNumber(Math.floor(stats.pendingReward))}`
     : `+${formatGOLD(stats.pendingReward)}`;
-  ctx.fillText(pendingValue, rightX + bottomCardWidth / 2, bottomRowY + 42);
+  ctx.fillText(pendingValue, startX + cardWidth / 2, cardY + 70);
 
   ctx.fillStyle = COLORS.gray500;
-  ctx.font = '500 10px Inter, system-ui, sans-serif';
-  ctx.fillText('$GOLD', rightX + bottomCardWidth / 2, bottomRowY + 60);
+  ctx.font = '500 13px Inter, system-ui, sans-serif';
+  ctx.fillText('$GOLD', startX + cardWidth / 2, cardY + 92);
 
-  // Card 2: Rank with Percentile
-  const rankCardX = rightX + bottomCardWidth + cardGap;
-  roundRect(ctx, rankCardX, bottomRowY, bottomCardWidth, bottomCardHeight, 10);
+  ctx.fillStyle = COLORS.gray400;
+  ctx.font = '600 14px Inter, system-ui, sans-serif';
+  const pendingUsdText = extras?.pendingRewardUsd !== undefined
+    ? `$${extras.pendingRewardUsd.toFixed(2)}`
+    : '$0.00';
+  ctx.fillText(pendingUsdText, startX + cardWidth / 2, cardY + 114);
+
+  // Card 2: Rank
+  const rankCardX = startX + cardWidth + cardGap;
+  roundRect(ctx, rankCardX, cardY, cardWidth, cardHeight, 16);
   ctx.fillStyle = COLORS.cardBg;
   ctx.fill();
   ctx.strokeStyle = COLORS.cardBorder;
   ctx.lineWidth = 1;
   ctx.stroke();
 
-  ctx.fillStyle = COLORS.gray500;
-  ctx.font = '600 9px Inter, system-ui, sans-serif';
-  ctx.fillText('RANK', rankCardX + bottomCardWidth / 2, bottomRowY + 18);
+  ctx.fillStyle = COLORS.gray400;
+  ctx.font = '600 11px Inter, system-ui, sans-serif';
+  ctx.fillText('RANK', rankCardX + cardWidth / 2, cardY + 28);
 
   ctx.fillStyle = COLORS.white;
-  ctx.font = 'bold 20px Inter, system-ui, sans-serif';
+  ctx.font = 'bold 32px Inter, system-ui, sans-serif';
   const rankDisplay = stats.rank ? `#${stats.rank}` : '-';
-  ctx.fillText(rankDisplay, rankCardX + bottomCardWidth / 2, bottomRowY + 42);
+  ctx.fillText(rankDisplay, rankCardX + cardWidth / 2, cardY + 70);
 
-  // Percentile or fallback
+  // Percentile badge
   if (extras?.totalHolders && stats.rank) {
     const percentile = getPercentile(stats.rank, extras.totalHolders);
     if (percentile) {
       ctx.fillStyle = COLORS.amber;
-      ctx.font = '600 10px Inter, system-ui, sans-serif';
-      ctx.fillText(percentile, rankCardX + bottomCardWidth / 2, bottomRowY + 60);
+      ctx.font = '600 14px Inter, system-ui, sans-serif';
+      ctx.fillText(percentile, rankCardX + cardWidth / 2, cardY + 100);
     } else {
       ctx.fillStyle = COLORS.gray500;
-      ctx.font = '500 10px Inter, system-ui, sans-serif';
-      ctx.fillText('Leaderboard', rankCardX + bottomCardWidth / 2, bottomRowY + 60);
+      ctx.font = '500 13px Inter, system-ui, sans-serif';
+      ctx.fillText('Leaderboard', rankCardX + cardWidth / 2, cardY + 100);
     }
   } else {
     ctx.fillStyle = COLORS.gray500;
-    ctx.font = '500 10px Inter, system-ui, sans-serif';
-    ctx.fillText('Leaderboard', rankCardX + bottomCardWidth / 2, bottomRowY + 60);
+    ctx.font = '500 13px Inter, system-ui, sans-serif';
+    ctx.fillText('Leaderboard', rankCardX + cardWidth / 2, cardY + 100);
   }
 
-  // Card 3: Lifetime Earnings OR Progress
-  const thirdCardX = rankCardX + bottomCardWidth + cardGap;
-  roundRect(ctx, thirdCardX, bottomRowY, bottomCardWidth, bottomCardHeight, 10);
+  // Card 3: Total Mined
+  const thirdCardX = rankCardX + cardWidth + cardGap;
+  roundRect(ctx, thirdCardX, cardY, cardWidth, cardHeight, 16);
   ctx.fillStyle = COLORS.cardBg;
   ctx.fill();
   ctx.strokeStyle = COLORS.cardBorder;
   ctx.lineWidth = 1;
   ctx.stroke();
 
-  if (extras?.lifetimeEarnings !== undefined && extras.lifetimeEarnings > 0) {
-    ctx.fillStyle = COLORS.gray500;
-    ctx.font = '600 9px Inter, system-ui, sans-serif';
-    ctx.fillText('EARNED', thirdCardX + bottomCardWidth / 2, bottomRowY + 18);
+  ctx.fillStyle = COLORS.gray400;
+  ctx.font = '600 11px Inter, system-ui, sans-serif';
+  ctx.fillText('TOTAL MINED', thirdCardX + cardWidth / 2, cardY + 28);
 
-    ctx.fillStyle = COLORS.white;
-    ctx.font = 'bold 20px Inter, system-ui, sans-serif';
-    ctx.fillText(formatCompactNumber(extras.lifetimeEarnings), thirdCardX + bottomCardWidth / 2, bottomRowY + 42);
+  ctx.fillStyle = COLORS.white;
+  ctx.font = 'bold 32px Inter, system-ui, sans-serif';
+  const totalMinedGold = extras?.lifetimeEarnings !== undefined && extras.lifetimeEarnings > 0
+    ? formatCompactNumber(extras.lifetimeEarnings)
+    : '0.00';
+  ctx.fillText(totalMinedGold, thirdCardX + cardWidth / 2, cardY + 70);
 
-    ctx.fillStyle = COLORS.gray500;
-    ctx.font = '500 10px Inter, system-ui, sans-serif';
-    ctx.fillText('$GOLD', thirdCardX + bottomCardWidth / 2, bottomRowY + 60);
-  } else {
-    ctx.fillStyle = COLORS.gray500;
-    ctx.font = '600 9px Inter, system-ui, sans-serif';
-    ctx.fillText('PROGRESS', thirdCardX + bottomCardWidth / 2, bottomRowY + 18);
+  ctx.fillStyle = COLORS.gray500;
+  ctx.font = '500 13px Inter, system-ui, sans-serif';
+  ctx.fillText('$GOLD', thirdCardX + cardWidth / 2, cardY + 92);
 
-    ctx.fillStyle = COLORS.white;
-    ctx.font = 'bold 20px Inter, system-ui, sans-serif';
-    ctx.fillText(`${Math.round(stats.progressToNextTier)}%`, thirdCardX + bottomCardWidth / 2, bottomRowY + 42);
-
-    ctx.fillStyle = COLORS.gray500;
-    ctx.font = '500 10px Inter, system-ui, sans-serif';
-    const nextTierText = stats.nextTier ? `to ${stats.nextTier.name}` : 'Max Tier';
-    ctx.fillText(nextTierText, thirdCardX + bottomCardWidth / 2, bottomRowY + 60);
-  }
+  ctx.fillStyle = COLORS.gray400;
+  ctx.font = '600 14px Inter, system-ui, sans-serif';
+  const totalMinedUsd = extras?.lifetimeEarningsUsd !== undefined && extras.lifetimeEarningsUsd > 0
+    ? `$${extras.lifetimeEarningsUsd.toFixed(2)}`
+    : '$0.00';
+  ctx.fillText(totalMinedUsd, thirdCardX + cardWidth / 2, cardY + 114);
 
   // === FOOTER ===
-  const footerY = CARD_HEIGHT - 40;
+  const footerY = CARD_HEIGHT - 36;
 
   // Divider line
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';

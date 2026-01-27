@@ -22,7 +22,6 @@ export default function HomePage() {
         totalDistributed={globalStats.data?.total_distributed ?? 0}
         poolValueUsd={poolStatus.data?.valueUsd ?? 0}
         poolBalance={poolStatus.data?.balance ?? 0}
-        hoursUntilNext={poolStatus.data?.hoursUntilTrigger ?? null}
         isLoading={globalStats.isLoading || poolStatus.isLoading}
       />
 

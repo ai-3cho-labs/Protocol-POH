@@ -11,13 +11,17 @@ interface ShareCardProps {
   totalHolders?: number;
   /** Lifetime earnings in $GOLD */
   lifetimeEarnings?: number;
+  /** Lifetime earnings in USD */
+  lifetimeEarningsUsd?: number;
+  /** Pending reward in USD */
+  pendingRewardUsd?: number;
   className?: string;
 }
 
 /**
  * Share button that generates a PNG stats card with preview modal.
  */
-export function ShareCard({ stats, totalHolders, lifetimeEarnings, className }: ShareCardProps) {
+export function ShareCard({ stats, totalHolders, lifetimeEarnings, lifetimeEarningsUsd, pendingRewardUsd, className }: ShareCardProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
@@ -33,6 +37,8 @@ export function ShareCard({ stats, totalHolders, lifetimeEarnings, className }: 
       const extras: ShareCardExtras = {
         totalHolders,
         lifetimeEarnings,
+        lifetimeEarningsUsd,
+        pendingRewardUsd,
       };
       const blob = await generateShareCard(stats, extras);
       const url = URL.createObjectURL(blob);

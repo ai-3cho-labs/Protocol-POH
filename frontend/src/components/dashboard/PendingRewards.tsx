@@ -9,7 +9,6 @@ import {
   AsciiProgressBar,
   Skeleton,
 } from '@/components/ui';
-import { useCountdown } from '@/hooks/useCountdown';
 
 export interface TotalMinedProps {
   /** Lifetime earnings from all distributions (GOLD tokens) */
@@ -34,8 +33,6 @@ export function PendingRewards({
   isLoading = false,
   className,
 }: TotalMinedProps) {
-  const countdown = useCountdown(pool?.hoursUntilTrigger ?? null);
-
   if (isLoading) {
     return <TotalMinedSkeleton className={className} />;
   }
@@ -128,18 +125,6 @@ export function PendingRewards({
               </span>
             </div>
 
-            {/* Next Trigger Info */}
-            <div className="flex items-center justify-between pt-2 border-t border-zinc-800 lg:border-terminal-border">
-              <div className="text-xs text-zinc-500 lg:font-mono">
-                {pool.nextTrigger === 'threshold'
-                  ? 'Threshold trigger'
-                  : pool.nextTrigger === 'time'
-                    ? 'Time trigger'
-                    : 'Next payout'}
-              </div>
-              <CountdownDisplay countdown={countdown} pool={pool} />
-            </div>
-
             {/* Ready State */}
             {pool.thresholdMet && (
               <div className="text-center py-2 px-4 rounded bg-white/10 border border-white/30">
@@ -158,35 +143,6 @@ export function PendingRewards({
 /**
  * Countdown display component
  */
-function CountdownDisplay({
-  countdown,
-  pool,
-}: {
-  countdown: ReturnType<typeof useCountdown>;
-  pool: PoolInfo;
-}) {
-  if (pool.thresholdMet || pool.timeTriggerMet) {
-    return (
-      <span className="text-sm font-medium text-white glow-white lg:font-mono">
-        READY
-      </span>
-    );
-  }
-
-  return (
-    <div className="text-right">
-      {/* Desktop: Full countdown */}
-      <span className="hidden lg:inline text-sm font-mono text-white tabular-nums">
-        {countdown.formatted}
-      </span>
-      {/* Mobile: Compact countdown */}
-      <span className="lg:hidden text-sm font-medium text-white">
-        {countdown.formattedCompact}
-      </span>
-    </div>
-  );
-}
-
 /**
  * Loading skeleton
  */

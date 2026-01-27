@@ -3,7 +3,7 @@
 import { cn } from '@/lib/cn';
 import { formatCompactNumber, formatUSD } from '@/lib/utils';
 import { Skeleton } from '@/components/ui';
-import { useCountdown, useAnimatedNumber } from '@/hooks/useCountdown';
+import { useAnimatedNumber } from '@/hooks/useCountdown';
 import { useSocketContext } from '@/components/providers/SocketProvider';
 
 export interface LiveStatsBarProps {
@@ -15,8 +15,6 @@ export interface LiveStatsBarProps {
   poolValueUsd: number;
   /** Pool balance (GOLD) - used to calculate GOLD price */
   poolBalance: number;
-  /** Hours until next distribution */
-  hoursUntilNext: number | null;
   /** Is loading */
   isLoading?: boolean;
   /** Additional class names */
@@ -32,11 +30,9 @@ export function LiveStatsBar({
   totalDistributed,
   poolValueUsd,
   poolBalance,
-  hoursUntilNext,
   isLoading = false,
   className,
 }: LiveStatsBarProps) {
-  const countdown = useCountdown(hoursUntilNext);
   const { status: socketStatus } = useSocketContext();
 
   // Calculate GOLD price from pool data
@@ -84,12 +80,6 @@ export function LiveStatsBar({
             value={formatUSD(animatedPool)}
             highlight={poolValueUsd >= 250}
           />
-          <Divider />
-          <StatItem
-            label="NEXT PAYOUT"
-            value={countdown.formatted}
-            highlight={countdown.isComplete}
-          />
         </div>
 
         {/* Mobile Layout - 2x2 Grid with Live indicator */}
@@ -99,18 +89,13 @@ export function LiveStatsBar({
             <ConnectionIndicator socketStatus={socketStatus} compact />
           </div>
           {/* Stats grid */}
-          <div className="grid grid-cols-4 gap-1">
+          <div className="grid grid-cols-3 gap-1">
             <MobileStatItem label="Miners" value={formatCompactNumber(Math.round(animatedHolders))} />
             <MobileStatItem label="Distributed" value={formatUSD(animatedDistributedUsd, true)} />
             <MobileStatItem
               label="Pool"
               value={formatUSD(animatedPool)}
               highlight={poolValueUsd >= 250}
-            />
-            <MobileStatItem
-              label="Next"
-              value={countdown.formattedCompact}
-              highlight={countdown.isComplete}
             />
           </div>
         </div>
