@@ -81,30 +81,6 @@ class Balance(Base):
     )
 
 
-class HoldStreak(Base):
-    """Wallet holding streak and tier tracking."""
-
-    __tablename__ = "hold_streaks"
-
-    wallet: Mapped[str] = mapped_column(String(44), primary_key=True)
-    streak_start: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-    current_tier: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
-    last_sell_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=utc_now, onupdate=utc_now
-    )
-
-    __table_args__ = (
-        CheckConstraint("current_tier >= 1 AND current_tier <= 6", name="valid_tier"),
-        Index("idx_hold_streaks_tier", "current_tier"),
-        Index("idx_hold_streaks_updated", "updated_at"),
-    )
-
-
 class CreatorReward(Base):
     """Incoming Pump.fun creator rewards."""
 
@@ -180,7 +156,7 @@ class Distribution(Base):
     pool_value_usd: Mapped[Optional[Decimal]] = mapped_column(
         Numeric(18, 2), nullable=True
     )
-    total_hashpower: Mapped[Decimal] = mapped_column(Numeric(24, 2), nullable=False)
+    total_supply: Mapped[int] = mapped_column(BigInteger, nullable=False)
     recipient_count: Mapped[int] = mapped_column(Integer, nullable=False)
     trigger_type: Mapped[str] = mapped_column(String(20), nullable=False)
     executed_at: Mapped[datetime] = mapped_column(
@@ -199,9 +175,9 @@ class Distribution(Base):
 
     __table_args__ = (
         CheckConstraint("pool_amount > 0", name="positive_pool"),
-        CheckConstraint("total_hashpower > 0", name="positive_hashpower"),
+        CheckConstraint("total_supply > 0", name="positive_total_supply"),
         CheckConstraint("recipient_count > 0", name="positive_recipients"),
-        CheckConstraint("trigger_type IN ('threshold', 'time')", name="valid_trigger"),
+        CheckConstraint("trigger_type IN ('hourly', 'manual')", name="valid_trigger"),
         Index("idx_distributions_executed", "executed_at"),
     )
 
@@ -218,9 +194,7 @@ class DistributionRecipient(Base):
         UUID(as_uuid=True), ForeignKey("distributions.id", ondelete="CASCADE")
     )
     wallet: Mapped[str] = mapped_column(String(44), nullable=False)
-    twab: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    multiplier: Mapped[Decimal] = mapped_column(Numeric(4, 2), nullable=False)
-    hash_power: Mapped[Decimal] = mapped_column(Numeric(24, 2), nullable=False)
+    balance: Mapped[int] = mapped_column(BigInteger, nullable=False)
     amount_received: Mapped[int] = mapped_column(BigInteger, nullable=False)
     tx_signature: Mapped[Optional[str]] = mapped_column(String(88), nullable=True)
 
@@ -233,6 +207,7 @@ class DistributionRecipient(Base):
         UniqueConstraint("distribution_id", "wallet", name="uq_distribution_recipient"),
         Index("idx_distribution_recipients_wallet", "wallet"),
         Index("idx_distribution_recipients_dist", "distribution_id"),
+        Index("idx_distribution_recipients_balance", "balance"),
     )
 
 

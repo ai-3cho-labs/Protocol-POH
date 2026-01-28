@@ -30,6 +30,19 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 
+def print_rpc_stats():
+    """Print RPC call statistics."""
+    from app.utils.http_client import rpc_counter
+    stats = rpc_counter.get_stats()
+
+    print("\n--- RPC Call Statistics ---")
+    print(f"  Total RPC Calls: {stats['total']}")
+    if stats['by_endpoint']:
+        for endpoint, count in sorted(stats['by_endpoint'].items(), key=lambda x: -x[1]):
+            print(f"    {endpoint}: {count}")
+    print()
+
+
 def print_header(title: str):
     print("\n" + "=" * 60)
     print(f"  {title}")
@@ -39,6 +52,9 @@ def print_header(title: str):
 async def check_balances():
     """Check SOL and GOLD balances of relevant wallets."""
     print_header("WALLET BALANCES")
+
+    from app.utils.http_client import rpc_counter
+    rpc_counter.reset()
 
     from app.config import get_settings, LAMPORTS_PER_SOL, GOLD_MULTIPLIER
     from app.services.helius import get_helius_service
@@ -58,14 +74,6 @@ async def check_balances():
     if settings.airdrop_pool_private_key:
         kp = keypair_from_base58(settings.airdrop_pool_private_key)
         wallets["Airdrop Pool"] = str(kp.pubkey())
-
-    # Team wallet
-    if settings.team_wallet_public_key:
-        wallets["Team"] = settings.team_wallet_public_key
-
-    # Algo bot
-    if settings.algo_bot_wallet_public_key:
-        wallets["Algo Bot"] = settings.algo_bot_wallet_public_key
 
     print(f"\nGOLD Token: {settings.gold_token_mint}")
     print()
@@ -90,12 +98,16 @@ async def check_balances():
 
         print()
 
+    print_rpc_stats()
     return True
 
 
 async def test_quote(sol_amount: float = 0.1):
     """Test Jupiter quote for a specific SOL amount."""
     print_header(f"JUPITER QUOTE TEST ({sol_amount} SOL)")
+
+    from app.utils.http_client import rpc_counter
+    rpc_counter.reset()
 
     from app.database import get_worker_session_maker
     from app.services.buyback import BuybackService
@@ -169,6 +181,7 @@ async def test_quote(sol_amount: float = 0.1):
         print(f"\n  Quote Age: {quote.age_seconds():.1f}s")
         print(f"  Quote Fresh: {quote.is_fresh()}")
 
+        print_rpc_stats()
         return True
 
 
@@ -184,6 +197,9 @@ async def test_swap_execution(sol_amount: float = 0.001):
     if confirm.lower() != 'yes':
         print("Cancelled.")
         return False
+
+    from app.utils.http_client import rpc_counter
+    rpc_counter.reset()
 
     from app.database import get_worker_session_maker
     from app.services.buyback import BuybackService
@@ -219,12 +235,16 @@ async def test_swap_execution(sol_amount: float = 0.001):
         if result.tx_signature:
             print(f"\n  View on Solscan: https://solscan.io/tx/{result.tx_signature}")
 
+        print_rpc_stats()
         return result.success
 
 
 async def test_full_buyback_flow():
     """Test the full buyback flow without executing (dry run)."""
     print_header("FULL BUYBACK FLOW (DRY RUN)")
+
+    from app.utils.http_client import rpc_counter
+    rpc_counter.reset()
 
     from app.database import get_worker_session_maker
     from app.services.buyback import BuybackService
@@ -250,15 +270,13 @@ async def test_full_buyback_flow():
         # Calculate split
         split = service.calculate_split(total_sol)
 
-        print("\n--- Reward Split (80/10/10) ---")
+        print("\n--- Reward Split (100% to Pool) ---")
         print(f"  Total: {split.total_sol} SOL")
-        print(f"  Buyback (80%): {split.buyback_sol} SOL")
-        print(f"  Algo Bot (10%): {split.algo_bot_sol} SOL")
-        print(f"  Team (10%): {split.team_sol} SOL")
+        print(f"  Pool: {split.pool_sol} SOL")
 
-        # The buyback portion gets further split
-        swap_amount = split.buyback_sol * Decimal("0.20")
-        reserve_amount = split.buyback_sol * Decimal("0.80")
+        # The pool portion gets further split
+        swap_amount = split.pool_sol * Decimal("0.20")
+        reserve_amount = split.pool_sol * Decimal("0.80")
 
         print("\n--- Buyback Split (20/80) ---")
         print(f"  Swap to GOLD (20%): {swap_amount} SOL")
@@ -276,6 +294,7 @@ async def test_full_buyback_flow():
             else:
                 print("\n  ❌ Could not get quote for swap amount")
 
+        print_rpc_stats()
         return True
 
 

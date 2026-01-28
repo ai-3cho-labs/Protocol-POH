@@ -21,9 +21,7 @@ function transformLeaderboardEntry(
     rank: entry.rank,
     wallet: entry.wallet,
     walletShort: entry.wallet_short,
-    hashPower: entry.hash_power,
-    tier: entry.tier,
-    multiplier: entry.multiplier,
+    balance: entry.balance,
     isCurrentUser: currentWallet?.toLowerCase() === entry.wallet.toLowerCase(),
   };
 }
@@ -37,9 +35,9 @@ export function useLeaderboard(limit = 10, currentWallet: string | null = null) 
   const query = useQuery<LeaderboardEntry[], Error>({
     queryKey: leaderboardQueryKey(limit),
     queryFn: () => getLeaderboard(limit),
-    staleTime: Infinity, // Never stale - WebSocket handles live updates
-    refetchOnMount: false, // Use cache, WebSocket invalidates when needed
-    refetchOnWindowFocus: false, // WebSocket keeps data fresh
+    staleTime: 0, // Always refetch for fresh data
+    refetchOnMount: 'always', // Force refetch every mount
+    refetchOnWindowFocus: true, // Refetch when user returns
   });
 
   // Transform data with current user highlighting

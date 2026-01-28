@@ -40,6 +40,10 @@ TEAM_PERCENT=10           # % to team wallet
 # Buyback split (of pool allocation)
 BUYBACK_SWAP_PERCENT=20   # % swapped to reward token
 BUYBACK_RESERVE_PERCENT=80 # % kept as SOL reserves
+
+# Minimum SOL balance in Creator Wallet to trigger buyback
+# The system checks Creator Wallet balance directly via RPC
+BUYBACK_MIN_SOL_THRESHOLD=0.01
 ```
 
 ### Token Branding (for logs)
@@ -56,14 +60,6 @@ CREATOR_WALLET_PRIVATE_KEY=Base58EncodedPrivateKey
 AIRDROP_POOL_PRIVATE_KEY=Base58EncodedPrivateKey
 TEAM_WALLET_PUBLIC_KEY=YourTeamWalletAddress
 ALGO_BOT_WALLET_PUBLIC_KEY=YourBotWalletAddress
-```
-
-### Distribution Settings
-
-```env
-DISTRIBUTION_THRESHOLD_USD=250  # Min USD value to trigger distribution
-DISTRIBUTION_MAX_HOURS=24       # Max hours between distributions
-MIN_BALANCE_USD=50              # Min balance to qualify for rewards
 ```
 
 ---
@@ -212,6 +208,7 @@ If environment variables are not set, these defaults are used:
 | `ALGO_BOT_PERCENT` | 10 |
 | `TEAM_PERCENT` | 10 |
 | `BUYBACK_SWAP_PERCENT` | 20 |
+| `BUYBACK_MIN_SOL_THRESHOLD` | 0.01 |
 | `HOLD_TOKEN_SYMBOL` | POH |
 | `REWARD_TOKEN_SYMBOL` | GOLD |
 | `NEXT_PUBLIC_APP_NAME` | Protocol |

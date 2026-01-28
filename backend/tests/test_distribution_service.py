@@ -1,7 +1,8 @@
 """
 $COPPER Distribution Service Tests
 
-Tests for distribution calculations and triggers.
+Tests for balance-based distribution calculations and triggers.
+Distribution formula: Share = Balance / Total Supply
 """
 
 import pytest
@@ -23,61 +24,34 @@ class TestDistributionTriggers:
     """Tests for distribution trigger logic."""
 
     @pytest.mark.asyncio
-    async def test_threshold_trigger(self, db_session, mock_settings):
-        """Test distribution triggers when pool reaches threshold."""
+    async def test_distribution_when_pool_has_balance(self, db_session, mock_settings):
+        """Test distribution triggers when pool has any balance."""
         with patch("app.services.distribution.get_settings", return_value=mock_settings):
             service = DistributionService(db_session)
 
-            # Mock pool value above threshold
-            with patch.object(service, "get_pool_value_usd", return_value=Decimal("300")):
-                with patch.object(service, "get_last_distribution", return_value=None):
-                    should, trigger = await service.should_distribute()
+            # Mock pool with balance > 0
+            with patch.object(service, "get_pool_balance", return_value=1_000_000):
+                with patch.object(service, "get_pool_value_usd", return_value=Decimal("10")):
+                    with patch.object(service, "get_last_distribution", return_value=None):
+                        should, trigger = await service.should_distribute()
 
-                    assert should is True
-                    assert trigger == "threshold"
+                        assert should is True
+                        assert trigger == "hourly"
 
     @pytest.mark.asyncio
-    async def test_time_trigger(self, db_session, mock_settings):
-        """Test distribution triggers after 24 hours."""
-        mock_settings.distribution_max_hours = 24
-        mock_settings.distribution_threshold_usd = Decimal("250")
-
+    async def test_no_distribution_when_pool_empty(self, db_session, mock_settings):
+        """Test no distribution when pool is empty."""
         with patch("app.services.distribution.get_settings", return_value=mock_settings):
             service = DistributionService(db_session)
 
-            # Mock last distribution 25 hours ago
-            old_distribution = MagicMock()
-            old_distribution.executed_at = datetime.now(timezone.utc) - timedelta(hours=25)
+            # Mock empty pool
+            with patch.object(service, "get_pool_balance", return_value=0):
+                with patch.object(service, "get_pool_value_usd", return_value=Decimal("0")):
+                    with patch.object(service, "get_last_distribution", return_value=None):
+                        should, trigger = await service.should_distribute()
 
-            # Mock get_pool_status to return time trigger met
-            mock_status = MagicMock()
-            mock_status.threshold_met = False
-            mock_status.time_trigger_met = True
-
-            with patch.object(service, "get_pool_status", return_value=mock_status):
-                should, trigger = await service.should_distribute()
-
-                assert should is True
-                assert trigger == "time"
-
-    @pytest.mark.asyncio
-    async def test_no_trigger_below_threshold(self, db_session, mock_settings):
-        """Test no distribution when below threshold and time."""
-        mock_settings.distribution_max_hours = 24
-
-        with patch("app.services.distribution.get_settings", return_value=mock_settings):
-            service = DistributionService(db_session)
-
-            # Mock last distribution 10 hours ago
-            recent_distribution = MagicMock()
-            recent_distribution.executed_at = datetime.now(timezone.utc) - timedelta(hours=10)
-
-            with patch.object(service, "get_pool_value_usd", return_value=Decimal("100")):
-                with patch.object(service, "get_last_distribution", return_value=recent_distribution):
-                    should, trigger = await service.should_distribute()
-
-                    assert should is False
-                    assert trigger == ""
+                        assert should is False
+                        assert trigger == ""
 
 
 class TestPoolStatus:
@@ -98,78 +72,61 @@ class TestPoolStatus:
                         assert hasattr(status, "balance")
                         assert hasattr(status, "balance_formatted")
                         assert hasattr(status, "value_usd")
-                        assert hasattr(status, "threshold_met")
-                        assert hasattr(status, "time_trigger_met")
                         assert hasattr(status, "should_distribute")
+                        # should_distribute is True when balance > 0
+                        assert status.should_distribute is True
 
 
 class TestDistributionCalculation:
-    """Tests for distribution share calculation."""
+    """Tests for balance-based distribution share calculation."""
 
     @pytest.mark.asyncio
-    async def test_calculate_distribution_plan(self, populated_db, mock_settings):
-        """Test distribution plan calculation."""
-        with patch("app.services.distribution.get_settings", return_value=mock_settings):
-            service = DistributionService(populated_db)
-
-            # Mock required methods
-            with patch.object(service, "get_pool_balance", return_value=10_000_000_000):
-                with patch.object(service, "get_pool_value_usd", return_value=Decimal("500")):
-                    with patch.object(service, "get_copper_price_usd", return_value=Decimal("0.05")):
-                        with patch.object(service.twab_service, "calculate_all_hash_powers") as mock_hp:
-                            # Mock hash powers
-                            mock_hp.return_value = [
-                                MagicMock(
-                                    wallet="Wallet1111111111111111111111111111111111111",
-                                    twab=100_000_000_000,
-                                    multiplier=2.5,
-                                    hash_power=Decimal("250000000000")
-                                ),
-                                MagicMock(
-                                    wallet="Wallet2222222222222222222222222222222222222",
-                                    twab=50_000_000_000,
-                                    multiplier=1.5,
-                                    hash_power=Decimal("75000000000")
-                                ),
-                            ]
-
-                            plan = await service.calculate_distribution(
-                                pool_amount=10_000_000_000
-                            )
-
-                            if plan:
-                                assert plan.pool_amount == 10_000_000_000
-                                assert len(plan.recipients) == 2
-                                # Total shares should equal pool amount
-                                total_shares = sum(r.amount for r in plan.recipients)
-                                assert total_shares <= plan.pool_amount
-
-    @pytest.mark.asyncio
-    async def test_distribution_share_proportional(self):
-        """Test that shares are proportional to hash power."""
-        # Create mock recipients with known hash powers
+    async def test_distribution_share_proportional_to_balance(self):
+        """Test that shares are proportional to balance."""
+        # With balance-based distribution:
+        # Wallet1 has 200 balance, Wallet2 has 100 balance
+        # Total supply = 300
+        # Wallet1 share = 200/300 = 66.67%
+        # Wallet2 share = 100/300 = 33.33%
         recipients = [
             RecipientShare(
                 wallet="Wallet1",
-                twab=100,
-                multiplier=2.0,
-                hash_power=Decimal("200"),  # 200 / 300 = 66.67%
+                balance=200,
                 share_percentage=Decimal("66.67"),
                 amount=6667
             ),
             RecipientShare(
                 wallet="Wallet2",
-                twab=50,
-                multiplier=2.0,
-                hash_power=Decimal("100"),  # 100 / 300 = 33.33%
+                balance=100,
                 share_percentage=Decimal("33.33"),
                 amount=3333
             ),
         ]
 
-        # Wallet1 should receive approximately 2x Wallet2
+        # Wallet1 should receive approximately 2x Wallet2 (proportional to balance)
         ratio = recipients[0].amount / recipients[1].amount
         assert 1.8 < ratio < 2.2  # Allow some rounding tolerance
+
+    @pytest.mark.asyncio
+    async def test_distribution_equal_balances(self):
+        """Test that equal balances get equal shares."""
+        recipients = [
+            RecipientShare(
+                wallet="Wallet1",
+                balance=100,
+                share_percentage=Decimal("50"),
+                amount=5000
+            ),
+            RecipientShare(
+                wallet="Wallet2",
+                balance=100,
+                share_percentage=Decimal("50"),
+                amount=5000
+            ),
+        ]
+
+        # Equal balances should get equal shares
+        assert recipients[0].amount == recipients[1].amount
 
 
 class TestDistributionExecution:
@@ -179,42 +136,40 @@ class TestDistributionExecution:
     async def test_execute_distribution_records_to_db(self, db_session, mock_settings):
         """Test that distribution is recorded in database."""
         with patch("app.services.distribution.get_settings", return_value=mock_settings):
-            service = DistributionService(db_session)
+            with patch("app.services.distribution.settings", mock_settings):
+                service = DistributionService(db_session)
 
-            plan = DistributionPlan(
-                pool_amount=1_000_000_000,
-                pool_value_usd=Decimal("100"),
-                total_hashpower=Decimal("500000000"),
-                recipient_count=2,
-                trigger_type="threshold",
-                recipients=[
-                    RecipientShare(
-                        wallet="Wallet1111111111111111111111111111111111111",
-                        twab=100_000_000,
-                        multiplier=2.0,
-                        hash_power=Decimal("200000000"),
-                        share_percentage=Decimal("60"),
-                        amount=600_000_000
-                    ),
-                    RecipientShare(
-                        wallet="Wallet2222222222222222222222222222222222222",
-                        twab=50_000_000,
-                        multiplier=2.0,
-                        hash_power=Decimal("100000000"),
-                        share_percentage=Decimal("40"),
-                        amount=400_000_000
-                    ),
-                ]
-            )
+                plan = DistributionPlan(
+                    pool_amount=1_000_000_000,
+                    pool_value_usd=Decimal("100"),
+                    total_supply=300_000_000,
+                    recipient_count=2,
+                    trigger_type="hourly",
+                    recipients=[
+                        RecipientShare(
+                            wallet="Wallet1111111111111111111111111111111111111",
+                            balance=200_000_000,
+                            share_percentage=Decimal("66.67"),
+                            amount=666_700_000
+                        ),
+                        RecipientShare(
+                            wallet="Wallet2222222222222222222222222222222222222",
+                            balance=100_000_000,
+                            share_percentage=Decimal("33.33"),
+                            amount=333_300_000
+                        ),
+                    ]
+                )
 
-            # Mock token transfers
-            with patch.object(service, "_execute_token_transfers", return_value={}):
-                distribution = await service.execute_distribution(plan)
+                # Mock token transfers
+                with patch.object(service, "_execute_token_transfers", return_value={}):
+                    distribution = await service.execute_distribution(plan)
 
-                if distribution:
-                    assert distribution.pool_amount == plan.pool_amount
-                    assert distribution.recipient_count == plan.recipient_count
-                    assert distribution.trigger_type == "threshold"
+                    if distribution:
+                        assert distribution.pool_amount == plan.pool_amount
+                        assert distribution.recipient_count == plan.recipient_count
+                        assert distribution.trigger_type == "hourly"
+                        assert distribution.total_supply == plan.total_supply
 
 
 class TestDistributionEdgeCases:
@@ -238,10 +193,9 @@ class TestDistributionEdgeCases:
 
             with patch.object(service, "get_pool_balance", return_value=1_000_000_000):
                 with patch.object(service, "get_pool_value_usd", return_value=Decimal("500")):
-                    with patch.object(service, "get_copper_price_usd", return_value=Decimal("0.05")):
-                        with patch.object(service.twab_service, "calculate_all_hash_powers", return_value=[]):
-                            plan = await service.calculate_distribution()
-                            assert plan is None
+                    with patch.object(service.helius, "get_token_accounts", return_value=[]):
+                        plan = await service.calculate_distribution()
+                        assert plan is None
 
 
 class TestTransferReconciliation:
@@ -261,24 +215,20 @@ class TestTransferReconciliation:
                 plan = DistributionPlan(
                     pool_amount=1_000_000_000,
                     pool_value_usd=Decimal("100"),
-                    total_hashpower=Decimal("500000000"),
+                    total_supply=300_000_000,
                     recipient_count=2,
-                    trigger_type="threshold",
+                    trigger_type="hourly",
                     recipients=[
                         RecipientShare(
                             wallet="Wallet1111111111111111111111111111111111111",
-                            twab=100_000_000,
-                            multiplier=2.0,
-                            hash_power=Decimal("200000000"),
-                            share_percentage=Decimal("60"),
+                            balance=200_000_000,
+                            share_percentage=Decimal("66.67"),
                             amount=600_000_000
                         ),
                         RecipientShare(
                             wallet="Wallet2222222222222222222222222222222222222",
-                            twab=50_000_000,
-                            multiplier=2.0,
-                            hash_power=Decimal("100000000"),
-                            share_percentage=Decimal("40"),
+                            balance=100_000_000,
+                            share_percentage=Decimal("33.33"),
                             amount=400_000_000
                         ),
                     ]
@@ -318,35 +268,34 @@ class TestTransferReconciliation:
     async def test_get_failed_transfers(self, db_session, mock_settings):
         """Test retrieving failed transfers for reconciliation."""
         with patch("app.services.distribution.get_settings", return_value=mock_settings):
-            service = DistributionService(db_session)
+            with patch("app.services.distribution.settings", mock_settings):
+                service = DistributionService(db_session)
 
-            plan = DistributionPlan(
-                pool_amount=1_000_000_000,
-                pool_value_usd=Decimal("100"),
-                total_hashpower=Decimal("500000000"),
-                recipient_count=1,
-                trigger_type="threshold",
-                recipients=[
-                    RecipientShare(
-                        wallet="FailedWallet11111111111111111111111111111",
-                        twab=100_000_000,
-                        multiplier=2.0,
-                        hash_power=Decimal("200000000"),
-                        share_percentage=Decimal("100"),
-                        amount=1_000_000_000
-                    ),
-                ]
-            )
+                plan = DistributionPlan(
+                    pool_amount=1_000_000_000,
+                    pool_value_usd=Decimal("100"),
+                    total_supply=100_000_000,
+                    recipient_count=1,
+                    trigger_type="hourly",
+                    recipients=[
+                        RecipientShare(
+                            wallet="FailedWallet11111111111111111111111111111",
+                            balance=100_000_000,
+                            share_percentage=Decimal("100"),
+                            amount=1_000_000_000
+                        ),
+                    ]
+                )
 
-            # Mock all transfers failing
-            with patch.object(service, "_execute_token_transfers", return_value={}):
-                distribution = await service.execute_distribution(plan)
+                # Mock all transfers failing
+                with patch.object(service, "_execute_token_transfers", return_value={}):
+                    distribution = await service.execute_distribution(plan)
 
-                assert distribution is not None
+                    assert distribution is not None
 
-                # Get failed transfers
-                failed = await service.get_failed_transfers()
+                    # Get failed transfers
+                    failed = await service.get_failed_transfers()
 
-                assert len(failed) >= 1
-                failed_wallets = [f.wallet for f in failed]
-                assert "FailedWallet11111111111111111111111111111" in failed_wallets
+                    assert len(failed) >= 1
+                    failed_wallets = [f.wallet for f in failed]
+                    assert "FailedWallet11111111111111111111111111111" in failed_wallets

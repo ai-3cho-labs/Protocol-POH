@@ -1,7 +1,7 @@
 """
 POH + GOLD Dual-Token Backend Configuration
 
-POH = Token users hold (determines eligibility & hash power)
+POH = Token users hold (determines eligibility & eligibility)
 GOLD = Token distributed as rewards
 
 Loads settings from environment variables with sensible defaults.
@@ -31,9 +31,6 @@ class Settings(BaseSettings):
 
     # Test mode mock values (user) - used when wallet has no real data
     test_user_balance: float = 1000000.0  # Mock user balance in tokens
-    test_user_twab: float = 950000.0  # Mock TWAB
-    test_user_multiplier: float = 2.5  # Mock multiplier (Validator tier)
-    test_user_hash_power: float = 2375000.0  # twab * multiplier
     test_user_share_percent: float = 15.0  # Mock share of pool
 
     # Solana Network (mainnet-beta or devnet)
@@ -68,22 +65,21 @@ class Settings(BaseSettings):
     solana_rpc_url: str = ""
 
     # Wallet Private Keys (Base58 encoded)
-    # Note: Buybacks use creator_wallet - no separate buyback wallet needed
+    # Creator wallet receives Pump.fun fees, Pool wallet holds rewards for distribution
     creator_wallet_private_key: str = ""
     airdrop_pool_private_key: str = ""
-    team_wallet_public_key: str = ""
-    algo_bot_wallet_public_key: str = ""
+    buyback_wallet_private_key: str = ""
 
     # Token Configuration (Dual-Token Model)
-    # POH = Token users hold (determines eligibility & hash power)
+    # POH = Token users hold (determines eligibility & eligibility)
     # GOLD = Token distributed as rewards
     # Note: CPU_TOKEN_* vars supported for backward compatibility
     poh_token_mint: str = ""
-    poh_token_decimals: int = 9  # Standard SPL token decimals
+    poh_token_decimals: int = 6  # Pump.fun tokens use 6 decimals
     cpu_token_mint: str = ""  # Deprecated: use poh_token_mint
-    cpu_token_decimals: int = 9  # Deprecated: use poh_token_decimals
+    cpu_token_decimals: int = 6  # Deprecated: use poh_token_decimals
     gold_token_mint: str = ""
-    gold_token_decimals: int = 6  # GOLD token has 6 decimals
+    gold_token_decimals: int = 6  # Pump.fun tokens use 6 decimals
 
     @property
     def hold_token_mint(self) -> str:
@@ -99,26 +95,19 @@ class Settings(BaseSettings):
     celery_broker_url: str = ""
     celery_result_backend: str = ""
 
-    # Distribution Settings
-    distribution_threshold_usd: float = 250.0
-    distribution_max_hours: int = 24
-    min_balance_usd: float = 50.0
-
-    # Reward Split (must total 100)
-    reward_pool_percent: int = 80  # % to airdrop pool
-    algo_bot_percent: int = 10  # % to algo bot
-    team_percent: int = 10  # % to team
-
-    # Buyback Split (of the pool allocation)
+    # Buyback Split (of pool allocation)
     buyback_swap_percent: int = 20  # % swapped to reward token
     buyback_reserve_percent: int = 80  # % kept as SOL reserves
+
+    # Buyback Settings
+    buyback_min_sol_threshold: float = 0.01  # Minimum SOL to trigger processing
 
     # Token Branding (for logs/display)
     hold_token_symbol: str = "POH"  # Token users hold
     reward_token_symbol: str = "GOLD"  # Token distributed as rewards
 
     # Snapshot Settings
-    snapshot_probability: float = 0.4  # 40% chance per hour
+    snapshot_probability: float = 1  # 40% chance per hour
 
     # Jupiter Swap Settings
     # API key for Jupiter paid API (optional, provides better rates and priority)
@@ -206,46 +195,6 @@ def get_settings() -> Settings:
     return Settings()
 
 
-# Tier configuration
-TIER_CONFIG = {
-    1: {"name": "Genesis", "emoji": "\U0001F331", "multiplier": 1.0, "min_hours": 0},
-    2: {
-        "name": "Holder",
-        "emoji": "\U0001F91D",
-        "multiplier": 1.25,
-        "min_hours": 6,
-    },
-    3: {"name": "Proven", "emoji": "\u2705", "multiplier": 1.5, "min_hours": 12},
-    4: {
-        "name": "Validator",
-        "emoji": "\U0001F3AF",
-        "multiplier": 2.5,
-        "min_hours": 72,
-    },  # 3 days
-    5: {
-        "name": "Guardian",
-        "emoji": "\U0001F6E1",
-        "multiplier": 3.5,
-        "min_hours": 168,
-    },  # 7 days
-    6: {
-        "name": "Sovereign",
-        "emoji": "\U0001F451",
-        "multiplier": 5.0,
-        "min_hours": 720,
-    },  # 30 days
-}
-
-# Tier thresholds in hours
-TIER_THRESHOLDS = {
-    1: 0,  # 0 hours
-    2: 6,  # 6 hours
-    3: 12,  # 12 hours
-    4: 72,  # 3 days
-    5: 168,  # 7 days
-    6: 720,  # 30 days
-}
-
 # Solana constants
 SOL_MINT = "So11111111111111111111111111111111111111112"
 USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
@@ -253,7 +202,7 @@ LAMPORTS_PER_SOL = 1_000_000_000
 
 # Token decimals - use settings value
 # Standard SPL token = 9 decimals, but some tokens (like USDC) use 6
-# POH token is what users hold (for eligibility/hash power calculation)
+# POH token is what users hold (for eligibility/eligibility calculation)
 # GOLD token is what gets distributed as rewards
 POH_DECIMALS = get_settings().hold_token_decimals
 GOLD_DECIMALS = get_settings().gold_token_decimals

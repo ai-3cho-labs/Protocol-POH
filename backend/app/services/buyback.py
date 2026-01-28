@@ -2,12 +2,9 @@
 Buyback Service
 
 Processes creator rewards and executes Jupiter swaps.
-Split percentages are configurable via environment variables (defaults shown):
-  REWARD_POOL_PERCENT (80%) → Airdrop Pool (SOL)
-      └── BUYBACK_SWAP_PERCENT (20%) swapped to reward token
-      └── BUYBACK_RESERVE_PERCENT (80%) kept as SOL (reserves/fees)
-  ALGO_BOT_PERCENT (10%) → Algo Bot (trading operations)
-  TEAM_PERCENT (10%) → Team Operations (maintenance)
+All creator rewards flow from Creator wallet → Pool wallet:
+  - BUYBACK_SWAP_PERCENT (default 20%) swapped to reward token (GOLD)
+  - BUYBACK_RESERVE_PERCENT (default 80%) kept as SOL (reserves/fees)
 """
 
 import logging
@@ -93,12 +90,10 @@ class BuybackResult:
 
 @dataclass
 class RewardSplit:
-    """Configurable split of creator rewards (default 80/10/10)."""
+    """Split of creator rewards (100% to pool)."""
 
     total_sol: Decimal
-    buyback_sol: Decimal  # REWARD_POOL_PERCENT → Reward pool
-    algo_bot_sol: Decimal  # ALGO_BOT_PERCENT → Algo bot
-    team_sol: Decimal  # TEAM_PERCENT → Maintenance
+    pool_sol: Decimal  # 100% → Reward pool
 
 
 class BuybackService:
@@ -113,6 +108,27 @@ class BuybackService:
     def client(self):
         """Get shared HTTP client."""
         return get_http_client()
+
+    async def get_creator_wallet_balance(self) -> Decimal:
+        """
+        Get Creator Wallet SOL balance via RPC.
+
+        Returns:
+            Balance in SOL (Decimal).
+        """
+        from app.services.helius import HeliusService
+        from app.utils.solana_tx import keypair_from_base58
+
+        if not settings.creator_wallet_private_key:
+            logger.warning("Creator wallet private key not configured")
+            return Decimal(0)
+
+        keypair = keypair_from_base58(settings.creator_wallet_private_key)
+        creator_address = str(keypair.pubkey())
+
+        helius = HeliusService()
+        lamports = await helius.get_sol_balance(creator_address)
+        return Decimal(lamports) / LAMPORTS_PER_SOL
 
     async def get_unprocessed_rewards(self) -> list[CreatorReward]:
         """
@@ -145,27 +161,17 @@ class BuybackService:
 
     def calculate_split(self, total_sol: Decimal) -> RewardSplit:
         """
-        Calculate reward split (configurable via env, default 80/10/10).
+        Calculate reward split (100% to pool).
 
         Args:
             total_sol: Total SOL to split.
 
         Returns:
-            RewardSplit with buyback, algo bot, and team amounts.
+            RewardSplit with pool amount.
         """
-        pool_pct = Decimal(settings.reward_pool_percent) / Decimal(100)
-        algo_pct = Decimal(settings.algo_bot_percent) / Decimal(100)
-        team_pct = Decimal(settings.team_percent) / Decimal(100)
-
-        buyback_sol = total_sol * pool_pct
-        algo_bot_sol = total_sol * algo_pct
-        team_sol = total_sol * team_pct
-
         return RewardSplit(
             total_sol=total_sol,
-            buyback_sol=buyback_sol,
-            algo_bot_sol=algo_bot_sol,
-            team_sol=team_sol,
+            pool_sol=total_sol,
         )
 
     async def get_jupiter_quote(
@@ -532,26 +538,26 @@ class BuybackService:
         )
 
 
-async def transfer_to_team_wallet(
+async def transfer_sol(
     amount_sol: Decimal, from_private_key: str, to_address: str
 ) -> Optional[str]:
     """
-    Transfer SOL to team wallet (10% of creator rewards).
+    Transfer SOL between wallets.
 
     Args:
         amount_sol: Amount of SOL to transfer.
         from_private_key: Private key of source wallet.
-        to_address: Team wallet public address.
+        to_address: Destination wallet public address.
 
     Returns:
         Transaction signature if successful, None otherwise.
     """
     if not from_private_key or not to_address:
-        logger.error("Team wallet transfer: missing private key or address")
+        logger.error("SOL transfer: missing private key or address")
         return None
 
     if amount_sol <= 0:
-        logger.warning("Team wallet transfer: amount is zero or negative")
+        logger.warning("SOL transfer: amount is zero or negative")
         return None
 
     lamports = int(amount_sol * LAMPORTS_PER_SOL)
@@ -563,51 +569,57 @@ async def transfer_to_team_wallet(
     )
 
     if result.success:
-        logger.info(f"Team wallet transfer: {result.signature}, {amount_sol} SOL")
+        logger.info(f"SOL transfer: {result.signature}, {amount_sol} SOL")
         return result.signature
     else:
-        logger.error(f"Team wallet transfer failed: {result.error}")
+        logger.error(f"SOL transfer failed: {result.error}")
         return None
 
 
 async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
     """
-    Process all pending creator rewards.
+    Process pending creator rewards by checking Creator Wallet SOL balance.
 
-    Main entry point for the buyback task. Split percentages are configurable
-    via environment variables (see config.py for defaults):
-    - REWARD_POOL_PERCENT goes to airdrop pool:
-      - BUYBACK_SWAP_PERCENT of that swapped to reward token
-      - BUYBACK_RESERVE_PERCENT of that kept as SOL (reserves/fees)
-    - ALGO_BOT_PERCENT goes to algo bot wallet for trading operations
-    - TEAM_PERCENT goes to team wallet for maintenance
+    Main entry point for the buyback task. Checks Creator Wallet balance directly
+    via RPC instead of querying CreatorReward table. All SOL (100%) flows to
+    the airdrop pool:
+      - BUYBACK_SWAP_PERCENT swapped to reward token (GOLD)
+      - BUYBACK_RESERVE_PERCENT kept as SOL (reserves/fees)
 
     Args:
         db: Database session.
 
     Returns:
-        BuybackResult if buyback was executed, None if no rewards.
+        BuybackResult if buyback was executed, None if balance below threshold.
     """
     service = BuybackService(db)
 
-    # Get unprocessed rewards
-    rewards = await service.get_unprocessed_rewards()
-    if not rewards:
-        logger.info("No pending rewards to process")
+    # Check Creator Wallet SOL balance directly via RPC
+    balance_sol = await service.get_creator_wallet_balance()
+
+    # Skip if below minimum threshold
+    min_threshold = Decimal(str(settings.buyback_min_sol_threshold))
+    if balance_sol < min_threshold:
+        logger.info(
+            f"Creator wallet balance {balance_sol} SOL below threshold {min_threshold}"
+        )
         return None
 
-    total_sol = sum(r.amount_sol for r in rewards)
-    split = service.calculate_split(total_sol)
+    # Reserve ~0.005 SOL for rent/fees
+    RENT_RESERVE = Decimal("0.005")
+    available_sol = balance_sol - RENT_RESERVE
+    if available_sol <= 0:
+        logger.info(f"Creator wallet balance {balance_sol} SOL not enough after rent reserve")
+        return None
+
+    split = service.calculate_split(available_sol)
 
     logger.info(
-        f"Processing {len(rewards)} rewards: "
-        f"total={split.total_sol} SOL, "
-        f"buyback={split.buyback_sol} SOL, "
-        f"algo_bot={split.algo_bot_sol} SOL, "
-        f"team={split.team_sol} SOL"
+        f"Processing creator wallet balance: {balance_sol} SOL "
+        f"(available: {available_sol} SOL after rent reserve) → pool"
     )
 
-    # Step 1: Transfer 80% SOL from CREATOR → AIRDROP_POOL for buyback
+    # Step 1: Transfer 100% available SOL from CREATOR → AIRDROP_POOL
     pool_transfer_tx = None
     pool_transfer_confirmed = False
     if settings.airdrop_pool_private_key and settings.creator_wallet_private_key:
@@ -616,13 +628,13 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
         pool_keypair = keypair_from_base58(settings.airdrop_pool_private_key)
         pool_address = str(pool_keypair.pubkey())
 
-        pool_transfer_tx = await transfer_to_team_wallet(
-            amount_sol=split.buyback_sol,
+        pool_transfer_tx = await transfer_sol(
+            amount_sol=split.pool_sol,
             from_private_key=settings.creator_wallet_private_key,
             to_address=pool_address,
         )
         if pool_transfer_tx:
-            logger.info(f"Pool transfer sent: {pool_transfer_tx}, {split.buyback_sol} SOL")
+            logger.info(f"Pool transfer sent: {pool_transfer_tx}, {split.pool_sol} SOL")
             # Wait for confirmation before swapping
             pool_transfer_confirmed = await confirm_transaction(
                 pool_transfer_tx, timeout_seconds=30
@@ -649,7 +661,7 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
     if pool_transfer_confirmed:
         # Swap configured % of transferred SOL to reward token, keep rest as SOL reserves
         swap_pct = Decimal(settings.buyback_swap_percent) / Decimal(100)
-        swap_amount = split.buyback_sol * swap_pct
+        swap_amount = split.pool_sol * swap_pct
         result = await service.execute_swap(
             swap_amount, settings.airdrop_pool_private_key
         )
@@ -673,27 +685,10 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
             dist_service = DistributionService(db)
             pool_status = await dist_service.get_pool_status()
 
-            # Calculate progress to threshold
-            threshold_usd = settings.distribution_threshold_usd
-            progress = (
-                min(100.0, float(pool_status.value_usd / threshold_usd * 100))
-                if threshold_usd > 0
-                else 0.0
-            )
-
-            # Calculate hours until time trigger
-            hours_until = None
-            if pool_status.hours_since_last is not None:
-                hours_until = max(
-                    0.0, settings.distribution_max_hours - pool_status.hours_since_last
-                )
-
             await emit_pool_updated(
                 balance=pool_status.balance,
                 value_usd=float(pool_status.value_usd),
-                progress_to_threshold=progress,
-                threshold_met=pool_status.threshold_met,
-                hours_until_time_trigger=hours_until,
+                ready_to_distribute=pool_status.should_distribute,
             )
             logger.info("Emitted pool:updated WebSocket event")
         except Exception as e:
@@ -701,41 +696,5 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
             logger.warning(f"Failed to emit pool:updated event: {e}")
     else:
         logger.error(f"Buyback failed: {result.error}")
-
-    # Transfer 10% to algo bot wallet
-    algo_bot_tx = None
-    if settings.algo_bot_wallet_public_key and settings.creator_wallet_private_key:
-        algo_bot_tx = await transfer_to_team_wallet(
-            amount_sol=split.algo_bot_sol,
-            from_private_key=settings.creator_wallet_private_key,
-            to_address=settings.algo_bot_wallet_public_key,
-        )
-        if algo_bot_tx:
-            logger.info(f"Algo bot wallet transfer: {algo_bot_tx}")
-        else:
-            logger.warning("Algo bot wallet transfer failed or skipped")
-    else:
-        logger.warning("Algo bot wallet transfer skipped: missing configuration")
-
-    # Transfer 10% to team wallet (maintenance)
-    team_tx = None
-    if settings.team_wallet_public_key and settings.creator_wallet_private_key:
-        team_tx = await transfer_to_team_wallet(
-            amount_sol=split.team_sol,
-            from_private_key=settings.creator_wallet_private_key,
-            to_address=settings.team_wallet_public_key,
-        )
-        if team_tx:
-            logger.info(f"Team wallet transfer: {team_tx}")
-        else:
-            logger.warning("Team wallet transfer failed or skipped")
-    else:
-        logger.warning("Team wallet transfer skipped: missing configuration")
-
-    # Mark rewards as processed if at least one operation succeeded
-    if buyback_success or algo_bot_tx or team_tx:
-        reward_ids = [r.id for r in rewards]
-        await service.mark_rewards_processed(reward_ids)
-        logger.info(f"Marked {len(reward_ids)} rewards as processed")
 
     return result

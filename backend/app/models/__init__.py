@@ -5,7 +5,6 @@ Database models
 from app.models.models import (
     Snapshot,
     Balance,
-    HoldStreak,
     CreatorReward,
     Buyback,
     Distribution,
@@ -18,7 +17,6 @@ from app.models.models import (
 __all__ = [
     "Snapshot",
     "Balance",
-    "HoldStreak",
     "CreatorReward",
     "Buyback",
     "Distribution",

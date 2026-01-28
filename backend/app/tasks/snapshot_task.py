@@ -9,7 +9,6 @@ import logging
 from app.tasks.celery_app import celery_app
 from app.database import get_worker_session_maker
 from app.services.snapshot import SnapshotService
-from app.services.streak import StreakService
 from app.utils.async_utils import run_async
 from app.websocket import emit_snapshot_taken
 
@@ -21,7 +20,7 @@ def take_snapshot() -> dict:
     """
     Take a balance snapshot (always executes).
 
-    Called every 15 minutes for consistent TWAB calculation.
+    Called every 15 minutes for consistent analytics.
     """
     return run_async(_take_snapshot())
 
@@ -121,37 +120,6 @@ async def _force_snapshot() -> dict:
             }
         else:
             return {"status": "failed", "reason": "snapshot_error"}
-
-
-@celery_app.task(name="app.tasks.snapshot_task.update_all_tiers")
-def update_all_tiers() -> dict:
-    """
-    Update tier progressions for all wallets.
-
-    Checks if any wallets should be promoted to higher tiers
-    based on their streak duration.
-    """
-    return run_async(_update_all_tiers())
-
-
-async def _update_all_tiers() -> dict:
-    """Async implementation of update_all_tiers."""
-    session_maker = get_worker_session_maker()
-    async with session_maker() as db:
-        streak_service = StreakService(db)
-
-        # Get all streaks
-        streaks = await streak_service.get_all_streaks()
-
-        updated = 0
-        for streak in streaks:
-            result = await streak_service.update_tier_if_needed(streak.wallet)
-            if result:
-                updated += 1
-
-        logger.info(f"Tier update complete: {updated} wallets upgraded")
-
-        return {"status": "success", "total_checked": len(streaks), "upgraded": updated}
 
 
 # Allow running as script for testing

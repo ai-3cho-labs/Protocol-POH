@@ -5,28 +5,6 @@
  */
 
 // ===========================================
-// Core Domain Types
-// ===========================================
-
-/** Tier information for a user's current holding tier */
-export interface TierInfo {
-  /** Tier number (1-6) */
-  tier: number;
-  /** Tier name (e.g., "Ore", "Diamond Hands") */
-  name: string;
-  /** Tier emoji */
-  emoji: string;
-  /** Reward multiplier (1.0x - 5.0x) */
-  multiplier: number;
-}
-
-/** Full tier configuration including requirements */
-export interface TierConfig extends TierInfo {
-  /** Minimum hours required to reach this tier */
-  min_hours: number;
-}
-
-// ===========================================
 // API Response Types
 // ===========================================
 
@@ -54,34 +32,14 @@ export interface UserStatsResponse {
   balance: number;
   /** Current token balance (raw with decimals) */
   balance_raw: number;
-  /** Time-weighted average balance (24h, human-readable) */
-  twab: number;
-  /** TWAB raw value */
-  twab_raw: number;
-  /** Current holding tier info */
-  tier: TierInfo;
-  /** Current streak multiplier */
-  multiplier: number;
-  /** Hash power (TWAB x multiplier) */
-  hash_power: number;
-  /** Hours since last sell */
-  streak_hours: number;
-  /** When current streak started (ISO string) */
-  streak_start: string | null;
-  /** Next tier info (null if at max) */
-  next_tier: TierInfo | null;
-  /** Hours until next tier (null if at max) */
-  hours_to_next_tier: number | null;
-  /** Global rank by hash power */
+  /** Global rank by balance */
   rank: number | null;
   /** Estimated pending reward from pool */
   pending_reward_estimate: number;
+  /** User's percentage share of the reward pool */
+  pool_share_percent: number;
   /** Is this a new holder with no snapshot data yet? */
   is_new_holder?: boolean;
-  /** Is TWAB projected from current balance (not actual)? */
-  is_projected?: boolean;
-  /** User's percentage share of the reward pool */
-  pool_share_percent?: number;
 }
 
 /** GET /api/user/{wallet}/history - Distribution history item */
@@ -90,12 +48,10 @@ export interface DistributionHistoryItem {
   distribution_id: string;
   /** When distribution was executed (ISO string) */
   executed_at: string;
-  /** User's TWAB at that time */
-  twab: number;
-  /** User's multiplier at that time */
-  multiplier: number;
-  /** User's hash power (TWAB x multiplier) */
-  hash_power: number;
+  /** User's balance at that time */
+  balance: number;
+  /** User's share percentage at that time */
+  share_percent: number;
   /** Tokens received (human-readable) */
   amount_received: number;
   /** Solana transaction signature */
@@ -110,12 +66,8 @@ export interface LeaderboardEntry {
   wallet: string;
   /** Shortened wallet format (first 4 + last 4) */
   wallet_short: string;
-  /** User's hash power */
-  hash_power: number;
-  /** Current tier info */
-  tier: TierInfo;
-  /** Streak multiplier */
-  multiplier: number;
+  /** User's balance */
+  balance: number;
 }
 
 /** GET /api/pool - Airdrop pool status */
@@ -126,18 +78,14 @@ export interface PoolStatusResponse {
   balance_raw: number;
   /** Current USD value of pool */
   value_usd: number;
+  /** Current GOLD token price in USD */
+  gold_price_usd: number;
   /** When last distribution occurred (ISO string) */
   last_distribution: string | null;
   /** Hours elapsed since last distribution */
   hours_since_last: number | null;
-  /** Hours until 24h time trigger */
-  hours_until_time_trigger: number | null;
-  /** Is pool >= $250 USD? */
-  threshold_met: boolean;
-  /** Has 24h elapsed since last distribution? */
-  time_trigger_met: boolean;
-  /** Next trigger type */
-  next_trigger: 'threshold' | 'time' | 'none';
+  /** Whether pool has balance to distribute */
+  ready_to_distribute: boolean;
 }
 
 /** GET /api/distributions - Distribution record */
@@ -148,12 +96,12 @@ export interface DistributionItem {
   pool_amount: number;
   /** USD value of pool at execution */
   pool_value_usd: number | null;
-  /** Sum of all recipients' hash power */
-  total_hashpower: number;
+  /** Total supply at distribution time */
+  total_supply: number;
   /** Number of wallets that received rewards */
   recipient_count: number;
   /** What triggered the distribution */
-  trigger_type: 'threshold' | 'time';
+  trigger_type: 'hourly' | 'manual';
   /** When distribution occurred (ISO string) */
   executed_at: string;
 }

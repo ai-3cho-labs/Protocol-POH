@@ -77,6 +77,7 @@ celery_app = Celery(
         "app.tasks.snapshot_task",
         "app.tasks.buyback_task",
         "app.tasks.distribution_task",
+        "app.tasks.cache_task",
     ],
     task_cls=BaseTaskWithRetry,  # Use retry-enabled base task
 )
@@ -123,9 +124,14 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.distribution_task.check_distribution_triggers",
         "schedule": crontab(minute=0),  # Every hour at :00
     },
-    # Update all tier progressions - every hour
-    "update-tiers": {
-        "task": "app.tasks.snapshot_task.update_all_tiers",
-        "schedule": crontab(minute=30),  # Every hour at :30
+    # Refresh leaderboard cache - every minute
+    "refresh-leaderboard": {
+        "task": "app.tasks.cache_task.refresh_leaderboard_cache",
+        "schedule": 60,  # Every 60 seconds
+    },
+    # Refresh pool cache - every 30 seconds
+    "refresh-pool": {
+        "task": "app.tasks.cache_task.refresh_pool_cache",
+        "schedule": 30,  # Every 30 seconds
     },
 }

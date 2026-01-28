@@ -107,6 +107,5 @@ git push origin main   # Auto-deploys to Koyeb + Cloudflare
 
 ```bash
 python scripts/setup_devnet_testing.py --check
-python -m scripts.load_test_twab --holders 10000
 pytest tests/test_devnet_integration.py -v -s
 ```

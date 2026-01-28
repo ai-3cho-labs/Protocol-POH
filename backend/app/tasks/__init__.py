@@ -7,7 +7,6 @@ from app.tasks.celery_app import celery_app
 from app.tasks.snapshot_task import (
     maybe_take_snapshot,
     force_snapshot,
-    update_all_tiers,
 )
 from app.tasks.buyback_task import (
     process_creator_rewards,
@@ -26,7 +25,6 @@ __all__ = [
     # Snapshot tasks
     "maybe_take_snapshot",
     "force_snapshot",
-    "update_all_tiers",
     # Buyback tasks
     "process_creator_rewards",
     "record_incoming_reward",

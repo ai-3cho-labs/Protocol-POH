@@ -23,49 +23,34 @@ export interface DistributionEvent {
   distribution_id: string;
   pool_amount: number;
   recipient_count: number;
-  trigger_type: 'threshold' | 'time';
+  trigger_type: 'hourly' | 'manual';
   executed_at: string;
 }
 
 export interface BalanceUpdateEvent {
   wallet: string;
   balance: number;
-  twab: number;
-  hash_power: number;
 }
 
 export interface PoolUpdateEvent {
   balance: number;
   value_usd: number;
-  threshold_met: boolean;
+  ready_to_distribute: boolean;
 }
 
 // WebSocket payload types used by useWebSocket hook
 export interface PoolUpdatedPayload {
   balance: number;
   value_usd: number;
-  progress_to_threshold: number;
-  threshold_met: boolean;
-  hours_until_time_trigger: number | null;
+  ready_to_distribute: boolean;
 }
 
 export interface DistributionExecutedPayload {
   distribution_id: string;
   pool_amount: number;
   recipient_count: number;
-  trigger_type: 'threshold' | 'time';
+  trigger_type: 'hourly' | 'manual';
   executed_at: string;
-}
-
-export interface TierChangedPayload {
-  wallet: string;
-  old_tier: number;
-  new_tier: number;
-}
-
-export interface SellDetectedPayload {
-  wallet: string;
-  amount: number;
 }
 
 // ===========================================

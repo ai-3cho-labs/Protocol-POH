@@ -4,7 +4,7 @@ $COPPER Buyback Integration Tests
 Integration tests for the full buyback flow including:
 - Creator reward processing
 - Jupiter swap execution
-- Team wallet transfers
+- SOL transfers
 - Database recording
 """
 
@@ -19,7 +19,7 @@ from app.services.buyback import (
     BuybackResult,
     RewardSplit,
     process_pending_rewards,
-    transfer_to_team_wallet
+    transfer_sol
 )
 from app.models import CreatorReward, Buyback, SystemStats
 
@@ -41,10 +41,9 @@ class TestFullBuybackFlow:
             )
             assert reward.processed is False
 
-            # 2. Calculate split
+            # 2. Calculate split (100% to pool)
             split = service.calculate_split(Decimal("1.0"))
-            assert split.buyback_sol == Decimal("0.8")
-            assert split.team_sol == Decimal("0.2")
+            assert split.pool_sol == Decimal("1.0")
 
             # 3. Mock Jupiter and execute swap
             mock_quote = {
@@ -58,24 +57,24 @@ class TestFullBuybackFlow:
                     mock_swap.return_value = BuybackResult(
                         success=True,
                         tx_signature="BuybackTxSig111111111111111111111111111111111",
-                        sol_spent=Decimal("0.8"),
-                        copper_received=40_000_000_000,
+                        sol_spent=Decimal("1.0"),
+                        copper_received=50_000_000_000,
                         price_per_token=Decimal("0.00000002")
                     )
 
                     result = await service.execute_swap(
-                        split.buyback_sol,
+                        split.pool_sol,
                         mock_settings.creator_wallet_private_key
                     )
 
                     assert result.success is True
-                    assert result.copper_received == 40_000_000_000
+                    assert result.copper_received == 50_000_000_000
 
             # 4. Record buyback
             buyback = await service.record_buyback(
                 tx_signature="BuybackTxSig111111111111111111111111111111111",
-                sol_amount=Decimal("0.8"),
-                copper_amount=40_000_000_000,
+                sol_amount=Decimal("1.0"),
+                gold_amount=50_000_000_000,
                 price_per_token=Decimal("0.00000002")
             )
             assert buyback is not None
@@ -95,9 +94,9 @@ class TestFullBuybackFlow:
             total = await service.get_total_unprocessed_sol()
             assert total == Decimal("1.0")
 
-            # Calculate split
+            # Calculate split (100% to pool)
             split = service.calculate_split(total)
-            assert split.buyback_sol == Decimal("0.8")
+            assert split.pool_sol == Decimal("1.0")
 
             # Get rewards for marking processed
             rewards = await service.get_unprocessed_rewards()
@@ -113,33 +112,37 @@ class TestFullBuybackFlow:
 
     @pytest.mark.asyncio
     async def test_process_pending_rewards_e2e(self, db_session, mock_settings):
-        """Test the main process_pending_rewards entry point."""
+        """Test the main process_pending_rewards entry point with balance check."""
         mock_settings.creator_wallet_private_key = "test_private_key_base58_encoded"
-        mock_settings.team_wallet_public_key = "TeamWalletPubKey111111111111111111111111111"
+        mock_settings.airdrop_pool_private_key = "pool_private_key_base58_encoded"
+        mock_settings.buyback_min_sol_threshold = 0.01
 
         with patch("app.services.buyback.get_settings", return_value=mock_settings):
-            # Add a reward first
-            service = BuybackService(db_session)
-            await service.record_creator_reward(Decimal("0.5"), "pumpfun")
-            await db_session.commit()
+            # Mock Creator Wallet balance check (instead of adding rewards to DB)
+            with patch("app.services.buyback.BuybackService.get_creator_wallet_balance") as mock_balance:
+                mock_balance.return_value = Decimal("0.5")  # Above threshold
 
-            # Mock all external calls
-            with patch("app.services.buyback.BuybackService.execute_swap") as mock_swap:
-                with patch("app.services.buyback.transfer_to_team_wallet") as mock_team:
-                    mock_swap.return_value = BuybackResult(
-                        success=True,
-                        tx_signature="ProcessPendingSig11111111111111111111111111",
-                        sol_spent=Decimal("0.4"),
-                        copper_received=20_000_000_000,
-                        price_per_token=Decimal("0.00000002")
-                    )
-                    mock_team.return_value = "TeamTransferSig1111111111111111111111111111"
+                # Mock all external calls
+                with patch("app.services.buyback.BuybackService.execute_swap") as mock_swap:
+                    with patch("app.services.buyback.transfer_sol") as mock_transfer:
+                        with patch("app.services.buyback.confirm_transaction") as mock_confirm:
+                            mock_swap.return_value = BuybackResult(
+                                success=True,
+                                tx_signature="ProcessPendingSig11111111111111111111111111",
+                                sol_spent=Decimal("0.1"),
+                                copper_received=5_000_000_000,
+                                price_per_token=Decimal("0.00000002")
+                            )
+                            mock_transfer.return_value = "PoolTransferSig1111111111111111111111111111"
+                            mock_confirm.return_value = True
 
-                    result = await process_pending_rewards(db_session)
+                            result = await process_pending_rewards(db_session)
 
-                    # Should have executed
-                    assert result is not None
-                    assert result.success is True
+                            # Should have checked balance
+                            mock_balance.assert_called_once()
+                            # Should have executed
+                            assert result is not None
+                            assert result.success is True
 
 
 class TestBuybackRecording:
@@ -332,39 +335,39 @@ class TestJupiterSwapExecution:
                 assert "swap transaction" in result.error.lower()
 
 
-class TestTeamWalletTransfers:
-    """Tests for team wallet SOL transfers."""
+class TestSolTransfers:
+    """Tests for SOL transfers."""
 
     @pytest.mark.asyncio
-    async def test_team_transfer_success(self):
-        """Test successful team wallet transfer."""
+    async def test_transfer_sol_success(self):
+        """Test successful SOL transfer."""
         from solders.keypair import Keypair
         keypair = Keypair()
         private_key = base58.b58encode(bytes(keypair)).decode()
-        team_address = str(Keypair().pubkey())
+        dest_address = str(Keypair().pubkey())
 
         with patch("app.services.buyback.send_sol_transfer") as mock_send:
             mock_send.return_value = MagicMock(
                 success=True,
-                signature="TeamTransferSig11111111111111111111111111111"
+                signature="TransferSig111111111111111111111111111111111"
             )
 
-            result = await transfer_to_team_wallet(
+            result = await transfer_sol(
                 amount_sol=Decimal("0.2"),
                 from_private_key=private_key,
-                to_address=team_address
+                to_address=dest_address
             )
 
-            assert result == "TeamTransferSig11111111111111111111111111111"
+            assert result == "TransferSig111111111111111111111111111111111"
             mock_send.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_team_transfer_failure(self):
-        """Test team wallet transfer failure handling."""
+    async def test_transfer_sol_failure(self):
+        """Test SOL transfer failure handling."""
         from solders.keypair import Keypair
         keypair = Keypair()
         private_key = base58.b58encode(bytes(keypair)).decode()
-        team_address = str(Keypair().pubkey())
+        dest_address = str(Keypair().pubkey())
 
         with patch("app.services.buyback.send_sol_transfer") as mock_send:
             mock_send.return_value = MagicMock(
@@ -373,18 +376,18 @@ class TestTeamWalletTransfers:
                 error="Insufficient funds"
             )
 
-            result = await transfer_to_team_wallet(
+            result = await transfer_sol(
                 amount_sol=Decimal("0.2"),
                 from_private_key=private_key,
-                to_address=team_address
+                to_address=dest_address
             )
 
             assert result is None
 
     @pytest.mark.asyncio
-    async def test_team_transfer_negative_amount(self):
-        """Test team transfer with negative amount."""
-        result = await transfer_to_team_wallet(
+    async def test_transfer_sol_negative_amount(self):
+        """Test transfer with negative amount."""
+        result = await transfer_sol(
             amount_sol=Decimal("-1.0"),
             from_private_key="SomeKey",
             to_address="SomeAddress"
@@ -409,8 +412,7 @@ class TestBuybackEdgeCases:
             )
 
             split = service.calculate_split(Decimal("0.0001"))
-            assert split.buyback_sol == Decimal("0.00008")
-            assert split.team_sol == Decimal("0.00002")
+            assert split.pool_sol == Decimal("0.0001")
 
     @pytest.mark.asyncio
     async def test_very_large_amount(self, db_session, mock_settings):
@@ -425,8 +427,7 @@ class TestBuybackEdgeCases:
             )
 
             split = service.calculate_split(Decimal("1000.0"))
-            assert split.buyback_sol == Decimal("800.0")
-            assert split.team_sol == Decimal("200.0")
+            assert split.pool_sol == Decimal("1000.0")
 
     @pytest.mark.asyncio
     async def test_concurrent_reward_processing(self, db_session, mock_settings):
@@ -462,8 +463,8 @@ class TestRewardSplitPrecision:
         # 1/3 creates repeating decimals
         split = service.calculate_split(Decimal("1") / Decimal("3"))
 
-        # Should maintain precision
-        assert split.buyback_sol + split.team_sol == split.total_sol
+        # 100% to pool
+        assert split.pool_sol == split.total_sol
 
     def test_split_precision_with_many_decimals(self):
         """Test split with high precision amounts."""
@@ -471,6 +472,5 @@ class TestRewardSplitPrecision:
 
         split = service.calculate_split(Decimal("0.123456789"))
 
-        # 80% and 20% should add up to total
-        assert split.buyback_sol == Decimal("0.0987654312")
-        assert split.team_sol == Decimal("0.0246913578")
+        # 100% to pool
+        assert split.pool_sol == Decimal("0.123456789")

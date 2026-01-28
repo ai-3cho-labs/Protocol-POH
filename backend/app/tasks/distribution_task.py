@@ -177,7 +177,7 @@ async def _get_distribution_preview() -> dict:
                 "status": "preview",
                 "pool_amount": plan.pool_amount,
                 "pool_value_usd": float(plan.pool_value_usd),
-                "total_hashpower": float(plan.total_hashpower),
+                "total_supply": plan.total_supply,
                 "recipient_count": plan.recipient_count,
                 "trigger_type": plan.trigger_type,
                 "top_recipients": top_recipients,
@@ -209,9 +209,7 @@ async def _get_pool_status() -> dict:
             if status.last_distribution
             else None,
             "hours_since_last": status.hours_since_last,
-            "threshold_met": status.threshold_met,
-            "time_trigger_met": status.time_trigger_met,
-            "should_distribute": status.should_distribute,
+            "ready_to_distribute": status.should_distribute,
         }
 
 

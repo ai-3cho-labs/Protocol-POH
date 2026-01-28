@@ -15,8 +15,8 @@ export interface TerminalCardProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 /**
- * Terminal-styled card component
- * Monochrome terminal aesthetic
+ * Card component - Light theme
+ * Converted from terminal aesthetic to modern light design
  */
 export const TerminalCard = forwardRef<HTMLDivElement, TerminalCardProps>(
   (
@@ -36,17 +36,14 @@ export const TerminalCard = forwardRef<HTMLDivElement, TerminalCardProps>(
         ref={ref}
         className={cn(
           // Base styles
-          'rounded-lg overflow-hidden',
-          // Desktop: Terminal aesthetic
-          'lg:rounded-sm lg:border',
-          'lg:bg-terminal-card lg:border-terminal-border',
-          // Mobile: Clean card design
-          'bg-gray-900/90 border border-gray-800',
-          // Variant styles (desktop)
-          variant === 'highlight' &&
-            'lg:border-gray-400 lg:shadow-white-glow',
-          variant === 'success' && 'lg:border-gray-300',
-          variant === 'error' && 'lg:border-gray-500',
+          'rounded-xl overflow-hidden',
+          'bg-white border border-gray-100',
+          // Shadow
+          'shadow-sm',
+          // Variant styles
+          variant === 'highlight' && 'border-gray-300 shadow-md',
+          variant === 'success' && 'border-emerald-200',
+          variant === 'error' && 'border-red-200',
           className
         )}
         {...props}
@@ -56,22 +53,10 @@ export const TerminalCard = forwardRef<HTMLDivElement, TerminalCardProps>(
           <div
             className={cn(
               'px-4 py-2.5 border-b flex items-center justify-between',
-              // Desktop: Terminal style header
-              'lg:border-terminal-border lg:bg-terminal-bg/50',
-              // Mobile: Clean header
-              'border-gray-800 bg-gray-900/50'
+              'border-gray-100 bg-gray-50/50'
             )}
           >
-            <span
-              className={cn(
-                'font-medium text-sm',
-                // Desktop: White text with prompt
-                'lg:font-mono lg:text-white',
-                // Mobile: White text
-                'text-gray-200'
-              )}
-            >
-              <span className="hidden lg:inline text-gray-500">&gt; </span>
+            <span className="font-medium text-sm text-gray-900">
               {title}
             </span>
             {headerRight && (

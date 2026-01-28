@@ -17,6 +17,7 @@ export interface SkeletonProps {
 
 /**
  * Skeleton loading placeholder with shimmer effect
+ * Light theme design
  */
 export function Skeleton({
   className,
@@ -28,10 +29,10 @@ export function Skeleton({
   return (
     <div
       className={cn(
-        'relative overflow-hidden bg-white/[0.06]',
+        'relative overflow-hidden bg-gray-100',
         // Shimmer overlay
         'before:absolute before:inset-0',
-        'before:bg-gradient-to-r before:from-transparent before:via-white/[0.08] before:to-transparent',
+        'before:bg-gradient-to-r before:from-transparent before:via-gray-200/60 before:to-transparent',
         'before:animate-shimmer',
         rounded && 'rounded-md',
         circle && 'rounded-full',
@@ -53,7 +54,7 @@ export function SkeletonCard({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'rounded-lg border border-terminal-border bg-terminal-card p-4',
+        'rounded-xl border border-gray-100 bg-white p-4 shadow-sm',
         className
       )}
     >

@@ -10,12 +10,11 @@ API Docs: `/docs` (Swagger UI)
 |--------|----------|-------------|
 | GET | `/api/health` | Health check |
 | GET | `/api/stats` | Global system statistics |
-| GET | `/api/user/{wallet}` | User mining stats |
+| GET | `/api/user/{wallet}` | User stats |
 | GET | `/api/user/{wallet}/history` | Distribution history |
 | GET | `/api/pool` | Reward pool status |
 | GET | `/api/distributions` | Recent distributions |
-| GET | `/api/leaderboard` | Top miners by hash power |
-| GET | `/api/tiers` | Tier configurations |
+| GET | `/api/leaderboard` | Top holders by balance |
 
 ## Response Examples
 
@@ -25,16 +24,10 @@ API Docs: `/docs` (Swagger UI)
 {
   "wallet": "ABC123...",
   "balance": 1000000000,
-  "twab": 950000000,
-  "tier": 3,
-  "tier_name": "Refined",
-  "multiplier": 1.5,
-  "hash_power": 1425000000,
   "rank": 42,
   "pool_share_percent": 0.15,
   "pending_reward": 12500,
-  "total_earned": 150000,
-  "is_new_holder": false
+  "total_earned": 150000
 }
 ```
 
@@ -42,16 +35,16 @@ API Docs: `/docs` (Swagger UI)
 
 ```json
 {
-  "balance": 1000000,
-  "balance_formatted": "1.00",
+  "balance": 1.0,
+  "balance_raw": 1000000,
   "value_usd": 5.12,
-  "gold_price": 5.12,
-  "threshold_met": false,
-  "time_trigger_met": false,
   "last_distribution": "2026-01-27T18:21:16Z",
-  "next_distribution": "2026-01-27T19:00:00Z"
+  "hours_since_last": 0.65,
+  "ready_to_distribute": true
 }
 ```
+
+Note: Distribution happens hourly whenever `ready_to_distribute` is true (pool balance > 0). No USD threshold or time limits.
 
 ### GET /api/stats
 
@@ -68,11 +61,40 @@ API Docs: `/docs` (Swagger UI)
 
 ### POST /api/webhook/helius
 
-Receives Helius transaction webhooks for sell detection.
+Receives Helius transaction webhooks.
 
 - Validates HMAC signature
 - IP allowlist (Helius IPs only)
-- Updates HoldStreak on sells
+
+## Admin Endpoints
+
+Requires `X-Admin-Key` header with valid `ADMIN_API_KEY`.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/admin/trigger/buyback` | Trigger buyback task |
+| POST | `/api/admin/trigger/snapshot` | Trigger balance snapshot |
+| POST | `/api/admin/trigger/distribution` | Trigger distribution check |
+| GET | `/api/admin/task/{task_id}` | Check Celery task status |
+| GET | `/api/admin/pending-rewards` | Creator Wallet balance |
+| GET | `/api/admin/distribution-preview` | Preview next distribution |
+| GET | `/api/admin/pool-balance` | Pool wallet balances |
+
+### GET /api/admin/pending-rewards
+
+Returns Creator Wallet SOL balance (pending rewards waiting for buyback).
+
+```json
+{
+  "creator_wallet_address": "ABC123...",
+  "creator_wallet_balance_sol": 0.5,
+  "creator_wallet_balance_lamports": 500000000,
+  "min_threshold_sol": 0.01,
+  "ready_to_process": true
+}
+```
+
+Note: The buyback system checks Creator Wallet balance directly via RPC instead of tracking individual rewards in a database table.
 
 ## Frontend API Client
 
@@ -92,21 +114,5 @@ getDistributionHistory(wallet) // GET /api/user/{wallet}/history
 | Route | Purpose |
 |-------|---------|
 | `/` | Home/landing |
-| `/dashboard` | Main mining dashboard |
 | `/leaderboard` | Top holders |
-| `/history` | Distribution history |
 | `/docs` | Documentation |
-
-## Dashboard Components
-
-Located in `frontend/src/components/dashboard/`:
-
-| Component | Purpose |
-|-----------|---------|
-| `MinerDisplay` | Main container |
-| `MiningCard` | Balance + TWAB |
-| `TierProgress` | Tier + progress bar |
-| `PendingRewards` | Estimated pending GOLD |
-| `ShareCard` | Pool share % |
-| `RewardHistory` | Distribution table |
-| `MiniLeaderboard` | Top 5 miners |

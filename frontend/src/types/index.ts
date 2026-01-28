@@ -5,8 +5,6 @@
 
 // API response types
 export type {
-  TierInfo,
-  TierConfig,
   GlobalStatsResponse,
   UserStatsResponse,
   DistributionHistoryItem,
@@ -23,13 +21,7 @@ export { isApiError } from './api';
 export type {
   UserMiningStats,
   PoolInfo,
-  TierId,
   LeaderboardUser,
   FormattedDistribution,
-} from './models';
-
-export {
-  DISTRIBUTION_THRESHOLD_USD,
-  DISTRIBUTION_MAX_HOURS,
-  TIER_CONFIG,
+  FormattedPayout,
 } from './models';

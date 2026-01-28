@@ -5,6 +5,7 @@ import { useAddressContext } from '@/contexts/AddressContext';
 import { isValidSolanaAddress } from '@/lib/validators';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/Button';
+import { ArrowRightLeft } from 'lucide-react';
 
 export interface AddressInputProps {
   /** Button/input size */
@@ -13,6 +14,8 @@ export interface AddressInputProps {
   fullWidth?: boolean;
   /** Custom class names */
   className?: string;
+  /** Custom placeholder */
+  placeholder?: string;
 }
 
 /**
@@ -23,13 +26,13 @@ export function AddressInput({
   size = 'md',
   fullWidth = false,
   className,
+  placeholder = 'Paste Wallet Address...',
 }: AddressInputProps) {
   const { address, shortAddress, isConnected, setAddress, clearAddress, error, clearError } =
     useAddressContext();
 
   const [inputValue, setInputValue] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
-  const [isFocused, setIsFocused] = useState(false);
 
   // Combined error from context or local validation
   const displayError = localError || error;
@@ -145,69 +148,42 @@ export function AddressInput({
     );
   }
 
-  // Disconnected state - show input field
+  // Disconnected state - show input field with Start Mining button
   return (
     <div className={cn('relative', fullWidth && 'w-full', className)}>
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <input
-            type="text"
-            value={inputValue}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => {
-              setIsFocused(false);
-              // Submit on blur if there's a value
-              if (inputValue.trim()) {
-                handleSubmit();
-              }
-            }}
-            placeholder="Paste wallet address..."
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="off"
-            spellCheck="false"
-            className={cn(
-              // Base styles
-              'w-full font-mono rounded-lg transition-all duration-200',
-              'bg-bg-card text-text-primary placeholder:text-text-muted',
-              'border focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-bg-dark',
-              // Size styles
-              styles.input,
-              // Error state
-              displayError
-                ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/50'
-                : 'border-border focus:border-gray-500 focus:ring-white/50',
-              // Focus state
-              isFocused && !displayError && 'border-gray-500'
-            )}
-          />
-        </div>
+      <div className="flex flex-col sm:flex-row items-stretch gap-2">
+        <input
+          type="text"
+          value={inputValue}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck="false"
+          className={cn(
+            // Base styles - matching protocol.md design
+            'flex-1 px-4 py-3 outline-none text-sm font-medium rounded-xl',
+            'transition-colors bg-transparent',
+            'placeholder:text-gray-400',
+            // Focus state
+            'focus:bg-gray-50',
+            // Error state
+            displayError && 'text-red-500'
+          )}
+        />
 
-        {/* Submit button (visible when there's input) */}
-        {inputValue.trim() && (
-          <Button
-            variant="primary"
-            size={size}
-            onClick={handleSubmit}
-            aria-label="Submit address"
-          >
-            <svg
-              className={styles.icon}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
-          </Button>
-        )}
+        {/* Start Mining button - always visible */}
+        <Button
+          variant="primary"
+          size={size}
+          onClick={handleSubmit}
+          className="whitespace-nowrap py-3 px-6"
+        >
+          Start Mining
+          <ArrowRightLeft className="w-4 h-4" />
+        </Button>
       </div>
 
       {/* Error message */}

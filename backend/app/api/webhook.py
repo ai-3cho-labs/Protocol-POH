@@ -1,7 +1,8 @@
 """
 $COPPER Webhook Handler
 
-Handles incoming webhooks from Helius for sell detection.
+Handles incoming webhooks from Helius for transaction monitoring.
+Note: Sell detection and tier drops have been removed - distribution is now balance-based.
 """
 
 import hmac
@@ -10,14 +11,11 @@ import re
 import time
 from typing import Optional
 
-from fastapi import APIRouter, Request, HTTPException, Depends, Header
+from fastapi import APIRouter, Request, HTTPException, Header
 from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
 from app.utils.rate_limiter import limiter
 from app.services.helius import get_helius_service
-from app.services.streak import StreakService
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -109,38 +107,22 @@ def validate_webhook_timestamp(timestamp: Optional[int]) -> bool:
     return True
 
 
-def validate_wallet_address(wallet: str) -> bool:
-    """
-    Validate Solana wallet address format.
-
-    Args:
-        wallet: Wallet address to validate.
-
-    Returns:
-        True if valid Solana address format.
-    """
-    if not wallet:
-        return False
-    return bool(WALLET_REGEX.match(wallet))
-
-
 @router.post("/helius", response_model=WebhookResponse)
 @limiter.limit("100/minute")
 async def helius_webhook(
     request: Request,
-    db: AsyncSession = Depends(get_db),
     authorization: Optional[str] = Header(None),
 ):
     """
     Handle Helius webhook for transaction monitoring.
 
-    Processes SWAP transactions to detect sells and update streaks.
+    Logs transactions for analytics purposes.
+    Note: Sell detection has been removed - distribution is now balance-based.
 
     SECURITY: Webhook authorization verification is MANDATORY.
     Configure HELIUS_WEBHOOK_SECRET in environment (must match Helius authHeader).
     """
     # MANDATORY: Verify webhook authorization
-    # This prevents attackers from sending fake sell events
     if not settings.helius_webhook_secret:
         logger.error("HELIUS_WEBHOOK_SECRET not configured - rejecting webhook")
         raise HTTPException(
@@ -179,8 +161,6 @@ async def helius_webhook(
         )
 
     # Validate webhook timestamp from first transaction
-    # SECURITY: Always require timestamps to prevent replay attacks
-    # Helius includes timestamp in transaction metadata (blockTime or timestamp)
     if transactions:
         first_tx = transactions[0]
         tx_timestamp = first_tx.get("timestamp") or first_tx.get("blockTime")
@@ -190,57 +170,27 @@ async def helius_webhook(
                 detail="Webhook timestamp missing or too old. Possible replay attack.",
             )
 
+    # Log transactions for analytics (no sell processing)
     helius = get_helius_service()
-    streak_service = StreakService(db)
     processed = 0
-    errors = 0
-    skipped_invalid_wallet = 0
 
     for tx in transactions:
         try:
-            # Parse transaction
             parsed = helius.parse_webhook_transaction(tx)
-
-            if parsed and parsed.is_sell:
-                # Validate wallet address format before processing
-                wallet = parsed.source_wallet
-                if not validate_wallet_address(wallet):
-                    logger.warning(
-                        f"Invalid wallet address in webhook: {wallet[:20] if wallet else 'None'}..."
-                    )
-                    skipped_invalid_wallet += 1
-                    continue
-
-                logger.info(
-                    f"Sell detected: wallet={wallet[:8]}..., "
-                    f"tx={parsed.signature[:16]}..., "
-                    f"amount={parsed.amount_out}"
+            if parsed:
+                # Just log for analytics - no sell detection/tier processing
+                logger.debug(
+                    f"Transaction logged: signature={parsed.signature[:16]}..., "
+                    f"type={'sell' if parsed.is_sell else 'buy'}"
                 )
-
-                streak = await streak_service.process_sell(wallet)
-                if streak:
-                    processed += 1
-                    logger.info(
-                        f"Streak updated for {wallet[:8]}...: "
-                        f"tier={streak.current_tier}"
-                    )
-
+                processed += 1
         except Exception as e:
             logger.error(f"Error processing transaction: {e}")
-            errors += 1
             continue
-
-    # Build response message with details
-    details = []
-    if errors:
-        details.append(f"{errors} errors")
-    if skipped_invalid_wallet:
-        details.append(f"{skipped_invalid_wallet} invalid wallets")
-    detail_str = f" ({', '.join(details)})" if details else ""
 
     return WebhookResponse(
         success=True,
-        message=f"Processed {processed} sell transactions{detail_str}",
+        message=f"Logged {processed} transactions",
         processed=processed,
     )
 

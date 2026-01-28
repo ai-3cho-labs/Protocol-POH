@@ -21,7 +21,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 /**
  * Button component
- * Monochrome terminal aesthetic
+ * Light modern aesthetic
  */
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
@@ -49,7 +49,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           // Base styles
           'inline-flex items-center justify-center gap-2',
           'font-medium transition-all duration-200',
-          'focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-bg-dark',
+          'focus:outline-none focus:ring-2 focus:ring-gray-900/20 focus:ring-offset-2 focus:ring-offset-white',
           'disabled:opacity-50 disabled:cursor-not-allowed',
           // Size variants
           size === 'sm' && 'px-3 py-1.5 text-sm rounded-md',
@@ -57,28 +57,28 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           size === 'lg' && 'px-6 py-3 text-base rounded-lg',
           // Variant styles
           variant === 'primary' && [
-            'bg-white text-black',
-            'hover:bg-gray-200 hover:shadow-white-glow',
-            'active:bg-gray-300',
+            'bg-black text-white shadow-md',
+            'hover:bg-gray-800',
+            'active:bg-gray-700',
           ],
           variant === 'secondary' && [
-            'bg-bg-card text-text-primary',
-            'border border-border',
-            'hover:bg-bg-surface hover:border-gray-500',
+            'bg-gray-100 text-gray-900',
+            'border border-gray-200',
+            'hover:bg-gray-200',
           ],
           variant === 'outline' && [
-            'bg-transparent text-white',
-            'border border-gray-400',
-            'hover:bg-white/10',
+            'bg-transparent text-gray-600',
+            'border border-gray-200',
+            'hover:border-gray-900 hover:text-gray-900',
           ],
           variant === 'ghost' && [
-            'bg-transparent text-text-secondary',
-            'hover:bg-bg-surface hover:text-text-primary',
+            'bg-transparent text-gray-600',
+            'hover:bg-gray-100 hover:text-gray-900',
           ],
           variant === 'danger' && [
-            'bg-gray-700/50 text-gray-300',
-            'border border-gray-600',
-            'hover:bg-gray-700',
+            'bg-red-50 text-red-600',
+            'border border-red-200',
+            'hover:bg-red-100',
           ],
           // Full width
           fullWidth && 'w-full',

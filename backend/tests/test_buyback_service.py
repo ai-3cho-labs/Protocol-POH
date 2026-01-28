@@ -14,7 +14,7 @@ from app.services.buyback import (
     BuybackResult,
     RewardSplit,
     process_pending_rewards,
-    transfer_to_team_wallet
+    transfer_sol
 )
 from app.models import CreatorReward, Buyback
 
@@ -22,16 +22,14 @@ from app.models import CreatorReward, Buyback
 class TestRewardSplit:
     """Tests for reward split calculation."""
 
-    def test_80_10_10_split_calculation(self):
-        """Test that rewards are split 80/10/10 correctly."""
+    def test_100_percent_to_pool(self):
+        """Test that 100% of rewards go to pool."""
         service = BuybackService(MagicMock())
 
         split = service.calculate_split(Decimal("100"))
 
         assert split.total_sol == Decimal("100")
-        assert split.buyback_sol == Decimal("80")  # 80% to reward pool
-        assert split.algo_bot_sol == Decimal("10")  # 10% to algo bot
-        assert split.team_sol == Decimal("10")  # 10% to team
+        assert split.pool_sol == Decimal("100")  # 100% to pool
 
     def test_split_with_decimal_amounts(self):
         """Test split with decimal amounts."""
@@ -40,9 +38,7 @@ class TestRewardSplit:
         split = service.calculate_split(Decimal("1.5"))
 
         assert split.total_sol == Decimal("1.5")
-        assert split.buyback_sol == Decimal("1.2")  # 80%
-        assert split.algo_bot_sol == Decimal("0.15")  # 10%
-        assert split.team_sol == Decimal("0.15")  # 10%
+        assert split.pool_sol == Decimal("1.5")  # 100%
 
     def test_split_with_zero(self):
         """Test split with zero amount."""
@@ -51,9 +47,44 @@ class TestRewardSplit:
         split = service.calculate_split(Decimal("0"))
 
         assert split.total_sol == Decimal("0")
-        assert split.buyback_sol == Decimal("0")
-        assert split.algo_bot_sol == Decimal("0")
-        assert split.team_sol == Decimal("0")
+        assert split.pool_sol == Decimal("0")
+
+
+class TestCreatorWalletBalance:
+    """Tests for Creator Wallet balance checking."""
+
+    @pytest.mark.asyncio
+    async def test_get_creator_wallet_balance_success(self, mock_settings):
+        """Test successful balance retrieval."""
+        mock_settings.creator_wallet_private_key = "test_private_key"
+
+        with patch("app.services.buyback.get_settings", return_value=mock_settings):
+            with patch("app.services.buyback.keypair_from_base58") as mock_keypair:
+                with patch("app.services.helius.HeliusService.get_sol_balance") as mock_balance:
+                    # Mock keypair
+                    mock_kp = MagicMock()
+                    mock_kp.pubkey.return_value = "CreatorWalletAddress123"
+                    mock_keypair.return_value = mock_kp
+
+                    # Mock balance: 1.5 SOL = 1,500,000,000 lamports
+                    mock_balance.return_value = 1_500_000_000
+
+                    service = BuybackService(MagicMock())
+                    balance = await service.get_creator_wallet_balance()
+
+                    assert balance == Decimal("1.5")
+                    mock_balance.assert_called_once_with("CreatorWalletAddress123")
+
+    @pytest.mark.asyncio
+    async def test_get_creator_wallet_balance_no_key(self, mock_settings):
+        """Test balance returns 0 when private key not configured."""
+        mock_settings.creator_wallet_private_key = ""
+
+        with patch("app.services.buyback.get_settings", return_value=mock_settings):
+            service = BuybackService(MagicMock())
+            balance = await service.get_creator_wallet_balance()
+
+            assert balance == Decimal(0)
 
 
 class TestJupiterIntegration:
@@ -250,27 +281,27 @@ class TestCreatorRewardRecording:
             assert len(rewards) >= 2
 
 
-class TestTeamWalletTransfer:
-    """Tests for team wallet transfer."""
+class TestSolTransfer:
+    """Tests for SOL transfer."""
 
     @pytest.mark.asyncio
-    async def test_transfer_to_team_wallet_no_config(self):
+    async def test_transfer_sol_no_config(self):
         """Test transfer fails with missing config."""
-        result = await transfer_to_team_wallet(
+        result = await transfer_sol(
             Decimal("1"),
             "",  # No private key
-            "TeamWallet"
+            "DestWallet"
         )
 
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_transfer_to_team_wallet_zero_amount(self):
+    async def test_transfer_sol_zero_amount(self):
         """Test transfer with zero amount."""
-        result = await transfer_to_team_wallet(
+        result = await transfer_sol(
             Decimal("0"),
             "PrivateKey",
-            "TeamWallet"
+            "DestWallet"
         )
 
         assert result is None
@@ -280,10 +311,47 @@ class TestProcessPendingRewards:
     """Tests for the main reward processing function."""
 
     @pytest.mark.asyncio
-    async def test_no_pending_rewards(self, db_session, mock_settings):
-        """Test processing when no rewards are pending."""
-        with patch("app.services.buyback.get_settings", return_value=mock_settings):
-            result = await process_pending_rewards(db_session)
+    async def test_balance_below_threshold(self, db_session, mock_settings):
+        """Test processing when Creator Wallet balance is below threshold."""
+        mock_settings.buyback_min_sol_threshold = 0.01
 
-            # Should return None when no rewards
-            assert result is None
+        with patch("app.services.buyback.get_settings", return_value=mock_settings):
+            with patch("app.services.buyback.BuybackService.get_creator_wallet_balance") as mock_balance:
+                # Balance below threshold
+                mock_balance.return_value = Decimal("0.005")
+
+                result = await process_pending_rewards(db_session)
+
+                # Should return None when balance below threshold
+                assert result is None
+
+    @pytest.mark.asyncio
+    async def test_balance_above_threshold(self, db_session, mock_settings):
+        """Test processing when Creator Wallet has sufficient balance."""
+        mock_settings.buyback_min_sol_threshold = 0.01
+        mock_settings.creator_wallet_private_key = "test_key"
+        mock_settings.airdrop_pool_private_key = "pool_key"
+
+        with patch("app.services.buyback.get_settings", return_value=mock_settings):
+            with patch("app.services.buyback.BuybackService.get_creator_wallet_balance") as mock_balance:
+                with patch("app.services.buyback.transfer_sol") as mock_transfer:
+                    with patch("app.services.buyback.confirm_transaction") as mock_confirm:
+                        with patch("app.services.buyback.BuybackService.execute_swap") as mock_swap:
+                            # Balance above threshold
+                            mock_balance.return_value = Decimal("0.5")
+                            mock_transfer.return_value = "TransferSig123"
+                            mock_confirm.return_value = True
+                            mock_swap.return_value = BuybackResult(
+                                success=True,
+                                tx_signature="SwapSig123",
+                                sol_spent=Decimal("0.1"),
+                                copper_received=5_000_000,
+                                price_per_token=Decimal("0.00001"),
+                            )
+
+                            result = await process_pending_rewards(db_session)
+
+                            # Should have called get_creator_wallet_balance
+                            mock_balance.assert_called_once()
+                            # Should have executed
+                            assert result is not None

@@ -181,7 +181,7 @@ export function ClientComponent({ data }: { data: DataType }) {
 **Key Files**:
 - `backend/app/models/*.py`
 - `backend/migrations/*.sql`
-- `backend/app/services/twab.py`
+- `backend/app/services/distribution.py`
 - `backend/app/services/snapshot.py`
 
 **Best Practices**:

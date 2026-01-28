@@ -21,7 +21,7 @@ export interface PageContainerProps {
 
 /**
  * Page container component
- * Provides consistent layout with header, footer, and navigation
+ * Light theme with clean white background
  */
 export function PageContainer({
   children,
@@ -41,15 +41,7 @@ export function PageContainer({
   };
 
   return (
-    <div
-      className={cn(
-        'min-h-screen flex flex-col',
-        // Desktop: Terminal background
-        'lg:bg-terminal-gradient',
-        // Mobile: Clean gradient
-        'bg-mobile-gradient'
-      )}
-    >
+    <div className="min-h-screen flex flex-col bg-white">
       {/* Desktop Header */}
       {showHeader && <Header />}
 

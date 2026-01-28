@@ -3,7 +3,7 @@
  * Functions for fetching data from the backend API.
  */
 
-import { API_BASE_URL, API_KEY } from './constants';
+import { API_BASE_URL } from './constants';
 import type {
   GlobalStatsResponse,
   UserStatsResponse,
@@ -11,7 +11,6 @@ import type {
   LeaderboardEntry,
   PoolStatusResponse,
   DistributionItem,
-  TierConfig,
   ApiError,
 } from '@/types/api';
 
@@ -46,16 +45,10 @@ export function getErrorMessage(error: unknown): string {
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
 
-  // Build headers with optional API key
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options?.headers as Record<string, string>),
   };
-
-  // Add API key if configured
-  if (API_KEY) {
-    headers['X-API-Key'] = API_KEY;
-  }
 
   const response = await fetch(url, {
     ...options,
@@ -134,11 +127,4 @@ export async function getDistributions(
   return fetchApi<DistributionItem[]>(
     `/api/distributions?limit=${limit}&offset=${offset}`
   );
-}
-
-/**
- * Get tier configurations
- */
-export async function getTiers(): Promise<TierConfig[]> {
-  return fetchApi<TierConfig[]>('/api/tiers');
 }

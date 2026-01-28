@@ -12,7 +12,6 @@ import logging
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -67,10 +66,6 @@ class EventType(str, Enum):
     LEADERBOARD_UPDATED = "leaderboard:updated"
     SNAPSHOT_TAKEN = "snapshot:taken"
 
-    # Wallet room events
-    TIER_CHANGED = "tier:changed"
-    SELL_DETECTED = "sell:detected"
-
 
 @dataclass
 class TopRecipient:
@@ -89,7 +84,7 @@ class DistributionExecutedPayload:
     pool_amount: int  # Raw token amount
     pool_value_usd: float
     recipient_count: int
-    trigger_type: str  # 'threshold' | 'time'
+    trigger_type: str  # 'hourly' | 'manual'
     top_recipients: list[TopRecipient]
     executed_at: str  # ISO timestamp
     server_timestamp: str = field(default_factory=iso_timestamp)
@@ -120,9 +115,7 @@ class PoolUpdatedPayload:
 
     balance: int  # Raw token amount
     value_usd: float
-    progress_to_threshold: float  # 0-100 percentage
-    threshold_met: bool
-    hours_until_time_trigger: Optional[float]
+    ready_to_distribute: bool  # True if pool has balance
     server_timestamp: str = field(default_factory=iso_timestamp)
 
     def to_dict(self) -> dict:
@@ -152,36 +145,3 @@ class SnapshotTakenPayload:
     def to_dict(self) -> dict:
         """Convert to dict for JSON serialization."""
         return validate_payload_size(asdict(self), "snapshot:taken")
-
-
-@dataclass
-class TierChangedPayload:
-    """Payload for tier:changed event."""
-
-    wallet: str
-    old_tier: int
-    new_tier: int
-    new_tier_name: str
-    new_multiplier: float
-    is_upgrade: bool
-    server_timestamp: str = field(default_factory=iso_timestamp)
-
-    def to_dict(self) -> dict:
-        """Convert to dict for JSON serialization."""
-        return validate_payload_size(asdict(self), "tier:changed")
-
-
-@dataclass
-class SellDetectedPayload:
-    """Payload for sell:detected event."""
-
-    wallet: str
-    tx_signature: Optional[str]
-    amount_sold: Optional[int]  # Raw token amount if available
-    old_tier: int
-    new_tier: int
-    server_timestamp: str = field(default_factory=iso_timestamp)
-
-    def to_dict(self) -> dict:
-        """Convert to dict for JSON serialization."""
-        return validate_payload_size(asdict(self), "sell:detected")

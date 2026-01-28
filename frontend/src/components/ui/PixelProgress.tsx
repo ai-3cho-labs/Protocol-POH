@@ -23,7 +23,7 @@ export interface PixelProgressProps {
 
 /**
  * Pixel-styled segmented progress bar
- * Monochrome terminal aesthetic
+ * Light theme design
  */
 export function PixelProgress({
   value,
@@ -43,7 +43,7 @@ export function PixelProgress({
       {/* Progress bar container */}
       <div
         className={cn(
-          'flex gap-0.5 bg-bg-dark rounded p-1',
+          'flex gap-0.5 bg-gray-100 rounded p-1',
           size === 'sm' && 'p-0.5',
           size === 'lg' && 'p-1.5'
         )}
@@ -69,15 +69,15 @@ export function PixelProgress({
                 // Filled state
                 isFilled
                   ? cn(
-                      variant === 'default' && 'bg-white',
+                      variant === 'default' && 'bg-gray-900',
                       variant === 'gradient' &&
                         i < filledSegments * 0.33
-                        ? 'bg-gray-500'
+                        ? 'bg-gray-400'
                         : i < filledSegments * 0.66
-                        ? 'bg-gray-300'
-                        : 'bg-white'
+                        ? 'bg-gray-600'
+                        : 'bg-gray-900'
                     )
-                  : 'bg-bg-surface'
+                  : 'bg-gray-200'
               )}
             />
           );
@@ -86,7 +86,7 @@ export function PixelProgress({
 
       {/* Label */}
       {showLabel && (
-        <span className="text-sm text-text-secondary font-medium min-w-[3ch]">
+        <span className="text-sm text-gray-500 font-medium min-w-[3ch]">
           {label || `${Math.round(percentage)}%`}
         </span>
       )}
@@ -96,7 +96,7 @@ export function PixelProgress({
 
 /**
  * Simple linear progress bar (non-segmented)
- * Monochrome terminal aesthetic
+ * Light theme design
  */
 export function ProgressBar({
   value,
@@ -114,7 +114,7 @@ export function ProgressBar({
       {/* Progress bar container */}
       <div
         className={cn(
-          'flex-1 bg-bg-surface rounded-full overflow-hidden',
+          'flex-1 bg-gray-100 rounded-full overflow-hidden',
           size === 'sm' && 'h-2',
           size === 'md' && 'h-3',
           size === 'lg' && 'h-4'
@@ -127,9 +127,9 @@ export function ProgressBar({
         <div
           className={cn(
             'h-full transition-all duration-300 ease-out rounded-full',
-            variant === 'default' && 'bg-white',
+            variant === 'default' && 'bg-gray-900',
             variant === 'gradient' &&
-              'bg-gradient-to-r from-gray-500 via-gray-300 to-white'
+              'bg-gradient-to-r from-gray-400 via-gray-600 to-gray-900'
           )}
           style={{ width: `${percentage}%` }}
         />
@@ -137,7 +137,7 @@ export function ProgressBar({
 
       {/* Label */}
       {showLabel && (
-        <span className="text-sm text-text-secondary font-medium min-w-[3ch]">
+        <span className="text-sm text-gray-500 font-medium min-w-[3ch]">
           {label || `${Math.round(percentage)}%`}
         </span>
       )}

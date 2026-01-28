@@ -2,7 +2,6 @@
 
 import { PageContainer } from '@/components/layout';
 import { TerminalCard } from '@/components/ui';
-import { TierExplainer } from '@/components/landing';
 import { cn } from '@/lib/cn';
 
 export default function DocsPage() {
@@ -16,7 +15,7 @@ export default function DocsPage() {
             DOCUMENTATION
           </h1>
           <p className="text-sm text-zinc-500 mt-1">
-            Everything you need to know about CPU → $GOLD mining
+            Everything you need to know about POH → $GOLD rewards
           </p>
         </div>
 
@@ -29,19 +28,16 @@ export default function DocsPage() {
             <TOCLink href="#how-it-works" number="02">
               How It Works
             </TOCLink>
-            <TOCLink href="#twab" number="03">
-              TWAB Calculation
+            <TOCLink href="#distribution" number="03">
+              Distribution Formula
             </TOCLink>
-            <TOCLink href="#tiers" number="04">
-              Tier System
-            </TOCLink>
-            <TOCLink href="#payouts" number="05">
+            <TOCLink href="#payouts" number="04">
               Payouts
             </TOCLink>
-            <TOCLink href="#faq" number="06">
+            <TOCLink href="#faq" number="05">
               FAQ
             </TOCLink>
-            <TOCLink href="#roadmap" number="07">
+            <TOCLink href="#roadmap" number="06">
               Roadmap
             </TOCLink>
           </nav>
@@ -50,16 +46,15 @@ export default function DocsPage() {
         {/* Overview */}
         <Section id="overview" title="01. OVERVIEW">
           <p>
-            CPU is a Solana token where you mine $GOLD rewards through holding.
-            Instead of running hardware, you mine $GOLD by simply holding CPU tokens
-            in your wallet.
+            POH is a Solana token where you earn $GOLD rewards through holding.
+            Simply hold POH tokens in your wallet to receive proportional rewards.
           </p>
           <p>
-            Trading volume generates fees, which fund the $GOLD reward pool. Rewards are
-            paid out to CPU holders based on their &quot;Hash Power&quot;.
+            Revenue flows into the $GOLD reward pool, which is distributed to POH holders
+            based on their balance.
           </p>
           <Highlight>
-            Hash Power = TWAB × Streak Multiplier
+            Your Share = Your Balance / Total Supply
           </Highlight>
         </Section>
 
@@ -67,147 +62,120 @@ export default function DocsPage() {
         <Section id="how-it-works" title="02. HOW IT WORKS">
           <ol className="space-y-4 list-decimal list-inside">
             <li>
-              <strong className="text-zinc-200">Buy & Hold CPU</strong> - Purchase CPU
+              <strong className="text-zinc-200">Buy & Hold POH</strong> - Purchase POH
               tokens and hold them in your wallet. No staking required.
             </li>
             <li>
-              <strong className="text-zinc-200">Build Your Streak</strong> - Every hour
-              you hold without selling increases your streak and tier level.
+              <strong className="text-zinc-200">Earn Proportional Rewards</strong> - Your
+              share of each distribution is based on your current balance.
             </li>
             <li>
-              <strong className="text-zinc-200">Earn Hash Power</strong> - Your Time-Weighted
-              Average Balance (TWAB) multiplied by your tier bonus equals your mining power.
-            </li>
-            <li>
-              <strong className="text-zinc-200">Receive $GOLD Payouts</strong> - When
-              the reward pool hits $250 or 24 hours pass, $GOLD rewards are paid
-              out proportionally based on Hash Power.
+              <strong className="text-zinc-200">Receive $GOLD Automatically</strong> - When
+              the reward pool has balance, $GOLD rewards are sent directly to your wallet.
             </li>
           </ol>
         </Section>
 
-        {/* TWAB */}
-        <Section id="twab" title="03. TWAB CALCULATION">
+        {/* Distribution Formula */}
+        <Section id="distribution" title="03. DISTRIBUTION FORMULA">
           <p>
-            TWAB (Time-Weighted Average Balance) measures your average token holding
-            over a period of time. It prevents gaming the system by buying right
-            before payouts.
+            Each distribution divides the reward pool proportionally among all eligible
+            holders based on their current balance at distribution time.
           </p>
           <CodeBlock>
-            {`TWAB = Σ(balance × time_held) / total_time
-
-Example:
-- Hold 1,000 tokens for 12 hours
-- Hold 2,000 tokens for 12 hours
-- TWAB = (1000×12 + 2000×12) / 24 = 1,500`}
-          </CodeBlock>
-          <p className="text-sm text-zinc-500">
-            Snapshots are taken randomly 3-6 times per day to calculate TWAB fairly.
-          </p>
-        </Section>
-
-        {/* Tiers */}
-        <Section id="tiers" title="04. TIER SYSTEM">
-          <p>
-            Hold without selling to climb the tier ladder. Each tier provides a
-            higher reward multiplier:
-          </p>
-          <TierExplainer className="py-0" />
-          <div className="mt-4 p-4 bg-white/10 border border-white/30 rounded">
-            <p className="text-sm text-white">
-              <strong>Warning:</strong> Selling tokens drops you down by one tier
-              and resets your streak to that tier&apos;s minimum. Transfers to other
-              wallets don&apos;t count as sells.
-            </p>
-          </div>
-        </Section>
-
-        {/* Payouts */}
-        <Section id="payouts" title="05. PAYOUTS">
-          <p>$GOLD rewards are paid out when either condition is met:</p>
-          <ul className="space-y-2 list-disc list-inside">
-            <li>
-              <strong className="text-white">Threshold:</strong> Pool
-              value reaches $250 USD
-            </li>
-            <li>
-              <strong className="text-white">Time:</strong> 24 hours
-              pass since the last payout
-            </li>
-          </ul>
-          <CodeBlock>
-            {`Your Reward = (Your Hash Power / Total Hash Power) × Pool Amount
+            {`Your Reward = Pool Amount × (Your Balance / Total Supply)
 
 Example:
 - Pool: 100,000 $GOLD
-- Your HP: 5,000
-- Total HP: 100,000
-- Your Reward: (5,000 / 100,000) × 100,000 = 5,000 $GOLD`}
+- Your Balance: 100,000 POH
+- Total Supply: 10,000,000 POH
+- Your Reward: 100,000 × (100,000 / 10,000,000) = 1,000 $GOLD`}
           </CodeBlock>
-          <p>
+          <p className="text-sm text-zinc-500">
+            Excluded wallets (like liquidity pools and team wallets) are not counted
+            in the total supply calculation.
+          </p>
+        </Section>
+
+        {/* Payouts */}
+        <Section id="payouts" title="04. PAYOUTS">
+          <p>$GOLD rewards are distributed hourly whenever the pool has a balance:</p>
+          <ul className="space-y-2 list-disc list-inside">
+            <li>
+              <strong className="text-white">Automatic:</strong> No threshold required -
+              distributions happen when there are rewards to distribute
+            </li>
+            <li>
+              <strong className="text-white">Hourly:</strong> Checked every hour
+            </li>
+            <li>
+              <strong className="text-white">Direct:</strong> $GOLD sent directly to your wallet
+            </li>
+          </ul>
+          <p className="mt-4">
             $GOLD rewards are automatically sent to your wallet. Note: $GOLD is a separate
-            token from CPU - you hold CPU to mine, and receive $GOLD as rewards.
+            token from POH - you hold POH to earn, and receive $GOLD as rewards.
           </p>
         </Section>
 
         {/* FAQ */}
-        <Section id="faq" title="06. FAQ">
+        <Section id="faq" title="05. FAQ">
           <div className="space-y-6">
-            <FAQ question="Do I need to stake my CPU tokens?">
+            <FAQ question="Do I need to stake my POH tokens?">
               No! Just hold them in your wallet. There&apos;s no staking contract
               or lock-up period.
             </FAQ>
-            <FAQ question="What happens if I sell some CPU?">
-              Selling triggers a tier drop. You&apos;ll go down one tier and your
-              streak resets to that tier&apos;s minimum hours. Your TWAB will also
-              adjust based on your new balance.
+            <FAQ question="What happens if I buy more POH?">
+              Your share of the next distribution increases proportionally to your
+              new balance. There&apos;s no waiting period.
             </FAQ>
-            <FAQ question="Are transfers counted as sells?">
-              No. Only DEX swaps where you sell CPU for SOL or USDC are
-              detected as sells. Wallet-to-wallet transfers are ignored.
-            </FAQ>
-            <FAQ question="How often are snapshots taken?">
-              Randomly 3-6 times per day with a 40% chance each hour. This prevents
-              predictable timing manipulation.
+            <FAQ question="What happens if I sell some POH?">
+              Your share of future distributions decreases proportionally. There
+              are no penalties for selling.
             </FAQ>
             <FAQ question="Which wallets are excluded?">
               Creator wallets, liquidity pool addresses, CEX deposit addresses,
               and system wallets are excluded from rewards.
             </FAQ>
             <FAQ question="Where do the $GOLD rewards come from?">
-              80% of trading fees go directly into the $GOLD reward pool. 20% goes to
-              team operations and development.
+              Revenue from trading fees and other sources flows into the $GOLD
+              reward pool for distribution.
             </FAQ>
-            <FAQ question="What&apos;s the difference between CPU and $GOLD?">
-              CPU is what you buy and hold - it determines your mining eligibility and hash power.
-              $GOLD is what you earn as rewards - it&apos;s distributed from the pool based on your hash power.
+            <FAQ question="What&apos;s the difference between POH and $GOLD?">
+              POH is what you buy and hold - it determines your reward share.
+              $GOLD is what you earn as rewards - it&apos;s distributed from the pool
+              based on your POH balance.
+            </FAQ>
+            <FAQ question="How can I see my distribution history?">
+              Connect your wallet and visit the History page to see all past
+              distributions you&apos;ve received.
             </FAQ>
           </div>
         </Section>
 
         {/* Roadmap */}
-        <Section id="roadmap" title="07. ROADMAP">
+        <Section id="roadmap" title="06. ROADMAP">
           <div className="space-y-6">
             <RoadmapPhase
               phase="V1"
-              title="Mining Protocol"
+              title="Reward Distribution"
               status="live"
               items={[
-                'Hold CPU tokens to mine $GOLD rewards',
-                'Tier system with up to 5x multiplier',
-                'Automatic distributions every 24h or $250 threshold',
+                'Hold POH tokens to earn $GOLD rewards',
+                'Simple balance-based distribution',
+                'Automatic hourly distributions',
                 'Real-time dashboard and reward tracking',
               ]}
             />
             <RoadmapPhase
               phase="V2"
-              title="Algo Trading Bot"
+              title="Enhanced Features"
               status="upcoming"
               items={[
-                'Automated trading bot for precious metals (Gold, Silver)',
-                'AI-powered algorithmic trading strategies',
-                'CPU holders receive % of trading profits',
-                'Profits distributed proportionally based on holdings',
+                'Additional reward mechanisms',
+                'Advanced analytics dashboard',
+                'Historical data export',
+                'Mobile app support',
               ]}
             />
             <RoadmapPhase
@@ -215,10 +183,10 @@ Example:
               title="Expansion"
               status="planned"
               items={[
-                'Additional metal markets and trading pairs',
-                'Advanced analytics dashboard',
-                'Governance for CPU holders',
+                'Governance for POH holders',
                 'Cross-chain expansion',
+                'Additional token integrations',
+                'Community features',
               ]}
             />
           </div>

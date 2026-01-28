@@ -95,7 +95,7 @@ function HistoryContent() {
         <div className="hidden lg:grid grid-cols-12 gap-4 px-4 py-3 border-b border-terminal-border font-mono text-sm text-gray-500">
           <div className="col-span-3">DATE</div>
           <div className="col-span-3 text-right">AMOUNT</div>
-          <div className="col-span-3 text-right">HASH POWER</div>
+          <div className="col-span-3 text-right">BALANCE</div>
           <div className="col-span-3 text-right">TX</div>
         </div>
 
@@ -113,7 +113,7 @@ function HistoryContent() {
               <div className="text-2xl mb-2">⛏️</div>
               <p>No rewards yet</p>
               <p className="text-xs text-zinc-600 mt-1">
-                Hold CPU tokens to earn $GOLD rewards
+                Hold POH tokens to earn $GOLD rewards
               </p>
             </div>
           )}
@@ -160,10 +160,10 @@ function HistoryRow({ item }: { item: DistributionHistoryItem }) {
         <span className="text-xs text-zinc-500 ml-1">$GOLD</span>
       </div>
 
-      {/* Hash Power - Desktop */}
+      {/* Balance - Desktop */}
       <div className="hidden lg:block col-span-3 text-right">
         <span className="text-sm text-zinc-400 font-mono tabular-nums">
-          {formatCompactNumber(item.hash_power)}
+          {formatCompactNumber(item.balance)}
         </span>
       </div>
 
@@ -185,7 +185,7 @@ function HistoryRow({ item }: { item: DistributionHistoryItem }) {
 
       {/* Mobile: Additional info */}
       <div className="lg:hidden col-span-12 flex items-center justify-between text-xs text-zinc-500 -mt-1">
-        <span>HP: {formatCompactNumber(item.hash_power)}</span>
+        <span>Bal: {formatCompactNumber(item.balance)}</span>
         {solscanUrl && (
           <a
             href={solscanUrl}

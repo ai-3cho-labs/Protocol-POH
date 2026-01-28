@@ -5,6 +5,7 @@ Async PostgreSQL connection using SQLAlchemy with asyncpg.
 """
 
 import ssl
+import threading
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 from sqlalchemy import text
@@ -158,6 +159,7 @@ async def close_db():
 # Separate engine for Celery workers (created per-worker, not shared with FastAPI)
 _worker_engine = None
 _worker_session_maker = None
+_worker_init_lock = threading.Lock()
 
 
 def get_worker_session_maker():
@@ -168,32 +170,41 @@ def get_worker_session_maker():
     event loop conflicts with FastAPI's async engine.
 
     Uses NullPool to avoid connection pooling issues across threads.
+    Thread-safe initialization via double-checked locking pattern.
     """
     global _worker_engine, _worker_session_maker
 
-    if _worker_session_maker is None:
-        # Create a fresh engine for the worker
-        worker_engine_kwargs = {
-            "echo": settings.debug,
-            "connect_args": connect_args,
-            "poolclass": NullPool,  # No pooling - each task gets fresh connection
-        }
-        _worker_engine = create_async_engine(database_url, **worker_engine_kwargs)
-        _worker_session_maker = async_sessionmaker(
-            _worker_engine,
-            class_=AsyncSession,
-            expire_on_commit=False,
-            autocommit=False,
-            autoflush=False,
-        )
+    # Fast path: already initialized
+    if _worker_session_maker is not None:
+        return _worker_session_maker
+
+    # Slow path: acquire lock and initialize
+    with _worker_init_lock:
+        # Double-check after acquiring lock
+        if _worker_session_maker is None:
+            # Create a fresh engine for the worker
+            worker_engine_kwargs = {
+                "echo": settings.debug,
+                "connect_args": connect_args,
+                "poolclass": NullPool,  # No pooling - each task gets fresh connection
+            }
+            _worker_engine = create_async_engine(database_url, **worker_engine_kwargs)
+            _worker_session_maker = async_sessionmaker(
+                _worker_engine,
+                class_=AsyncSession,
+                expire_on_commit=False,
+                autocommit=False,
+                autoflush=False,
+            )
 
     return _worker_session_maker
 
 
 async def close_worker_db():
-    """Close worker database connections."""
+    """Close worker database connections (thread-safe)."""
     global _worker_engine, _worker_session_maker
-    if _worker_engine:
-        await _worker_engine.dispose()
-        _worker_engine = None
-        _worker_session_maker = None
+    with _worker_init_lock:
+        if _worker_engine:
+            await _worker_engine.dispose()
+            _worker_engine = None
+            _worker_session_maker = None

@@ -72,11 +72,14 @@ class HTTPClientManager:
         return cls._instance
 
     def _get_current_loop_id(self) -> Optional[int]:
-        """Get the current event loop's ID, or None if no loop."""
+        """Get the current event loop's ID, or None if no loop running."""
         try:
-            loop = asyncio.get_event_loop()
+            # Use get_running_loop() which is the recommended API for Python 3.10+
+            # This only works when called from within an async context
+            loop = asyncio.get_running_loop()
             return id(loop) if loop and not loop.is_closed() else None
         except RuntimeError:
+            # No running event loop - this is expected when called from sync context
             return None
 
     @property

@@ -14,9 +14,6 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost
 /** WebSocket URL for real-time updates */
 export const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:8000';
 
-/** API Key for authenticated requests (optional for public endpoints) */
-export const API_KEY = process.env.NEXT_PUBLIC_API_KEY || '';
-
 /**
  * Solana RPC URL
  * In production, use the proxy to keep API key server-side.

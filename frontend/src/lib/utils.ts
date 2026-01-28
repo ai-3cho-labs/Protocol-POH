@@ -2,8 +2,6 @@
  * Utility Functions
  */
 
-import { TIER_CONFIG, type TierId } from '@/types/models';
-
 // ===========================================
 // Number Formatting
 // ===========================================
@@ -136,43 +134,6 @@ export function shortenAddress(address: string, chars = 4): string {
   if (!address) return '';
   if (address.length <= chars * 2 + 3) return address;
   return `${address.slice(0, chars)}...${address.slice(-chars)}`;
-}
-
-// ===========================================
-// Tier Utilities
-// ===========================================
-
-/**
- * Calculate progress percentage to next tier
- */
-export function calculateTierProgress(
-  currentTier: number,
-  streakHours: number
-): number {
-  const currentTierId = currentTier as TierId;
-  const nextTierId = (currentTier + 1) as TierId;
-
-  // If at max tier, return 100%
-  if (currentTier >= 6) return 100;
-
-  const currentConfig = TIER_CONFIG[currentTierId];
-  const nextConfig = TIER_CONFIG[nextTierId];
-
-  if (!currentConfig || !nextConfig) return 0;
-
-  const hoursInCurrentTier = streakHours - currentConfig.minHours;
-  const hoursNeeded = nextConfig.minHours - currentConfig.minHours;
-
-  if (hoursNeeded <= 0) return 100;
-
-  return Math.min(100, Math.max(0, (hoursInCurrentTier / hoursNeeded) * 100));
-}
-
-/**
- * Get tier info by tier ID
- */
-export function getTierInfo(tierId: TierId) {
-  return TIER_CONFIG[tierId];
 }
 
 // ===========================================

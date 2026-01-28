@@ -61,10 +61,7 @@ def process_creator_rewards(self) -> dict:
     """
     Process pending creator rewards.
 
-    Executes 80/20 split:
-    - 80% → Jupiter swap SOL → COPPER → Airdrop pool
-    - 20% → Team wallet
-
+    Transfers 100% from Creator → Pool, then swaps configured % to GOLD.
     Uses idempotency check to prevent double-processing on retries.
     """
     return run_async(_process_creator_rewards(self.request.id))
@@ -78,17 +75,8 @@ async def _process_creator_rewards(task_id: Optional[str] = None) -> dict:
 
     session_maker = get_worker_session_maker()
     async with session_maker() as db:
-        service = BuybackService(db)
-
         try:
-            # Check for pending rewards
-            total_pending = await service.get_total_unprocessed_sol()
-
-            if total_pending == 0:
-                logger.info("No pending rewards to process")
-                return {"status": "skipped", "reason": "no_pending_rewards"}
-
-            # Process rewards
+            # Process rewards by checking Creator Wallet SOL balance directly
             result = await process_pending_rewards(db)
 
             if result and result.success:
@@ -101,7 +89,7 @@ async def _process_creator_rewards(task_id: Optional[str] = None) -> dict:
             elif result:
                 return {"status": "failed", "error": result.error}
             else:
-                return {"status": "skipped", "reason": "no_result"}
+                return {"status": "skipped", "reason": "balance_below_threshold"}
 
         except Exception as e:
             logger.error(f"Error processing rewards: {e}")
@@ -113,10 +101,17 @@ def record_incoming_reward(
     amount_sol: float, source: str, tx_signature: str = None
 ) -> dict:
     """
-    Record an incoming creator reward.
+    DEPRECATED: Record an incoming creator reward.
 
-    Called when Pump.fun fees are detected.
+    This task is deprecated. The buyback system now checks Creator Wallet
+    SOL balance directly via RPC instead of tracking individual rewards
+    in the database.
+
+    Kept for backward compatibility with existing webhook integrations.
     """
+    logger.warning(
+        "record_incoming_reward is deprecated - buyback now uses direct balance check"
+    )
     return run_async(_record_incoming_reward(amount_sol, source, tx_signature))
 
 
@@ -153,12 +148,13 @@ async def _get_buyback_stats() -> dict:
         service = BuybackService(db)
 
         total_sol, total_copper = await service.get_total_buybacks()
-        pending_sol = await service.get_total_unprocessed_sol()
+        # Get Creator Wallet balance directly instead of querying CreatorReward table
+        creator_wallet_balance = await service.get_creator_wallet_balance()
 
         return {
             "total_sol_spent": float(total_sol),
             "total_copper_bought": total_copper,
-            "pending_sol": float(pending_sol),
+            "creator_wallet_balance": float(creator_wallet_balance),
         }
 
 

@@ -19,8 +19,6 @@ import {
   subscribeToGlobal,
   type DistributionExecutedPayload,
   type PoolUpdatedPayload,
-  type TierChangedPayload,
-  type SellDetectedPayload,
 } from '@/lib/socket';
 import {
   POOL_STATUS_QUERY_KEY,
@@ -83,9 +81,7 @@ export function useWebSocket(): UseWebSocketReturn {
           ...(old as object),
           balance: payload.balance,
           value_usd: payload.value_usd,
-          progress_to_threshold: payload.progress_to_threshold,
-          threshold_met: payload.threshold_met,
-          hours_until_time_trigger: payload.hours_until_time_trigger,
+          ready_to_distribute: payload.ready_to_distribute,
         };
       });
     },
@@ -140,36 +136,6 @@ export function useWebSocket(): UseWebSocketReturn {
     }
     queryClient.invalidateQueries({ queryKey: ['globalStats'] });
   }, [queryClient]);
-
-  /**
-   * Handle tier:changed - invalidate user stats
-   */
-  const handleTierChanged = useCallback(
-    (payload: TierChangedPayload) => {
-      const currentWallet = walletAddressRef.current;
-      if (currentWallet && payload.wallet === currentWallet) {
-        queryClient.invalidateQueries({
-          queryKey: userStatsQueryKey(currentWallet),
-        });
-      }
-    },
-    [queryClient]
-  );
-
-  /**
-   * Handle sell:detected - invalidate user stats
-   */
-  const handleSellDetected = useCallback(
-    (payload: SellDetectedPayload) => {
-      const currentWallet = walletAddressRef.current;
-      if (currentWallet && payload.wallet === currentWallet) {
-        queryClient.invalidateQueries({
-          queryKey: userStatsQueryKey(currentWallet),
-        });
-      }
-    },
-    [queryClient]
-  );
 
   // ========================================================================
   // Force Reconnect
@@ -256,8 +222,6 @@ export function useWebSocket(): UseWebSocketReturn {
     socket.on('distribution:executed', handleDistributionExecuted);
     socket.on('leaderboard:updated', handleLeaderboardUpdated);
     socket.on('snapshot:taken', handleSnapshotTaken);
-    socket.on('tier:changed', handleTierChanged);
-    socket.on('sell:detected', handleSellDetected);
 
     // Connect immediately for global stats
     setStatus('connecting');
@@ -274,8 +238,6 @@ export function useWebSocket(): UseWebSocketReturn {
       socket.off('distribution:executed', handleDistributionExecuted);
       socket.off('leaderboard:updated', handleLeaderboardUpdated);
       socket.off('snapshot:taken', handleSnapshotTaken);
-      socket.off('tier:changed', handleTierChanged);
-      socket.off('sell:detected', handleSellDetected);
 
       disconnectSocket();
     };
@@ -285,8 +247,6 @@ export function useWebSocket(): UseWebSocketReturn {
     handleDistributionExecuted,
     handleLeaderboardUpdated,
     handleSnapshotTaken,
-    handleTierChanged,
-    handleSellDetected,
   ]);
 
   // ========================================================================

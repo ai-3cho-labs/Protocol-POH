@@ -7,17 +7,14 @@ All functions are wrapped in try/except to never block service operations.
 
 import logging
 from datetime import datetime
-from typing import Optional
 
-from app.websocket.socket_server import sio, GLOBAL_ROOM, wallet_room, WS_NAMESPACES
+from app.websocket.socket_server import sio, GLOBAL_ROOM, WS_NAMESPACES
 from app.websocket.events import (
     EventType,
     DistributionExecutedPayload,
     PoolUpdatedPayload,
     LeaderboardUpdatedPayload,
     SnapshotTakenPayload,
-    TierChangedPayload,
-    SellDetectedPayload,
     TopRecipient,
 )
 
@@ -39,25 +36,6 @@ async def broadcast_global(event: str, data: dict) -> None:
         logger.debug(f"Broadcast to global: {event}")
     except Exception as e:
         logger.warning(f"WebSocket broadcast failed (global): {event} - {e}")
-
-
-async def broadcast_to_wallet(wallet: str, event: str, data: dict) -> None:
-    """
-    Broadcast an event to clients subscribed to a specific wallet on all namespaces.
-
-    Args:
-        wallet: Wallet address.
-        event: Event name.
-        data: Event payload.
-    """
-    try:
-        room = wallet_room(wallet)
-        # Emit to all supported namespaces
-        for ns in WS_NAMESPACES:
-            await sio.emit(event, data, room=room, namespace=ns)
-        logger.debug(f"Broadcast to wallet {wallet[:8]}...: {event}")
-    except Exception as e:
-        logger.warning(f"WebSocket broadcast failed (wallet): {event} - {e}")
 
 
 # ============================================================================
@@ -82,7 +60,7 @@ async def emit_distribution_executed(
         pool_amount: Total pool amount distributed (raw tokens).
         pool_value_usd: Pool value in USD.
         recipient_count: Total number of recipients.
-        trigger_type: 'threshold' or 'time'.
+        trigger_type: 'hourly' or 'manual'.
         top_recipients: List of (wallet, amount, rank) tuples for top 5.
         executed_at: When the distribution was executed.
     """
@@ -103,9 +81,7 @@ async def emit_distribution_executed(
 async def emit_pool_updated(
     balance: int,
     value_usd: float,
-    progress_to_threshold: float,
-    threshold_met: bool,
-    hours_until_time_trigger: Optional[float] = None,
+    ready_to_distribute: bool,
 ) -> None:
     """
     Emit pool:updated event to all clients.
@@ -113,16 +89,12 @@ async def emit_pool_updated(
     Args:
         balance: Current pool balance (raw tokens).
         value_usd: Current pool value in USD.
-        progress_to_threshold: Progress percentage (0-100).
-        threshold_met: Whether the threshold has been met.
-        hours_until_time_trigger: Hours until time-based trigger.
+        ready_to_distribute: Whether the pool has balance to distribute.
     """
     payload = PoolUpdatedPayload(
         balance=balance,
         value_usd=float(value_usd),
-        progress_to_threshold=progress_to_threshold,
-        threshold_met=threshold_met,
-        hours_until_time_trigger=hours_until_time_trigger,
+        ready_to_distribute=ready_to_distribute,
     )
     await broadcast_global(EventType.POOL_UPDATED.value, payload.to_dict())
 
@@ -148,65 +120,3 @@ async def emit_snapshot_taken(snapshot_at: datetime) -> None:
         snapshot_at=snapshot_at.isoformat(),
     )
     await broadcast_global(EventType.SNAPSHOT_TAKEN.value, payload.to_dict())
-
-
-# ============================================================================
-# Wallet Room Event Emitters
-# ============================================================================
-
-
-async def emit_tier_changed(
-    wallet: str,
-    old_tier: int,
-    new_tier: int,
-    new_tier_name: str,
-    new_multiplier: float,
-    is_upgrade: bool,
-) -> None:
-    """
-    Emit tier:changed event to a specific wallet's room.
-
-    Args:
-        wallet: Wallet address.
-        old_tier: Previous tier number.
-        new_tier: New tier number.
-        new_tier_name: Name of the new tier.
-        new_multiplier: New tier multiplier.
-        is_upgrade: True if upgrade, False if downgrade.
-    """
-    payload = TierChangedPayload(
-        wallet=wallet,
-        old_tier=old_tier,
-        new_tier=new_tier,
-        new_tier_name=new_tier_name,
-        new_multiplier=new_multiplier,
-        is_upgrade=is_upgrade,
-    )
-    await broadcast_to_wallet(wallet, EventType.TIER_CHANGED.value, payload.to_dict())
-
-
-async def emit_sell_detected(
-    wallet: str,
-    old_tier: int,
-    new_tier: int,
-    tx_signature: Optional[str] = None,
-    amount_sold: Optional[int] = None,
-) -> None:
-    """
-    Emit sell:detected event to a specific wallet's room.
-
-    Args:
-        wallet: Wallet address that sold.
-        old_tier: Tier before the sell.
-        new_tier: Tier after the sell.
-        tx_signature: Transaction signature if available.
-        amount_sold: Amount sold in raw tokens if available.
-    """
-    payload = SellDetectedPayload(
-        wallet=wallet,
-        tx_signature=tx_signature,
-        amount_sold=amount_sold,
-        old_tier=old_tier,
-        new_tier=new_tier,
-    )
-    await broadcast_to_wallet(wallet, EventType.SELL_DETECTED.value, payload.to_dict())

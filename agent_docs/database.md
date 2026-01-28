@@ -6,8 +6,7 @@
 |-------|---------|
 | `snapshots` | Balance snapshot metadata |
 | `balances` | Per-wallet balance at each snapshot |
-| `hold_streaks` | Tier tracking per wallet |
-| `creator_rewards` | Incoming Pump.fun rewards |
+| `creator_rewards` | Incoming Pump.fun rewards (DEPRECATED - see note) |
 | `buybacks` | Jupiter swap records |
 | `distributions` | Distribution cycles |
 | `distribution_recipients` | Per-wallet distribution amounts |
@@ -33,15 +32,13 @@ wallet: String(44)
 balance: BigInteger
 ```
 
-### HoldStreak
-```python
-wallet: String(44) (PK)
-streak_start: DateTime
-current_tier: Integer (1-6)
-last_sell_at: DateTime (nullable)
-```
+### CreatorReward (DEPRECATED)
 
-### CreatorReward
+> **Note:** This table is deprecated. The buyback system now checks Creator Wallet
+> SOL balance directly via RPC (`HeliusService.get_sol_balance()`) instead of
+> tracking individual rewards in the database. The table is kept for backward
+> compatibility but is no longer actively used.
+
 ```python
 id: UUID (PK)
 amount_sol: BigInteger (lamports)
@@ -66,9 +63,9 @@ created_at: DateTime
 id: UUID (PK)
 pool_amount: BigInteger
 pool_value_usd: Float
-total_hashpower: Float
+total_supply: BigInteger
 recipient_count: Integer
-trigger_type: String (threshold/time/hourly)
+trigger_type: String (hourly/manual)
 created_at: DateTime
 ```
 
@@ -77,9 +74,7 @@ created_at: DateTime
 id: UUID (PK)
 distribution_id: UUID (FK → Distribution)
 wallet: String(44)
-twab: Float
-multiplier: Float
-hash_power: Float
+balance: BigInteger
 amount_received: BigInteger
 tx_signature: String
 ```
@@ -93,9 +88,9 @@ Located in `backend/migrations/`:
 | `001_initial.sql` | Complete schema with indexes |
 | `002_distribution_lock.sql` | Concurrency control |
 | `003_creator_rewards_unique_tx.sql` | Prevent webhook duplicates |
-| `004_twab_optimization.sql` | Query optimization indexes |
 | `005_add_manual_trigger.sql` | Manual distribution support |
 | `006_rename_copper_to_gold.sql` | Column rename |
+| `007_remove_twab_tiers.sql` | Simplified distribution (Balance / Total Supply) |
 
 ## Run Migrations
 

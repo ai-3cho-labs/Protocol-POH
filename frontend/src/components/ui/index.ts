@@ -39,7 +39,7 @@ export { Button } from './Button';
 export type { ButtonProps } from './Button';
 
 // Badge
-export { Badge, TierBadge, RankBadge, StatusBadge } from './Badge';
+export { Badge, RankBadge, StatusBadge } from './Badge';
 export type { BadgeProps } from './Badge';
 
 // Error

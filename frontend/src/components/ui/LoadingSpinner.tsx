@@ -19,7 +19,7 @@ export interface LoadingSpinnerProps {
 
 /**
  * Loading spinner component
- * Uses ASCII animation for terminal aesthetic
+ * Light theme design
  */
 export function LoadingSpinner({
   size = 'md',
@@ -50,7 +50,7 @@ export function LoadingSpinner({
       <div className={cn('flex items-center gap-2', className)}>
         <span
           className={cn(
-            'inline-block rounded-full bg-white animate-pulse',
+            'inline-block rounded-full bg-gray-900 animate-pulse',
             size === 'sm' && 'w-2 h-2',
             size === 'md' && 'w-3 h-3',
             size === 'lg' && 'w-4 h-4'
@@ -71,7 +71,7 @@ export function LoadingSpinner({
       aria-label={text || 'Loading'}
     >
       <span
-        className={cn('font-mono text-white', sizeClasses[size])}
+        className={cn('font-mono text-gray-900', sizeClasses[size])}
         aria-hidden="true"
       >
         {frames[frame]}

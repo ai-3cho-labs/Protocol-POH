@@ -383,8 +383,8 @@ class TestDistributionExclusion:
                     mock_pool_value.return_value = 500
 
                     # The distribution calculation should exclude wallet1
-                    # This is verified through the TWAB service which filters
-                    # based on balance records from snapshots
+                    # This is verified through the distribution service which filters
+                    # excluded wallets before calculating shares
 
 
 class TestKnownExclusionAddresses:

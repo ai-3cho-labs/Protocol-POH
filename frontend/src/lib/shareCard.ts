@@ -1,44 +1,18 @@
 /**
  * Share Card Generator
  * Creates a branded PNG image of user mining stats using Canvas API.
+ * Matches the modal preview design.
  */
 
 import type { UserMiningStats } from '@/types/models';
-import { branding, themeColors } from '@/config';
-import { formatCompactNumber, formatGOLD, shortenAddress } from './utils';
+import { branding } from '@/config';
+import { formatCompactNumber, shortenAddress } from './utils';
 
 // Card dimensions (optimized for social sharing)
-const CARD_WIDTH = 800;
+const CARD_WIDTH = 400;
 const CARD_HEIGHT = 280;
-
-/**
- * Convert hex color to rgba string
- */
-function hexToRgba(hex: string, alpha: number): string {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!result || !result[1] || !result[2] || !result[3]) {
-    return `rgba(245, 158, 11, ${alpha})`; // fallback to amber
-  }
-  const r = parseInt(result[1], 16);
-  const g = parseInt(result[2], 16);
-  const b = parseInt(result[3], 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-// Colors matching the app theme (uses configurable accent)
-const COLORS = {
-  background: themeColors.background,
-  cardBg: 'rgba(255, 255, 255, 0.04)',
-  cardBorder: 'rgba(255, 255, 255, 0.08)',
-  accent: themeColors.accent,
-  accentLight: themeColors.accentLight,
-  accentMuted: `${themeColors.accent}b3`, // 70% opacity
-  white: '#ffffff',
-  gray300: '#d4d4d4',
-  gray400: '#a3a3a3',
-  gray500: '#737373',
-  gray600: '#525252',
-};
+const PADDING = 32;
+const BORDER_RADIUS = 16;
 
 /** Additional data for richer share cards */
 export interface ShareCardExtras {
@@ -77,45 +51,66 @@ function roundRect(
 }
 
 /**
- * Calculate percentile from rank and total
+ * Draw a pickaxe icon (Lucide Pickaxe using actual SVG paths)
  */
-function getPercentile(rank: number, total: number): string {
-  if (total <= 0 || rank <= 0) return '';
-  const percentile = (rank / total) * 100;
-  if (percentile <= 1) return 'Top 1%';
-  if (percentile <= 5) return 'Top 5%';
-  if (percentile <= 10) return 'Top 10%';
-  if (percentile <= 25) return 'Top 25%';
-  if (percentile <= 50) return 'Top 50%';
-  return '';
+function drawPickaxe(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  color: string,
+  fill = false
+) {
+  ctx.save();
+  ctx.translate(x, y);
+
+  const scale = size / 24; // Lucide icons are 24x24
+  ctx.scale(scale, scale);
+
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  // Path 1: Handle
+  const p1 = new Path2D('m14 13-8.381 8.38a1 1 0 0 1-3.001-3L11 9.999');
+  // Path 2: Left curve
+  const p2 = new Path2D('M15.973 4.027A13 13 0 0 0 5.902 2.373c-1.398.342-1.092 2.158.277 2.601a19.9 19.9 0 0 1 5.822 3.024');
+  // Path 3: Right curve
+  const p3 = new Path2D('M16.001 11.999a19.9 19.9 0 0 1 3.024 5.824c.444 1.369 2.26 1.676 2.603.278A13 13 0 0 0 20 8.069');
+  // Path 4: Head rectangle
+  const p4 = new Path2D('M18.352 3.352a1.205 1.205 0 0 0-1.704 0l-5.296 5.296a1.205 1.205 0 0 0 0 1.704l2.296 2.296a1.205 1.205 0 0 0 1.704 0l5.296-5.296a1.205 1.205 0 0 0 0-1.704z');
+
+  if (fill) {
+    ctx.fill(p1);
+    ctx.fill(p2);
+    ctx.fill(p3);
+    ctx.fill(p4);
+  }
+  ctx.stroke(p1);
+  ctx.stroke(p2);
+  ctx.stroke(p3);
+  ctx.stroke(p4);
+
+  ctx.restore();
 }
 
 /**
- * Draw decorative grid pattern (subtle)
+ * Format USD value
  */
-function drawGridPattern(ctx: CanvasRenderingContext2D) {
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.015)';
-  ctx.lineWidth = 1;
-
-  const gridSize = 40;
-
-  for (let x = gridSize; x < CARD_WIDTH; x += gridSize) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, CARD_HEIGHT);
-    ctx.stroke();
-  }
-
-  for (let y = gridSize; y < CARD_HEIGHT; y += gridSize) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(CARD_WIDTH, y);
-    ctx.stroke();
-  }
+function formatUSD(value: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
 /**
  * Generate a share card image from user stats
+ * Matches the modal preview design
  */
 export async function generateShareCard(
   stats: UserMiningStats,
@@ -126,172 +121,79 @@ export async function generateShareCard(
   canvas.height = CARD_HEIGHT;
   const ctx = canvas.getContext('2d')!;
 
-  // === BACKGROUND ===
-  ctx.fillStyle = COLORS.background;
-  ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
+  // === BLACK BACKGROUND WITH ROUNDED CORNERS ===
+  ctx.fillStyle = '#000000';
+  roundRect(ctx, 0, 0, CARD_WIDTH, CARD_HEIGHT, BORDER_RADIUS);
+  ctx.fill();
 
-  // Subtle gradient
-  const bgGradient = ctx.createLinearGradient(0, 0, CARD_WIDTH, CARD_HEIGHT);
-  bgGradient.addColorStop(0, hexToRgba(themeColors.accent, 0.02));
-  bgGradient.addColorStop(1, 'transparent');
-  ctx.fillStyle = bgGradient;
-  ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
+  // === DECORATIVE PICKAXE (top right, faded) ===
+  drawPickaxe(ctx, CARD_WIDTH - 140, 20, 120, 'rgba(255, 255, 255, 0.08)');
 
-  // Grid pattern
-  drawGridPattern(ctx);
+  // === HEADER: Logo + "PROTOCOL TERMINAL" ===
+  const headerY = PADDING + 8;
 
-  // === HEADER ===
-  const headerY = 36;
+  // Small white box with pickaxe icon
+  ctx.fillStyle = '#ffffff';
+  roundRect(ctx, PADDING, PADDING, 28, 28, 6);
+  ctx.fill();
+  drawPickaxe(ctx, PADDING + 4, PADDING + 4, 20, '#000000');
 
-  // Logo/Brand
-  ctx.fillStyle = COLORS.white;
-  ctx.font = 'bold 28px Inter, system-ui, sans-serif';
+  // "PROTOCOL TERMINAL" text
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 14px Inter, system-ui, sans-serif';
   ctx.textAlign = 'left';
-  ctx.fillText(branding.holdToken.symbol, 40, headerY + 6);
+  ctx.fillText('PROTOCOL TERMINAL', PADDING + 40, headerY + 10);
 
-  // Tagline
-  ctx.fillStyle = COLORS.gray500;
-  ctx.font = '500 13px Inter, system-ui, sans-serif';
-  ctx.fillText('Mining Stats', 100, headerY + 4);
+  // === MAIN CONTENT: "TOTAL CLAIMED" + USD VALUE ===
+  const mainY = 90;
 
-  // User wallet address
-  ctx.fillStyle = COLORS.accent;
-  ctx.font = '600 13px Inter, system-ui, sans-serif';
-  ctx.textAlign = 'right';
-  ctx.fillText(shortenAddress(stats.wallet, 4), CARD_WIDTH - 40, headerY + 4);
+  // Label
+  ctx.fillStyle = '#9ca3af'; // gray-400
+  ctx.font = 'bold 11px Inter, system-ui, sans-serif';
+  ctx.fillText('TOTAL CLAIMED', PADDING, mainY);
 
-  // === MAIN CONTENT - 3 Stat Cards ===
-  const cardY = 70;
-  const cardHeight = 130;
-  const cardGap = 16;
-  const totalWidth = CARD_WIDTH - 80; // 40px padding each side
-  const cardWidth = (totalWidth - cardGap * 2) / 3;
-  const startX = 40;
+  // USD Value (gold gradient effect - simulate with solid gold)
+  const totalUsd = extras?.lifetimeEarningsUsd ?? 0;
+  ctx.fillStyle = '#fbbf24'; // yellow-400/gold
+  ctx.font = 'bold 48px Inter, system-ui, sans-serif';
+  ctx.fillText(formatUSD(totalUsd), PADDING, mainY + 55);
 
-  // Card 1: Pending Rewards (accent glow)
-  roundRect(ctx, startX, cardY, cardWidth, cardHeight, 16);
-  ctx.fillStyle = hexToRgba(themeColors.accent, 0.08);
-  ctx.fill();
-  ctx.strokeStyle = hexToRgba(themeColors.accent, 0.2);
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  ctx.textAlign = 'center';
-  ctx.fillStyle = COLORS.gray400;
-  ctx.font = '600 11px Inter, system-ui, sans-serif';
-  ctx.fillText('PENDING REWARDS', startX + cardWidth / 2, cardY + 28);
-
-  ctx.fillStyle = COLORS.accentLight;
-  ctx.font = 'bold 32px Inter, system-ui, sans-serif';
-  const pendingValue = stats.pendingReward >= 1
-    ? `+${formatCompactNumber(Math.floor(stats.pendingReward))}`
-    : `+${formatGOLD(stats.pendingReward)}`;
-  ctx.fillText(pendingValue, startX + cardWidth / 2, cardY + 70);
-
-  ctx.fillStyle = COLORS.gray500;
-  ctx.font = '500 13px Inter, system-ui, sans-serif';
-  ctx.fillText(`$${branding.rewardToken.symbol}`, startX + cardWidth / 2, cardY + 92);
-
-  ctx.fillStyle = COLORS.gray400;
-  ctx.font = '600 14px Inter, system-ui, sans-serif';
-  const pendingUsdText = extras?.pendingRewardUsd !== undefined
-    ? `$${extras.pendingRewardUsd.toFixed(2)}`
-    : '$0.00';
-  ctx.fillText(pendingUsdText, startX + cardWidth / 2, cardY + 114);
-
-  // Card 2: Rank
-  const rankCardX = startX + cardWidth + cardGap;
-  roundRect(ctx, rankCardX, cardY, cardWidth, cardHeight, 16);
-  ctx.fillStyle = COLORS.cardBg;
-  ctx.fill();
-  ctx.strokeStyle = COLORS.cardBorder;
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  ctx.fillStyle = COLORS.gray400;
-  ctx.font = '600 11px Inter, system-ui, sans-serif';
-  ctx.fillText('RANK', rankCardX + cardWidth / 2, cardY + 28);
-
-  ctx.fillStyle = COLORS.white;
-  ctx.font = 'bold 32px Inter, system-ui, sans-serif';
-  const rankDisplay = stats.rank ? `#${stats.rank}` : '-';
-  ctx.fillText(rankDisplay, rankCardX + cardWidth / 2, cardY + 70);
-
-  // Percentile badge
-  if (extras?.totalHolders && stats.rank) {
-    const percentile = getPercentile(stats.rank, extras.totalHolders);
-    if (percentile) {
-      ctx.fillStyle = COLORS.accent;
-      ctx.font = '600 14px Inter, system-ui, sans-serif';
-      ctx.fillText(percentile, rankCardX + cardWidth / 2, cardY + 100);
-    } else {
-      ctx.fillStyle = COLORS.gray500;
-      ctx.font = '500 13px Inter, system-ui, sans-serif';
-      ctx.fillText('Leaderboard', rankCardX + cardWidth / 2, cardY + 100);
-    }
-  } else {
-    ctx.fillStyle = COLORS.gray500;
-    ctx.font = '500 13px Inter, system-ui, sans-serif';
-    ctx.fillText('Leaderboard', rankCardX + cardWidth / 2, cardY + 100);
-  }
-
-  // Card 3: Total Mined
-  const thirdCardX = rankCardX + cardWidth + cardGap;
-  roundRect(ctx, thirdCardX, cardY, cardWidth, cardHeight, 16);
-  ctx.fillStyle = COLORS.cardBg;
-  ctx.fill();
-  ctx.strokeStyle = COLORS.cardBorder;
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  ctx.fillStyle = COLORS.gray400;
-  ctx.font = '600 11px Inter, system-ui, sans-serif';
-  ctx.fillText('TOTAL MINED', thirdCardX + cardWidth / 2, cardY + 28);
-
-  ctx.fillStyle = COLORS.white;
-  ctx.font = 'bold 32px Inter, system-ui, sans-serif';
-  const totalMinedGold = extras?.lifetimeEarnings !== undefined && extras.lifetimeEarnings > 0
-    ? (extras.lifetimeEarnings >= 1 ? formatCompactNumber(extras.lifetimeEarnings) : formatGOLD(extras.lifetimeEarnings))
-    : '0.00';
-  ctx.fillText(totalMinedGold, thirdCardX + cardWidth / 2, cardY + 70);
-
-  ctx.fillStyle = COLORS.gray500;
-  ctx.font = '500 13px Inter, system-ui, sans-serif';
-  ctx.fillText(`$${branding.rewardToken.symbol}`, thirdCardX + cardWidth / 2, cardY + 92);
-
-  ctx.fillStyle = COLORS.gray400;
-  ctx.font = '600 14px Inter, system-ui, sans-serif';
-  const totalMinedUsd = extras?.lifetimeEarningsUsd !== undefined && extras.lifetimeEarningsUsd > 0
-    ? `$${extras.lifetimeEarningsUsd.toFixed(2)}`
-    : '$0.00';
-  ctx.fillText(totalMinedUsd, thirdCardX + cardWidth / 2, cardY + 114);
-
-  // === FOOTER ===
-  const footerY = CARD_HEIGHT - 36;
+  // === FOOTER: Miner + Holdings ===
+  const footerY = CARD_HEIGHT - 70;
 
   // Divider line
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(40, footerY);
-  ctx.lineTo(CARD_WIDTH - 40, footerY);
+  ctx.moveTo(PADDING, footerY);
+  ctx.lineTo(CARD_WIDTH - PADDING, footerY);
   ctx.stroke();
 
-  // Footer content
-  ctx.fillStyle = COLORS.gray600;
-  ctx.font = '500 12px Inter, system-ui, sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText(`https://${branding.domain}/`, 40, footerY + 24);
+  // Two columns
+  const col1X = PADDING;
+  const col2X = CARD_WIDTH / 2 + 10;
+  const labelY = footerY + 24;
+  const valueY = footerY + 44;
 
-  // Timestamp
-  ctx.textAlign = 'right';
-  const now = new Date();
-  const timestamp = now.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  });
-  ctx.fillText(timestamp, CARD_WIDTH - 40, footerY + 24);
+  // Column 1: Miner
+  ctx.fillStyle = '#6b7280'; // gray-500
+  ctx.font = 'bold 10px Inter, system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('MINER', col1X, labelY);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '500 14px monospace';
+  ctx.fillText(shortenAddress(stats.wallet, 4), col1X, valueY);
+
+  // Column 2: Holdings
+  ctx.fillStyle = '#6b7280';
+  ctx.font = 'bold 10px Inter, system-ui, sans-serif';
+  ctx.fillText('HOLDINGS', col2X, labelY);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '500 14px monospace';
+  const holdingsText = `${formatCompactNumber(stats.balance)} ${branding.holdToken.symbol}`;
+  ctx.fillText(holdingsText, col2X, valueY);
 
   // Convert to blob
   return new Promise((resolve, reject) => {

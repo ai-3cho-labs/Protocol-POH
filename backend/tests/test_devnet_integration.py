@@ -53,7 +53,6 @@ def get_devnet_settings():
         helius_api_key=os.getenv("HELIUS_API_KEY", ""),
         copper_token_mint=os.getenv("COPPER_TOKEN_MINT", ""),
         creator_wallet_private_key=os.getenv("CREATOR_WALLET_PRIVATE_KEY", ""),
-        team_wallet_public_key=os.getenv("TEAM_WALLET_PUBLIC_KEY", ""),
     )
 
 

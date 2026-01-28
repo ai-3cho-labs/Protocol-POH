@@ -15,13 +15,13 @@ const NAV_LINKS = [
 
 /**
  * Desktop header with navigation
- * Monochrome terminal aesthetic with frosted glass
+ * Light modern aesthetic
  */
 export function Header() {
   const pathname = usePathname();
 
   return (
-    <header className="hidden lg:block border-b border-terminal-border bg-bg-dark/80 backdrop-blur-[4px] sticky top-0 z-40">
+    <header className="hidden lg:block border-b border-gray-100 bg-white/80 backdrop-blur-[4px] sticky top-0 z-40">
       <div className="container mx-auto px-6">
         <div className="relative flex items-center justify-between h-16">
           {/* Logo - Left */}
@@ -46,13 +46,12 @@ export function Header() {
                   href={link.href}
                   prefetch={false}
                   className={cn(
-                    'px-4 py-2 text-sm font-mono rounded transition-colors',
+                    'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
                     isActive
-                      ? 'text-white bg-white/10'
-                      : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50'
+                      ? 'text-gray-900 bg-gray-100'
+                      : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
                   )}
                 >
-                  {isActive && <span className="text-gray-500 mr-1">&gt;</span>}
                   {link.label}
                 </Link>
               );

@@ -76,10 +76,12 @@ class TaskStatusResponse(BaseModel):
 
 
 class PendingRewardsResponse(BaseModel):
-    """Response for pending rewards."""
-    count: int
-    total_sol: float
-    rewards: list[dict]
+    """Response for pending rewards (Creator Wallet balance)."""
+    creator_wallet_address: str
+    creator_wallet_balance_sol: float
+    creator_wallet_balance_lamports: int
+    min_threshold_sol: float
+    ready_to_process: bool
 
 
 class PoolBalanceResponse(BaseModel):
@@ -129,7 +131,7 @@ async def trigger_snapshot(
     """
     Manually trigger a balance snapshot.
 
-    Takes a snapshot of all holder balances for TWAB calculation.
+    Takes a snapshot of all holder balances for analytics.
     """
     from app.tasks.snapshot_task import take_snapshot
 
@@ -229,27 +231,36 @@ async def get_pending_rewards(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    View unprocessed creator rewards waiting for buyback.
+    View Creator Wallet SOL balance (pending rewards waiting for buyback).
+
+    The buyback system now checks Creator Wallet balance directly via RPC
+    instead of tracking individual rewards in the database.
     """
     from app.services.buyback import BuybackService
+    from app.utils.solana_tx import keypair_from_base58
+    from decimal import Decimal
 
+    if not settings.creator_wallet_private_key:
+        raise HTTPException(status_code=503, detail="Creator wallet not configured")
+
+    # Get creator wallet address
+    keypair = keypair_from_base58(settings.creator_wallet_private_key)
+    creator_address = str(keypair.pubkey())
+
+    # Get balance via BuybackService
     service = BuybackService(db)
-    rewards = await service.get_unprocessed_rewards()
-    total_sol = sum(r.amount_sol for r in rewards)
+    balance_sol = await service.get_creator_wallet_balance()
+    balance_lamports = int(balance_sol * LAMPORTS_PER_SOL)
+
+    min_threshold = Decimal(str(settings.buyback_min_sol_threshold))
+    ready_to_process = balance_sol >= min_threshold
 
     return PendingRewardsResponse(
-        count=len(rewards),
-        total_sol=float(total_sol),
-        rewards=[
-            {
-                "id": str(r.id),
-                "amount_sol": float(r.amount_sol),
-                "source": r.source,
-                "received_at": r.received_at.isoformat() if r.received_at else None,
-                "tx_signature": r.tx_signature,
-            }
-            for r in rewards
-        ]
+        creator_wallet_address=creator_address,
+        creator_wallet_balance_sol=float(balance_sol),
+        creator_wallet_balance_lamports=balance_lamports,
+        min_threshold_sol=float(min_threshold),
+        ready_to_process=ready_to_process,
     )
 
 
@@ -283,7 +294,7 @@ async def get_distribution_preview(
             "status": "preview",
             "pool_amount": plan.pool_amount,
             "pool_value_usd": float(plan.pool_value_usd),
-            "total_hashpower": float(plan.total_hashpower),
+            "total_supply": plan.total_supply,
             "recipient_count": plan.recipient_count,
             "trigger_type": plan.trigger_type,
             "top_recipients": [

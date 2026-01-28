@@ -5,7 +5,6 @@ import { useWalletAddress } from '@/hooks/useWallet';
 import { PageContainer } from '@/components/layout';
 import {
   TerminalCard,
-  TierBadge,
   RankBadge,
   Button,
   Skeleton,
@@ -14,34 +13,8 @@ import { useLeaderboard } from '@/hooks/api';
 import { formatCompactNumber } from '@/lib/utils';
 import { cn } from '@/lib/cn';
 import type { LeaderboardUser } from '@/types/models';
-import { TIER_CONFIG, type TierId } from '@/types/models';
 
 const ITEMS_PER_PAGE = 25;
-
-/**
- * TierBadgeCircle - Circular tier badge with color styling
- */
-function TierBadgeCircle({ tier, size = 'md' }: { tier: TierId; size?: 'sm' | 'md' | 'lg' }) {
-  const config = TIER_CONFIG[tier];
-  const sizeClasses = {
-    sm: 'w-6 h-6 text-[10px]',
-    md: 'w-8 h-8 text-xs',
-    lg: 'w-10 h-10 text-sm',
-  };
-
-  return (
-    <div
-      className={cn(
-        'rounded-full flex items-center justify-center font-bold flex-shrink-0',
-        sizeClasses[size],
-        config.bgColor,
-        config.color
-      )}
-    >
-      {config.label}
-    </div>
-  );
-}
 
 export default function LeaderboardPage() {
   const wallet = useWalletAddress();
@@ -65,7 +38,7 @@ export default function LeaderboardPage() {
         <div className="text-center">
           <h1 className="text-xl font-bold text-white">Leaderboard</h1>
           <p className="text-xs text-gray-500 mt-1">
-            Top miners by Hash Power
+            Top holders by Balance
           </p>
         </div>
 
@@ -88,8 +61,8 @@ export default function LeaderboardPage() {
             ))
           ) : data?.length === 0 ? (
             <div className="py-12 text-center text-gray-500">
-              <div className="text-3xl mb-2">🏆</div>
-              <p className="text-sm">No miners yet</p>
+              <div className="text-3xl mb-2">[EMPTY]</div>
+              <p className="text-sm">No holders yet</p>
               <p className="text-xs text-gray-600 mt-1">Be the first!</p>
             </div>
           ) : null}
@@ -117,7 +90,7 @@ export default function LeaderboardPage() {
             LEADERBOARD
           </h1>
           <p className="text-sm text-zinc-500 mt-1">
-            Top miners ranked by Hash Power (TWAB × Multiplier)
+            Top holders ranked by Balance
           </p>
         </div>
 
@@ -126,10 +99,8 @@ export default function LeaderboardPage() {
           {/* Desktop Header */}
           <div className="grid grid-cols-12 gap-4 px-4 py-3 border-b border-terminal-border font-mono text-sm text-gray-500">
             <div className="col-span-1">RANK</div>
-            <div className="col-span-5">MINER</div>
-            <div className="col-span-2 text-center">TIER</div>
-            <div className="col-span-2 text-right">MULTIPLIER</div>
-            <div className="col-span-2 text-right">HASH POWER</div>
+            <div className="col-span-7">HOLDER</div>
+            <div className="col-span-4 text-right">BALANCE</div>
           </div>
 
           {/* Rows */}
@@ -144,7 +115,7 @@ export default function LeaderboardPage() {
               ))
             ) : (
               <div className="px-4 py-12 text-center text-zinc-500">
-                No miners on the leaderboard yet
+                No holders on the leaderboard yet
               </div>
             )}
           </div>
@@ -169,7 +140,7 @@ export default function LeaderboardPage() {
 }
 
 /**
- * Mobile Podium - Featured top 3 miners
+ * Mobile Podium - Featured top 3 holders
  */
 function MobilePodium({ entries }: { entries: LeaderboardUser[] }) {
   // Reorder for podium: 2nd, 1st, 3rd
@@ -191,8 +162,19 @@ function MobilePodium({ entries }: { entries: LeaderboardUser[] }) {
         >
           {entry && (
             <>
-              {/* Tier badge */}
-              <TierBadgeCircle tier={entry.tier.tier as TierId} size="lg" />
+              {/* Rank badge */}
+              <div
+                className={cn(
+                  'w-10 h-10 rounded-full flex items-center justify-center font-bold flex-shrink-0',
+                  ranks[idx] === 1
+                    ? 'bg-amber-500/30 text-amber-400'
+                    : ranks[idx] === 2
+                    ? 'bg-gray-400/20 text-gray-300'
+                    : 'bg-amber-700/20 text-amber-600'
+                )}
+              >
+                #{ranks[idx]}
+              </div>
 
               {/* Wallet */}
               <span
@@ -204,9 +186,9 @@ function MobilePodium({ entries }: { entries: LeaderboardUser[] }) {
                 {entry.isCurrentUser ? 'You' : entry.walletShort}
               </span>
 
-              {/* Hash Power */}
+              {/* Balance */}
               <span className="text-[10px] text-gray-500 mb-2">
-                {formatCompactNumber(entry.hashPower)} H/s
+                {formatCompactNumber(entry.balance)}
               </span>
 
               {/* Podium bar */}
@@ -296,10 +278,7 @@ function MobileRow({ entry }: { entry: LeaderboardUser }) {
         </span>
       </div>
 
-      {/* Tier badge */}
-      <TierBadgeCircle tier={entry.tier.tier as TierId} size="md" />
-
-      {/* Wallet + Multiplier */}
+      {/* Wallet */}
       <div className="flex-1 min-w-0">
         <div
           className={cn(
@@ -309,12 +288,9 @@ function MobileRow({ entry }: { entry: LeaderboardUser }) {
         >
           {entry.isCurrentUser ? 'You' : entry.walletShort}
         </div>
-        <div className="text-[10px] text-gray-500">
-          {entry.tier.name} · {entry.multiplier.toFixed(1)}x
-        </div>
       </div>
 
-      {/* Hash Power */}
+      {/* Balance */}
       <div className="text-right flex-shrink-0">
         <div
           className={cn(
@@ -322,9 +298,8 @@ function MobileRow({ entry }: { entry: LeaderboardUser }) {
             entry.isCurrentUser ? 'text-amber-400' : 'text-white'
           )}
         >
-          {formatCompactNumber(entry.hashPower)}
+          {formatCompactNumber(entry.balance)}
         </div>
-        <div className="text-[10px] text-gray-500">H/s</div>
       </div>
     </div>
   );
@@ -334,14 +309,11 @@ function MobileRowSkeleton() {
   return (
     <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/5">
       <Skeleton className="h-4 w-8" />
-      <Skeleton className="h-6 w-6 rounded-full" />
       <div className="flex-1">
         <Skeleton className="h-4 w-24 mb-1" />
-        <Skeleton className="h-2.5 w-16" />
       </div>
       <div className="text-right">
-        <Skeleton className="h-4 w-14 mb-1" />
-        <Skeleton className="h-2.5 w-8 ml-auto" />
+        <Skeleton className="h-4 w-14" />
       </div>
     </div>
   );
@@ -365,7 +337,7 @@ function DesktopRow({ entry }: { entry: LeaderboardUser }) {
       </div>
 
       {/* Wallet */}
-      <div className="col-span-5">
+      <div className="col-span-7">
         <div className="flex items-center gap-2">
           <span
             className={cn(
@@ -381,27 +353,15 @@ function DesktopRow({ entry }: { entry: LeaderboardUser }) {
         </div>
       </div>
 
-      {/* Tier */}
-      <div className="col-span-2 flex justify-center">
-        <TierBadge tier={entry.tier} size="sm" />
-      </div>
-
-      {/* Multiplier */}
-      <div className="col-span-2 text-right">
-        <span className="text-sm text-zinc-400 font-mono">
-          {entry.multiplier.toFixed(1)}x
-        </span>
-      </div>
-
-      {/* Hash Power */}
-      <div className="col-span-2 text-right">
+      {/* Balance */}
+      <div className="col-span-4 text-right">
         <span
           className={cn(
             'text-sm font-medium tabular-nums font-mono',
             entry.isCurrentUser ? 'text-white glow-white' : 'text-white'
           )}
         >
-          {formatCompactNumber(entry.hashPower)}
+          {formatCompactNumber(entry.balance)}
         </span>
       </div>
     </div>
@@ -414,16 +374,10 @@ function DesktopRowSkeleton() {
       <div className="col-span-1">
         <Skeleton className="h-6 w-10 rounded-full" />
       </div>
-      <div className="col-span-5">
+      <div className="col-span-7">
         <Skeleton className="h-5 w-24" />
       </div>
-      <div className="col-span-2 flex justify-center">
-        <Skeleton className="h-6 w-20 rounded-full" />
-      </div>
-      <div className="col-span-2">
-        <Skeleton className="h-5 w-10 ml-auto" />
-      </div>
-      <div className="col-span-2">
+      <div className="col-span-4">
         <Skeleton className="h-5 w-16 ml-auto" />
       </div>
     </div>

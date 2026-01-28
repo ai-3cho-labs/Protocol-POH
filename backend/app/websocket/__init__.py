@@ -23,20 +23,15 @@ from app.websocket.events import (
     PoolUpdatedPayload,
     LeaderboardUpdatedPayload,
     SnapshotTakenPayload,
-    TierChangedPayload,
-    SellDetectedPayload,
 )
 
 # Broadcaster functions
 from app.websocket.broadcaster import (
     broadcast_global,
-    broadcast_to_wallet,
     emit_distribution_executed,
     emit_pool_updated,
     emit_leaderboard_updated,
     emit_snapshot_taken,
-    emit_tier_changed,
-    emit_sell_detected,
 )
 
 # Handlers are registered via decorators in handlers.py
@@ -59,15 +54,10 @@ __all__ = [
     "PoolUpdatedPayload",
     "LeaderboardUpdatedPayload",
     "SnapshotTakenPayload",
-    "TierChangedPayload",
-    "SellDetectedPayload",
     # Broadcasters
     "broadcast_global",
-    "broadcast_to_wallet",
     "emit_distribution_executed",
     "emit_pool_updated",
     "emit_leaderboard_updated",
     "emit_snapshot_taken",
-    "emit_tier_changed",
-    "emit_sell_detected",
 ]

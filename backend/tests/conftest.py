@@ -19,7 +19,7 @@ from sqlalchemy.pool import StaticPool
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 
 from app.database import Base
-from app.models import Snapshot, Balance, HoldStreak, Distribution, DistributionRecipient
+from app.models import Snapshot, Balance, Distribution, DistributionRecipient
 from app.config import Settings
 
 
@@ -108,14 +108,10 @@ def mock_settings():
     settings.is_production = False
     settings.is_devnet = True
     settings.copper_token_mint = "TestTokenMint111111111111111111111111111"
-    settings.team_wallet_public_key = "TestTeamWallet1111111111111111111111111"
     settings.creator_wallet_private_key = "TestPrivateKey111111111111111111111111111111111111111111111111111111"
     settings.airdrop_pool_private_key = "TestPoolKey1111111111111111111111111111111111111111111111111111111"
     settings.helius_api_key = "test-api-key"
     settings.helius_rpc_url = "https://devnet.helius-rpc.com"
-    settings.distribution_threshold_usd = Decimal("250")
-    settings.distribution_max_hours = 24
-    settings.min_balance_usd = Decimal("50")
     settings.redis_url = None
     settings.sentry_dsn = None
     return settings
@@ -142,19 +138,8 @@ def sample_balances():
     ]
 
 
-@pytest.fixture
-def sample_streaks():
-    """Generate sample hold streak data for testing."""
-    now = datetime.now(timezone.utc)
-    return [
-        {"wallet": "11111111111111111111111111111111111111111111", "current_tier": 3, "streak_start": now - timedelta(hours=24)},
-        {"wallet": "22222222222222222222222222222222222222222222", "current_tier": 2, "streak_start": now - timedelta(hours=12)},
-        {"wallet": "33333333333333333333333333333333333333333333", "current_tier": 1, "streak_start": now - timedelta(hours=1)},
-    ]
-
-
 @pytest_asyncio.fixture
-async def populated_db(db_session, sample_snapshot_data, sample_balances, sample_streaks):
+async def populated_db(db_session, sample_snapshot_data, sample_balances):
     """Populate database with sample data for testing."""
     now = datetime.now(timezone.utc)
 
@@ -176,15 +161,6 @@ async def populated_db(db_session, sample_snapshot_data, sample_balances, sample
                 balance=bal_data["balance"]
             )
             db_session.add(balance)
-
-    # Add streaks
-    for streak_data in sample_streaks:
-        streak = HoldStreak(
-            wallet=streak_data["wallet"],
-            current_tier=streak_data["current_tier"],
-            streak_start=streak_data["streak_start"]
-        )
-        db_session.add(streak)
 
     await db_session.commit()
 

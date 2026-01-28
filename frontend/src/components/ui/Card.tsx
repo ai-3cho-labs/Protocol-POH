@@ -12,12 +12,12 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   noPadding?: boolean;
   /** Header right content */
   headerRight?: ReactNode;
-  /** Add pixel accent border */
+  /** Add accent border */
   pixelAccent?: boolean;
 }
 
 /**
- * Card component with monochrome terminal aesthetic
+ * Card component with light modern aesthetic
  */
 export const Card = forwardRef<HTMLDivElement, CardProps>(
   (
@@ -38,16 +38,16 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
         ref={ref}
         className={cn(
           // Base styles
-          'rounded-lg overflow-hidden',
-          'bg-bg-card border border-border',
+          'rounded-xl overflow-hidden',
+          'bg-white border border-gray-100',
           // Shadow
-          'shadow-lg',
+          'shadow-sm',
           // Variant styles
-          variant === 'highlight' && 'border-gray-400 shadow-white-glow',
-          variant === 'success' && 'border-gray-300',
-          variant === 'error' && 'border-gray-500',
-          // Pixel accent
-          pixelAccent && 'border-2 border-gray-600',
+          variant === 'highlight' && 'border-gray-300 shadow-md',
+          variant === 'success' && 'border-emerald-200',
+          variant === 'error' && 'border-red-200',
+          // Accent border
+          pixelAccent && 'border-2 border-gray-200',
           className
         )}
         {...props}
@@ -56,14 +56,13 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
         {title && (
           <div
             className={cn(
-              'px-4 py-3 border-b border-border flex items-center justify-between',
-              'bg-bg-dark/50'
+              'px-4 py-3 border-b border-gray-100 flex items-center justify-between',
+              'bg-gray-50/50'
             )}
           >
             <span
               className={cn(
-                'font-medium text-sm text-white',
-                variant === 'highlight' && 'glow-white'
+                'font-medium text-sm text-gray-900'
               )}
             >
               {title}

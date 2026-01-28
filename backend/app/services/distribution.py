@@ -1,12 +1,12 @@
 """
 $GOLD Distribution Service
 
-Handles GOLD token distribution to CPU holders based on Hash Power.
-Triggers: Pool reaches $250 USD OR 24 hours since last distribution.
+Handles GOLD token distribution to POH holders based on current balance.
+Share = Balance / Total Supply
 """
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional
 from dataclasses import dataclass
@@ -21,8 +21,8 @@ from app.models import (
     DistributionRecipient,
     DistributionLock,
     SystemStats,
+    ExcludedWallet,
 )
-from app.services.twab import TWABService
 from app.services.helius import get_helius_service
 from app.utils.http_client import get_http_client
 from app.utils.solana_tx import send_spl_token_transfer, batch_confirm_transactions
@@ -45,9 +45,9 @@ class DistributionPlan:
 
     pool_amount: int  # Raw token amount
     pool_value_usd: Decimal
-    total_hashpower: Decimal
+    total_supply: int  # Total eligible supply
     recipient_count: int
-    trigger_type: str  # 'threshold' or 'time'
+    trigger_type: str  # 'hourly' or 'manual'
     recipients: list["RecipientShare"]
 
 
@@ -56,9 +56,7 @@ class RecipientShare:
     """Individual recipient's share in a distribution."""
 
     wallet: str
-    twab: int
-    multiplier: float
-    hash_power: Decimal
+    balance: int  # Current balance
     share_percentage: Decimal
     amount: int  # Raw token amount
 
@@ -72,9 +70,7 @@ class PoolStatus:
     value_usd: Decimal
     last_distribution: Optional[datetime]
     hours_since_last: Optional[float]
-    threshold_met: bool
-    time_trigger_met: bool
-    should_distribute: bool
+    should_distribute: bool  # True if pool has balance
 
 
 class DistributionService:
@@ -82,7 +78,6 @@ class DistributionService:
 
     def __init__(self, db: AsyncSession):
         self.db = db
-        self.twab_service = TWABService(db)
         self.helius = get_helius_service()
 
     @property
@@ -109,8 +104,7 @@ class DistributionService:
                 logger.warning("Airdrop pool wallet not configured")
                 return 0
 
-            # Use single-wallet balance fetch (1 RPC call) instead of
-            # fetching all token holders (many RPC calls for pagination)
+            # Use single-wallet balance fetch (1 RPC call)
             balance = await self.helius.get_token_balance(
                 pool_wallet, settings.gold_token_mint
             )
@@ -210,8 +204,7 @@ class DistributionService:
             delta = utc_now() - last_dist.executed_at
             hours_since = delta.total_seconds() / 3600
 
-        # Triggers removed - distribute whenever pool has balance
-        # Previously: threshold ($250 USD) or time (24h) triggers
+        # Distribute whenever pool has balance
         has_balance = balance > 0
 
         return PoolStatus(
@@ -220,16 +213,12 @@ class DistributionService:
             value_usd=value_usd,
             last_distribution=last_dist.executed_at if last_dist else None,
             hours_since_last=hours_since,
-            threshold_met=has_balance,  # Legacy field - now just checks balance > 0
-            time_trigger_met=has_balance,  # Legacy field - now just checks balance > 0
-            should_distribute=has_balance,  # Distribute if pool has any balance
+            should_distribute=has_balance,
         )
 
     async def should_distribute(self) -> tuple[bool, str]:
         """
         Check if distribution should be triggered.
-
-        Triggers removed - distribute whenever pool has balance.
 
         Returns:
             Tuple of (should_distribute, trigger_type).
@@ -237,7 +226,7 @@ class DistributionService:
         status = await self.get_pool_status()
 
         if status.should_distribute:
-            return True, "manual"  # Triggers removed - all distributions are manual now
+            return True, "hourly"
 
         return False, ""
 
@@ -246,6 +235,8 @@ class DistributionService:
     ) -> Optional[DistributionPlan]:
         """
         Calculate distribution shares for all eligible wallets.
+
+        Share = Balance / Total Supply
 
         Args:
             pool_amount: Override pool amount (for testing).
@@ -268,78 +259,63 @@ class DistributionService:
         if not should:
             trigger_type = "manual"  # Allow manual distributions
 
-        # Calculate period (since last distribution or 24h)
-        last_dist = await self.get_last_distribution()
-        end = utc_now()
+        # Fetch current holders from Helius
+        holders = await self.helius.get_token_accounts()
 
-        if last_dist:
-            start = last_dist.executed_at
-        else:
-            start = end - timedelta(hours=24)
+        if not holders:
+            logger.warning("No token holders found")
+            return None
 
-        # Calculate hash powers for all wallets (no minimum balance filter)
-        # All CPU token holders are eligible for GOLD distribution
-        hash_powers = await self.twab_service.calculate_all_hash_powers(
-            start, end, min_balance=0
-        )
+        # Filter excluded wallets
+        excluded_result = await self.db.execute(select(ExcludedWallet.wallet))
+        excluded = {w for (w,) in excluded_result.all()}
 
-        if not hash_powers:
+        # Filter eligible holders (not excluded, balance > 0)
+        eligible = [h for h in holders if h.wallet not in excluded and h.balance > 0]
+
+        if not eligible:
             logger.warning("No eligible wallets for distribution")
             return None
 
-        logger.info(f"Distribution: {len(hash_powers)} wallets with hash power")
+        logger.info(f"Distribution: {len(eligible)} eligible wallets")
 
-        # Calculate total hash power
-        total_hp = sum(hp.hash_power for hp in hash_powers)
+        # Calculate total supply of eligible holders
+        total_supply = sum(h.balance for h in eligible)
 
-        # SAFETY: Guard against division by zero
-        # This can happen if all wallets have 0 hash power (no TWAB or all at tier 1 with 0 balance)
-        if total_hp <= 0:
-            logger.warning(
-                "Total hash power is zero or negative, cannot calculate distribution shares"
-            )
+        if total_supply <= 0:
+            logger.warning("Total supply is zero, cannot calculate distribution shares")
             return None
 
-        # Calculate shares with precision remainder distribution
-        # First pass: calculate truncated amounts
+        # Calculate shares based on balance only
         recipients = []
-        for hp in hash_powers:
-            # SAFETY: total_hp is guaranteed > 0 here due to guard above
-            share_pct = hp.hash_power / total_hp
+        for holder in eligible:
+            share_pct = Decimal(holder.balance) / Decimal(total_supply)
             amount = int(Decimal(pool_amount) * share_pct)
 
-            # Include all recipients, even with 0 amount initially
-            # (they may receive remainder tokens)
             recipients.append(
                 RecipientShare(
-                    wallet=hp.wallet,
-                    twab=hp.twab,
-                    multiplier=hp.multiplier,
-                    hash_power=hp.hash_power,
+                    wallet=holder.wallet,
+                    balance=holder.balance,
                     share_percentage=share_pct * 100,
                     amount=amount,
                 )
             )
 
-        # Second pass: distribute remainder to largest holder(s)
-        # Truncation loses ~1 token per recipient on average
+        # Distribute remainder to largest holder(s)
         total_distributed = sum(r.amount for r in recipients)
         remainder = pool_amount - total_distributed
 
         if remainder > 0 and recipients:
-            # Sort by hash power descending to give remainder to top holders
-            recipients.sort(key=lambda x: x.hash_power, reverse=True)
+            # Sort by balance descending to give remainder to top holders
+            recipients.sort(key=lambda x: x.balance, reverse=True)
 
             # Distribute remainder 1 token at a time to top holders
             for i in range(remainder):
                 idx = i % len(recipients)
-                # Create new RecipientShare with updated amount (dataclass is immutable-ish)
                 r = recipients[idx]
                 recipients[idx] = RecipientShare(
                     wallet=r.wallet,
-                    twab=r.twab,
-                    multiplier=r.multiplier,
-                    hash_power=r.hash_power,
+                    balance=r.balance,
                     share_percentage=r.share_percentage,
                     amount=r.amount + 1,
                 )
@@ -362,7 +338,7 @@ class DistributionService:
         return DistributionPlan(
             pool_amount=pool_amount,
             pool_value_usd=pool_value_usd,
-            total_hashpower=total_hp,
+            total_supply=total_supply,
             recipient_count=len(recipients),
             trigger_type=trigger_type,
             recipients=recipients,
@@ -385,7 +361,7 @@ class DistributionService:
             distribution = Distribution(
                 pool_amount=plan.pool_amount,
                 pool_value_usd=plan.pool_value_usd,
-                total_hashpower=plan.total_hashpower,
+                total_supply=plan.total_supply,
                 recipient_count=plan.recipient_count,
                 trigger_type=plan.trigger_type,
                 executed_at=utc_now(),
@@ -403,16 +379,12 @@ class DistributionService:
                 )
 
             # BULK INSERT: Create all recipient records at once
-            # Only record amount_received for successful transfers (tx_signature present)
-            # Failed transfers get amount_received=0 for reconciliation
             if plan.recipients:
                 recipient_data = [
                     {
                         "distribution_id": distribution.id,
                         "wallet": r.wallet,
-                        "twab": r.twab,
-                        "multiplier": Decimal(str(r.multiplier)),
-                        "hash_power": r.hash_power,
+                        "balance": r.balance,
                         "amount_received": r.amount
                         if transfer_results.get(r.wallet)
                         else 0,
@@ -716,11 +688,13 @@ class DistributionService:
             result = await send_spl_token_transfer(
                 from_private_key=settings.airdrop_pool_private_key,
                 to_address=recipient.wallet,
-                token_mint=settings.gold_token_mint,  # Distribute GOLD tokens
+                token_mint=settings.gold_token_mint,
                 amount=planned_amount,
             )
 
             if result.success:
+                from app.utils.solana_tx import confirm_transaction
+
                 confirmed = await confirm_transaction(
                     result.signature, timeout_seconds=30
                 )
@@ -781,7 +755,6 @@ async def acquire_distribution_lock(
 
     try:
         # Ensure lock row exists using upsert (race-condition safe)
-        # This handles the case where migration hasn't been run yet
         try:
             stmt = pg_insert(DistributionLock).values(id=1)
             stmt = stmt.on_conflict_do_nothing(index_elements=["id"])
@@ -800,7 +773,6 @@ async def acquire_distribution_lock(
         lock = result.scalar_one_or_none()
 
         if lock is None:
-            # This should not happen after the upsert above
             logger.error(
                 "Distribution lock row not found after upsert - database issue"
             )
@@ -815,7 +787,6 @@ async def acquire_distribution_lock(
 
     except OperationalError as e:
         # NOWAIT raises OperationalError if row is locked
-        # PostgreSQL error code 55P03 = lock_not_available
         if "could not obtain lock" in str(e) or "55P03" in str(e):
             logger.info("Distribution lock held by another worker, skipping")
             return False
@@ -846,7 +817,6 @@ async def check_and_distribute(db: AsyncSession) -> Optional[Distribution]:
         return None
 
     # Lock acquired - proceed with distribution check and execution
-    # The lock is held until the transaction commits or rolls back
     service = DistributionService(db)
 
     should, trigger = await service.should_distribute()
@@ -866,5 +836,4 @@ async def check_and_distribute(db: AsyncSession) -> Optional[Distribution]:
         return None
 
     # execute_distribution commits on success, rolls back on failure
-    # Either way, the lock is released
     return await service.execute_distribution(plan)

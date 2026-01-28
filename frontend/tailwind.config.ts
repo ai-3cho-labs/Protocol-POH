@@ -9,51 +9,38 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Monochrome palette
-        accent: '#ffffff',
-        // Backgrounds - Pure darks
+        // Light theme palette
+        accent: '#111827',
+        // Backgrounds - Light
         bg: {
-          dark: '#0a0a0a',
-          card: '#111111',
-          surface: '#1a1a1a',
+          dark: '#ffffff',
+          card: '#ffffff',
+          surface: '#f9fafb',
         },
         // Neutrals
-        border: '#333333',
+        border: '#e5e7eb',
         text: {
-          primary: '#e5e5e5',
-          secondary: '#a0a0a0',
-          muted: '#666666',
+          primary: '#111827',
+          secondary: '#6b7280',
+          muted: '#9ca3af',
         },
         // Gray scale for UI elements
         gray: {
-          50: '#fafafa',
-          100: '#f5f5f5',
-          200: '#e5e5e5',
-          300: '#d4d4d4',
-          400: '#a3a3a3',
-          500: '#737373',
-          600: '#525252',
-          700: '#404040',
-          800: '#262626',
-          900: '#171717',
-        },
-        // Legacy terminal colors (mapped to monochrome)
-        terminal: {
-          bg: '#0a0a0a',
-          card: '#111111',
-          border: '#333333',
-          green: '#e5e5e5',
-          amber: '#ffffff',
-          red: '#a0a0a0',
-          text: '#a0a0a0',
-          muted: '#666666',
+          50: '#f9fafb',
+          100: '#f3f4f6',
+          200: '#e5e7eb',
+          300: '#d1d5db',
+          400: '#9ca3af',
+          500: '#6b7280',
+          600: '#4b5563',
+          700: '#374151',
+          800: '#1f2937',
+          900: '#111827',
         },
       },
       fontFamily: {
         mono: [
-          'VT323',
           'IBM Plex Mono',
-          'Fira Code',
           'ui-monospace',
           'SFMono-Regular',
           'Menlo',
@@ -107,6 +94,7 @@ const config: Config = {
         'word-reveal': 'wordReveal 0.5s ease-out both',
         'scale-in': 'scaleIn 0.3s ease-out both',
         'draw-line': 'drawLine 1s ease-out both',
+        'fade-in-right': 'fadeInRight 0.3s ease-out both',
       },
       keyframes: {
         blink: {
@@ -178,23 +166,22 @@ const config: Config = {
           '0%': { strokeDashoffset: '100' },
           '100%': { strokeDashoffset: '0' },
         },
+        fadeInRight: {
+          '0%': { opacity: '0', transform: 'translateX(-10px)' },
+          '100%': { opacity: '1', transform: 'translateX(0)' },
+        },
       },
       screens: {
         'xs': '375px',
       },
       boxShadow: {
-        'white-glow': '0 0 10px rgba(255, 255, 255, 0.3)',
-        'white-strong': '0 0 20px rgba(255, 255, 255, 0.5)',
-        'terminal-inset': 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.5)',
+        'card': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)',
+        'card-hover': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
       },
       backgroundImage: {
-        // Monochrome gradients
-        'cave-gradient':
-          'linear-gradient(180deg, #0a0a0a 0%, #111111 100%)',
-        'mobile-gradient': 'linear-gradient(180deg, #0a0a0a 0%, #050505 100%)',
-        // Legacy alias
-        'terminal-gradient':
-          'linear-gradient(180deg, #0a0a0a 0%, #111111 100%)',
+        // Light theme - clean white
+        'cave-gradient': 'linear-gradient(180deg, #ffffff 0%, #f9fafb 100%)',
+        'mobile-gradient': 'linear-gradient(180deg, #ffffff 0%, #f9fafb 100%)',
       },
       spacing: {
         '18': '4.5rem',
