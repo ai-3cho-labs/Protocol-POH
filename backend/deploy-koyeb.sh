@@ -36,8 +36,6 @@ create_secrets() {
     # Wallets
     koyeb secrets create CREATOR_WALLET_PRIVATE_KEY --value "your-private-key"
     koyeb secrets create AIRDROP_POOL_PRIVATE_KEY --value "your-private-key"
-    koyeb secrets create TEAM_WALLET_PUBLIC_KEY --value "your-public-key"
-    koyeb secrets create ALGO_BOT_WALLET_PUBLIC_KEY --value "your-public-key"
 
     # Tokens
     koyeb secrets create POH_TOKEN_MINT --value "your-poh-token-mint"
@@ -81,10 +79,10 @@ deploy_api() {
         --env SOLANA_RPC_URL=@SOLANA_RPC_URL \
         --env CREATOR_WALLET_PRIVATE_KEY=@CREATOR_WALLET_PRIVATE_KEY \
         --env AIRDROP_POOL_PRIVATE_KEY=@AIRDROP_POOL_PRIVATE_KEY \
-        --env TEAM_WALLET_PUBLIC_KEY=@TEAM_WALLET_PUBLIC_KEY \
-        --env ALGO_BOT_WALLET_PUBLIC_KEY=@ALGO_BOT_WALLET_PUBLIC_KEY \
         --env POH_TOKEN_MINT=@POH_TOKEN_MINT \
-        --env GOLD_TOKEN_MINT=@GOLD_TOKEN_MINT
+        --env GOLD_TOKEN_MINT=@GOLD_TOKEN_MINT \
+        --env CORS_ORIGINS=@CORS_ORIGINS \
+        --env ADMIN_API_KEY=@ADMIN_API_KEY
 
     echo "API deployed!"
 }
@@ -113,8 +111,6 @@ deploy_worker() {
         --env SOLANA_RPC_URL=@SOLANA_RPC_URL \
         --env CREATOR_WALLET_PRIVATE_KEY=@CREATOR_WALLET_PRIVATE_KEY \
         --env AIRDROP_POOL_PRIVATE_KEY=@AIRDROP_POOL_PRIVATE_KEY \
-        --env TEAM_WALLET_PUBLIC_KEY=@TEAM_WALLET_PUBLIC_KEY \
-        --env ALGO_BOT_WALLET_PUBLIC_KEY=@ALGO_BOT_WALLET_PUBLIC_KEY \
         --env POH_TOKEN_MINT=@POH_TOKEN_MINT \
         --env GOLD_TOKEN_MINT=@GOLD_TOKEN_MINT
 
@@ -145,8 +141,6 @@ deploy_beat() {
         --env SOLANA_RPC_URL=@SOLANA_RPC_URL \
         --env CREATOR_WALLET_PRIVATE_KEY=@CREATOR_WALLET_PRIVATE_KEY \
         --env AIRDROP_POOL_PRIVATE_KEY=@AIRDROP_POOL_PRIVATE_KEY \
-        --env TEAM_WALLET_PUBLIC_KEY=@TEAM_WALLET_PUBLIC_KEY \
-        --env ALGO_BOT_WALLET_PUBLIC_KEY=@ALGO_BOT_WALLET_PUBLIC_KEY \
         --env POH_TOKEN_MINT=@POH_TOKEN_MINT \
         --env GOLD_TOKEN_MINT=@GOLD_TOKEN_MINT
 
