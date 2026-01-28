@@ -1,6 +1,6 @@
 # White-Label Customization Guide
 
-Deploy your own version of the mining protocol with custom branding, tokens, and reward splits.
+Deploy your own version of the Protocol with custom branding, tokens, and reward splits.
 
 ## Quick Start
 
@@ -19,11 +19,11 @@ Set these environment variables in your backend `.env` or hosting platform (Koye
 
 ```env
 # Your token mint addresses
-CPU_TOKEN_MINT=YourHoldTokenMintAddress
+POH_TOKEN_MINT=YourHoldTokenMintAddress
 GOLD_TOKEN_MINT=YourRewardTokenMintAddress
 
 # Token decimals (default: 9 for hold, 6 for reward)
-CPU_TOKEN_DECIMALS=9
+POH_TOKEN_DECIMALS=9
 GOLD_TOKEN_DECIMALS=6
 ```
 
@@ -45,7 +45,7 @@ BUYBACK_RESERVE_PERCENT=80 # % kept as SOL reserves
 ### Token Branding (for logs)
 
 ```env
-HOLD_TOKEN_SYMBOL=CPU
+HOLD_TOKEN_SYMBOL=POH
 REWARD_TOKEN_SYMBOL=GOLD
 ```
 
@@ -122,7 +122,7 @@ NEXT_PUBLIC_THEME_COLOR=#0a0a0a    # Browser theme color
 ```env
 NEXT_PUBLIC_API_URL=https://your-api.koyeb.app
 NEXT_PUBLIC_WS_URL=wss://your-api.koyeb.app/ws
-NEXT_PUBLIC_CPU_TOKEN_MINT=YourHoldTokenMintAddress
+NEXT_PUBLIC_POH_TOKEN_MINT=YourHoldTokenMintAddress
 NEXT_PUBLIC_GOLD_TOKEN_MINT=YourRewardTokenMintAddress
 ```
 
@@ -212,8 +212,8 @@ If environment variables are not set, these defaults are used:
 | `ALGO_BOT_PERCENT` | 10 |
 | `TEAM_PERCENT` | 10 |
 | `BUYBACK_SWAP_PERCENT` | 20 |
-| `HOLD_TOKEN_SYMBOL` | CPU |
+| `HOLD_TOKEN_SYMBOL` | POH |
 | `REWARD_TOKEN_SYMBOL` | GOLD |
-| `NEXT_PUBLIC_APP_NAME` | Copper Processing Unit |
-| `NEXT_PUBLIC_TAGLINE` | The Working Man's Gold Mine |
+| `NEXT_PUBLIC_APP_NAME` | Protocol |
+| `NEXT_PUBLIC_TAGLINE` | Proof of Hold |
 | `NEXT_PUBLIC_ACCENT_COLOR` | #f59e0b (amber) |

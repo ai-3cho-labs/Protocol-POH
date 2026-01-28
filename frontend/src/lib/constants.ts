@@ -35,14 +35,14 @@ export const DESKTOP_BREAKPOINT = 768;
 /** Token decimals for hold token */
 export const TOKEN_DECIMALS = 6;
 
-/** Hold token symbol - what users hold for mining eligibility */
-export const CPU_TOKEN_SYMBOL = branding.holdToken.symbol;
+/** Hold token symbol - what users hold for eligibility */
+export const POH_TOKEN_SYMBOL = branding.holdToken.symbol;
 
 /** Reward token symbol - what users earn as rewards */
 export const TOKEN_SYMBOL = branding.rewardToken.symbol;
 
 /** Hold token mint address */
-export const CPU_TOKEN_MINT = process.env.NEXT_PUBLIC_CPU_TOKEN_MINT || '';
+export const POH_TOKEN_MINT = process.env.NEXT_PUBLIC_POH_TOKEN_MINT || '';
 
 /** Reward token mint address */
 export const TOKEN_MINT = process.env.NEXT_PUBLIC_GOLD_TOKEN_MINT || '';

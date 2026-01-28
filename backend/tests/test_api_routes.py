@@ -1,5 +1,5 @@
 """
-$COPPER API Routes Tests
+Protocol API Routes Tests
 
 Tests for REST API endpoints.
 """
@@ -25,7 +25,7 @@ class TestHealthEndpoint:
             assert response.status_code == 200
             data = response.json()
             assert data["status"] == "healthy"
-            assert data["service"] == "copper-backend"
+            assert data["service"] == "protocol-backend"
 
     def test_root_endpoint(self):
         """Test root endpoint returns welcome message."""

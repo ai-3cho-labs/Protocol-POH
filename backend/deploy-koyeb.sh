@@ -9,9 +9,9 @@
 
 set -e
 
-APP_NAME="copper"
+APP_NAME="protocol"
 REGION="was"  # Washington DC (or: fra, sin, sao)
-GITHUB_REPO="ai-3cho-labs/copper-processing-unit"
+GITHUB_REPO="ai-3cho-labs/Protocol-POH"
 BRANCH="main"
 
 # ===========================================
@@ -40,7 +40,7 @@ create_secrets() {
     koyeb secrets create ALGO_BOT_WALLET_PUBLIC_KEY --value "your-public-key"
 
     # Tokens
-    koyeb secrets create CPU_TOKEN_MINT --value "your-cpu-token-mint"
+    koyeb secrets create POH_TOKEN_MINT --value "your-poh-token-mint"
     koyeb secrets create GOLD_TOKEN_MINT --value "GoLDppdjB1vDTPSGxyMJFqdnj134yH6Prg9eqsGDiw6A"
 
     # Optional
@@ -83,7 +83,7 @@ deploy_api() {
         --env AIRDROP_POOL_PRIVATE_KEY=@AIRDROP_POOL_PRIVATE_KEY \
         --env TEAM_WALLET_PUBLIC_KEY=@TEAM_WALLET_PUBLIC_KEY \
         --env ALGO_BOT_WALLET_PUBLIC_KEY=@ALGO_BOT_WALLET_PUBLIC_KEY \
-        --env CPU_TOKEN_MINT=@CPU_TOKEN_MINT \
+        --env POH_TOKEN_MINT=@POH_TOKEN_MINT \
         --env GOLD_TOKEN_MINT=@GOLD_TOKEN_MINT
 
     echo "API deployed!"
@@ -115,7 +115,7 @@ deploy_worker() {
         --env AIRDROP_POOL_PRIVATE_KEY=@AIRDROP_POOL_PRIVATE_KEY \
         --env TEAM_WALLET_PUBLIC_KEY=@TEAM_WALLET_PUBLIC_KEY \
         --env ALGO_BOT_WALLET_PUBLIC_KEY=@ALGO_BOT_WALLET_PUBLIC_KEY \
-        --env CPU_TOKEN_MINT=@CPU_TOKEN_MINT \
+        --env POH_TOKEN_MINT=@POH_TOKEN_MINT \
         --env GOLD_TOKEN_MINT=@GOLD_TOKEN_MINT
 
     echo "Worker deployed!"
@@ -147,7 +147,7 @@ deploy_beat() {
         --env AIRDROP_POOL_PRIVATE_KEY=@AIRDROP_POOL_PRIVATE_KEY \
         --env TEAM_WALLET_PUBLIC_KEY=@TEAM_WALLET_PUBLIC_KEY \
         --env ALGO_BOT_WALLET_PUBLIC_KEY=@ALGO_BOT_WALLET_PUBLIC_KEY \
-        --env CPU_TOKEN_MINT=@CPU_TOKEN_MINT \
+        --env POH_TOKEN_MINT=@POH_TOKEN_MINT \
         --env GOLD_TOKEN_MINT=@GOLD_TOKEN_MINT
 
     echo "Beat deployed!"

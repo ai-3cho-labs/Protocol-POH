@@ -1,8 +1,8 @@
 """
-CPU Mining Backend API
+Protocol Backend API
 
 FastAPI application entry point.
-CPU = Token users hold, GOLD = Token distributed as rewards.
+POH = Token users hold, GOLD = Token distributed as rewards.
 """
 
 import logging
@@ -91,7 +91,7 @@ class EmbeddedCelery:
         )
         self.beat_thread.start()
 
-        logging.getLogger("copper").info(
+        logging.getLogger("protocol").info(
             "Embedded Celery started (worker + beat in background threads)"
         )
 
@@ -120,7 +120,7 @@ class EmbeddedCelery:
             self.worker.stop()
         if self.beat:
             self.beat.stop()
-        logging.getLogger("copper").info("Embedded Celery stopped")
+        logging.getLogger("protocol").info("Embedded Celery stopped")
 
 
 # Global embedded celery instance
@@ -133,7 +133,7 @@ logging.basicConfig(
 # Add sensitive data filter to root logger
 for handler in logging.root.handlers:
     handler.addFilter(SensitiveDataFilter())
-logger = logging.getLogger("copper")
+logger = logging.getLogger("protocol")
 logger.addFilter(SensitiveDataFilter())
 
 settings = get_settings()
@@ -176,7 +176,7 @@ async def lifespan(app: FastAPI):
     global _embedded_celery
 
     # Startup
-    logger.info("CPU Mining Backend initializing...")
+    logger.info("Protocol Backend initializing...")
 
     # Start embedded Celery if enabled
     if settings.embedded_celery:
@@ -191,8 +191,8 @@ async def lifespan(app: FastAPI):
             logger.warning("Sentry DSN not configured for production")
         if not settings.helius_api_key:
             logger.error("CRITICAL: Helius API key not configured")
-        if not settings.cpu_token_mint:
-            logger.error("CRITICAL: CPU token mint not configured")
+        if not settings.hold_token_mint:
+            logger.error("CRITICAL: POH token mint not configured")
         if not settings.gold_token_mint:
             logger.error("CRITICAL: GOLD token mint not configured")
 
@@ -273,12 +273,12 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Failed to warm price cache: {e}")
 
-    logger.info("CPU Mining Backend ready")
+    logger.info("Protocol Backend ready")
 
     yield
 
     # Shutdown
-    logger.info("CPU Mining Backend shutting down...")
+    logger.info("Protocol Backend shutting down...")
 
     # Stop embedded Celery if running
     if _embedded_celery:
@@ -295,8 +295,8 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app
 app = FastAPI(
-    title="CPU Mining API",
-    description="Backend API for the CPU mining dashboard (Hold CPU → Mine $GOLD)",
+    title="Protocol API",
+    description="Backend API for the Protocol dashboard (Hold POH → Earn $GOLD)",
     version="0.1.0",
     lifespan=lifespan,
     docs_url="/docs" if not settings.is_production else None,
@@ -341,7 +341,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 @limiter.limit("60/minute")
 async def health_check(request: Request):
     """Health check endpoint."""
-    return {"status": "healthy", "service": "copper-backend", "version": "0.1.0"}
+    return {"status": "healthy", "service": "protocol-backend", "version": "0.1.0"}
 
 
 # Root endpoint
@@ -349,7 +349,7 @@ async def health_check(request: Request):
 async def root():
     """Root endpoint."""
     return {
-        "message": "Welcome to the CPU Mining API (Hold CPU → Mine $GOLD)",
+        "message": "Welcome to the Protocol API (Hold POH → Earn $GOLD)",
         "docs": "/docs",
         "health": "/api/health",
     }

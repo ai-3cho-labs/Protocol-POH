@@ -1,7 +1,7 @@
 """
-CPU + GOLD Dual-Token Backend Configuration
+POH + GOLD Dual-Token Backend Configuration
 
-CPU = Token users hold (determines mining eligibility & hash power)
+POH = Token users hold (determines eligibility & hash power)
 GOLD = Token distributed as rewards
 
 Loads settings from environment variables with sensible defaults.
@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     # Test mode mock values (user) - used when wallet has no real data
     test_user_balance: float = 1000000.0  # Mock user balance in tokens
     test_user_twab: float = 950000.0  # Mock TWAB
-    test_user_multiplier: float = 2.5  # Mock multiplier (Industrial tier)
+    test_user_multiplier: float = 2.5  # Mock multiplier (Validator tier)
     test_user_hash_power: float = 2375000.0  # twab * multiplier
     test_user_share_percent: float = 15.0  # Mock share of pool
 
@@ -75,12 +75,25 @@ class Settings(BaseSettings):
     algo_bot_wallet_public_key: str = ""
 
     # Token Configuration (Dual-Token Model)
-    # CPU = Token users hold (determines mining eligibility & hash power)
+    # POH = Token users hold (determines eligibility & hash power)
     # GOLD = Token distributed as rewards
-    cpu_token_mint: str = ""
-    cpu_token_decimals: int = 9  # Standard SPL token decimals
+    # Note: CPU_TOKEN_* vars supported for backward compatibility
+    poh_token_mint: str = ""
+    poh_token_decimals: int = 9  # Standard SPL token decimals
+    cpu_token_mint: str = ""  # Deprecated: use poh_token_mint
+    cpu_token_decimals: int = 9  # Deprecated: use poh_token_decimals
     gold_token_mint: str = ""
     gold_token_decimals: int = 6  # GOLD token has 6 decimals
+
+    @property
+    def hold_token_mint(self) -> str:
+        """Get hold token mint (supports POH_TOKEN_MINT or legacy CPU_TOKEN_MINT)."""
+        return self.poh_token_mint or self.cpu_token_mint
+
+    @property
+    def hold_token_decimals(self) -> int:
+        """Get hold token decimals (supports POH or legacy CPU)."""
+        return self.poh_token_decimals if self.poh_token_mint else self.cpu_token_decimals
 
     # Celery
     celery_broker_url: str = ""
@@ -101,7 +114,7 @@ class Settings(BaseSettings):
     buyback_reserve_percent: int = 80  # % kept as SOL reserves
 
     # Token Branding (for logs/display)
-    hold_token_symbol: str = "CPU"  # Token users hold
+    hold_token_symbol: str = "POH"  # Token users hold
     reward_token_symbol: str = "GOLD"  # Token distributed as rewards
 
     # Snapshot Settings
@@ -195,29 +208,29 @@ def get_settings() -> Settings:
 
 # Tier configuration
 TIER_CONFIG = {
-    1: {"name": "Ore", "emoji": "\U0001FAA8", "multiplier": 1.0, "min_hours": 0},
+    1: {"name": "Genesis", "emoji": "\U0001F331", "multiplier": 1.0, "min_hours": 0},
     2: {
-        "name": "Raw Copper",
-        "emoji": "\U0001F536",
+        "name": "Holder",
+        "emoji": "\U0001F91D",
         "multiplier": 1.25,
         "min_hours": 6,
     },
-    3: {"name": "Refined", "emoji": "\u26A1", "multiplier": 1.5, "min_hours": 12},
+    3: {"name": "Proven", "emoji": "\u2705", "multiplier": 1.5, "min_hours": 12},
     4: {
-        "name": "Industrial",
-        "emoji": "\U0001F3ED",
+        "name": "Validator",
+        "emoji": "\U0001F3AF",
         "multiplier": 2.5,
         "min_hours": 72,
     },  # 3 days
     5: {
-        "name": "Master Miner",
-        "emoji": "\U0001F451",
+        "name": "Guardian",
+        "emoji": "\U0001F6E1",
         "multiplier": 3.5,
         "min_hours": 168,
     },  # 7 days
     6: {
-        "name": "Diamond Hands",
-        "emoji": "\U0001F48E",
+        "name": "Sovereign",
+        "emoji": "\U0001F451",
         "multiplier": 5.0,
         "min_hours": 720,
     },  # 30 days
@@ -240,9 +253,9 @@ LAMPORTS_PER_SOL = 1_000_000_000
 
 # Token decimals - use settings value
 # Standard SPL token = 9 decimals, but some tokens (like USDC) use 6
-# CPU token is what users hold (for eligibility/hash power calculation)
+# POH token is what users hold (for eligibility/hash power calculation)
 # GOLD token is what gets distributed as rewards
-CPU_DECIMALS = get_settings().cpu_token_decimals
+POH_DECIMALS = get_settings().hold_token_decimals
 GOLD_DECIMALS = get_settings().gold_token_decimals
-TOKEN_MULTIPLIER = 10**CPU_DECIMALS
+TOKEN_MULTIPLIER = 10**POH_DECIMALS
 GOLD_MULTIPLIER = 10**GOLD_DECIMALS

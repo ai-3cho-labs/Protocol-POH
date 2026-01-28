@@ -7,14 +7,14 @@
 
 export const branding = {
   // App identity
-  appName: process.env.NEXT_PUBLIC_APP_NAME || 'Copper Processing Unit',
-  appShortName: process.env.NEXT_PUBLIC_APP_SHORT_NAME || 'CPU Mine',
-  tagline: process.env.NEXT_PUBLIC_TAGLINE || "The Working Man's Gold Mine",
+  appName: process.env.NEXT_PUBLIC_APP_NAME || 'Protocol',
+  appShortName: process.env.NEXT_PUBLIC_APP_SHORT_NAME || 'POH Protocol',
+  tagline: process.env.NEXT_PUBLIC_TAGLINE || 'Proof of Hold',
 
   // Token branding
   holdToken: {
-    symbol: process.env.NEXT_PUBLIC_HOLD_TOKEN_SYMBOL || 'CPU',
-    name: process.env.NEXT_PUBLIC_HOLD_TOKEN_NAME || 'Copper Processing Unit',
+    symbol: process.env.NEXT_PUBLIC_HOLD_TOKEN_SYMBOL || 'POH',
+    name: process.env.NEXT_PUBLIC_HOLD_TOKEN_NAME || 'Protocol',
   },
   rewardToken: {
     symbol: process.env.NEXT_PUBLIC_REWARD_TOKEN_SYMBOL || 'GOLD',
@@ -22,11 +22,11 @@ export const branding = {
   },
 
   // Links
-  domain: process.env.NEXT_PUBLIC_DOMAIN || 'cpu-mine.xyz',
+  domain: process.env.NEXT_PUBLIC_DOMAIN || '',
   buyTokenUrl: process.env.NEXT_PUBLIC_BUY_TOKEN_URL || 'https://pump.fun',
   buyTokenLabel:
     process.env.NEXT_PUBLIC_BUY_TOKEN_LABEL ||
-    `Buy ${process.env.NEXT_PUBLIC_HOLD_TOKEN_SYMBOL || 'CPU'} on Pump.fun`,
+    `Buy ${process.env.NEXT_PUBLIC_HOLD_TOKEN_SYMBOL || 'POH'} on Pump.fun`,
 
   // Social links
   socials: {
@@ -38,16 +38,16 @@ export const branding = {
   // Legal
   disclaimer:
     process.env.NEXT_PUBLIC_DISCLAIMER ||
-    `${process.env.NEXT_PUBLIC_HOLD_TOKEN_SYMBOL || 'CPU'} and $${process.env.NEXT_PUBLIC_REWARD_TOKEN_SYMBOL || 'GOLD'} are memecoins with no intrinsic value or expectation of financial return. Not financial advice. Trade at your own risk.`,
-  copyrightHolder: process.env.NEXT_PUBLIC_COPYRIGHT_HOLDER || 'CPU Mine',
+    `${process.env.NEXT_PUBLIC_HOLD_TOKEN_SYMBOL || 'POH'} and $${process.env.NEXT_PUBLIC_REWARD_TOKEN_SYMBOL || 'GOLD'} are memecoins with no intrinsic value or expectation of financial return. Not financial advice. Trade at your own risk.`,
+  copyrightHolder: process.env.NEXT_PUBLIC_COPYRIGHT_HOLDER || 'POH Protocol',
 
   // SEO
   seoDescription:
     process.env.NEXT_PUBLIC_SEO_DESCRIPTION ||
-    `Hold ${process.env.NEXT_PUBLIC_HOLD_TOKEN_SYMBOL || 'CPU'} tokens to mine $${process.env.NEXT_PUBLIC_REWARD_TOKEN_SYMBOL || 'GOLD'} rewards. Trading fees fund the pool. Build streaks, get paid.`,
+    `Hold ${process.env.NEXT_PUBLIC_HOLD_TOKEN_SYMBOL || 'POH'} tokens to earn $${process.env.NEXT_PUBLIC_REWARD_TOKEN_SYMBOL || 'GOLD'} rewards. Trading fees fund the pool. Build streaks, get paid.`,
   seoKeywords: (
     process.env.NEXT_PUBLIC_SEO_KEYWORDS ||
-    'solana,memecoin,mining,crypto,rewards,defi,cpu,gold'
+    'solana,memecoin,protocol,crypto,rewards,defi,poh,gold'
   ).split(','),
 } as const;
 

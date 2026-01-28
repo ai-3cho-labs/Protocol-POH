@@ -13,7 +13,7 @@ const nextConfig = {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
     NEXT_PUBLIC_WS_URL: process.env.NEXT_PUBLIC_WS_URL,
     NEXT_PUBLIC_SOLANA_RPC_URL: process.env.NEXT_PUBLIC_SOLANA_RPC_URL,
-    NEXT_PUBLIC_COPPER_TOKEN_MINT: process.env.NEXT_PUBLIC_COPPER_TOKEN_MINT,
+    NEXT_PUBLIC_POH_TOKEN_MINT: process.env.NEXT_PUBLIC_POH_TOKEN_MINT,
   },
 
   // Image optimization (unoptimized for static export)
