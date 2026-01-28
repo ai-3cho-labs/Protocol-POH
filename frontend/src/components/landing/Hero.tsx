@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/cn';
+import { branding } from '@/config';
 import { AddressInput } from '@/components/wallet/AddressInput';
 
 export interface HeroProps {
@@ -13,33 +14,46 @@ export interface HeroProps {
  * Monochrome terminal aesthetic with entrance animations
  */
 export function Hero({ className }: HeroProps) {
+  // Split tagline for animated display (assumes format "THE WORKING MAN'S GOLD MINE" or similar)
+  const taglineParts = branding.tagline.toUpperCase().split(' ');
+  const lastTwoWords = taglineParts.slice(-2).join(' ');
+  const firstWords = taglineParts.slice(0, -2);
+
   return (
     <section className={cn('relative py-12 lg:py-20 overflow-hidden', className)}>
       <div className="relative max-w-4xl mx-auto text-center px-4">
         {/* Main Title - Word-by-word animated entrance */}
         <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
           <span className="block text-text-primary">
-            <span className="inline-block animate-word-reveal [animation-delay:0ms]">THE</span>{' '}
-            <span className="inline-block animate-word-reveal [animation-delay:100ms]">WORKING</span>{' '}
-            <span className="inline-block animate-word-reveal [animation-delay:200ms]">MAN&apos;S</span>
+            {firstWords.map((word, i) => (
+              <span key={word + i}>
+                <span
+                  className="inline-block animate-word-reveal"
+                  style={{ animationDelay: `${i * 100}ms` }}
+                >
+                  {word === "MAN'S" ? "MAN'S" : word}
+                </span>{' '}
+              </span>
+            ))}
           </span>
           <span className="block mt-2">
             <span
               className={cn(
-                'inline-block animate-word-reveal [animation-delay:400ms]',
+                'inline-block animate-word-reveal',
                 'text-white animate-pulse-glow',
                 'drop-shadow-[0_0_30px_rgba(255,255,255,0.5)]'
               )}
+              style={{ animationDelay: `${firstWords.length * 100 + 200}ms` }}
             >
-              GOLD MINE
+              {lastTwoWords}
             </span>
           </span>
         </h1>
 
         {/* Tagline - Staggered entrance */}
         <p className="text-body lg:text-lg text-text-secondary mb-8 max-w-2xl mx-auto animate-fade-slide-in [animation-delay:600ms]">
-          Hold CPU to mine $GOLD around the clock. Trading fees fund the rewards
-          pool. Hold longer, earn up to 5x more.
+          Hold {branding.holdToken.symbol} to mine ${branding.rewardToken.symbol} around the clock.
+          Trading fees fund the rewards pool. Hold longer, earn up to 5x more.
         </p>
 
         {/* CTA - Visual hierarchy: Primary > Secondary > Tertiary */}
@@ -50,9 +64,9 @@ export function Hero({ className }: HeroProps) {
             <AddressInput size="lg" fullWidth className="relative" />
           </div>
 
-          {/* Secondary CTA - Buy CPU */}
+          {/* Secondary CTA - Buy token */}
           <a
-            href="https://pump.fun"
+            href={branding.buyTokenUrl}
             target="_blank"
             rel="noopener noreferrer"
             className={cn(
@@ -63,7 +77,7 @@ export function Hero({ className }: HeroProps) {
               'hover:shadow-[0_0_20px_rgba(255,255,255,0.15)]'
             )}
           >
-            Buy CPU
+            Buy {branding.holdToken.symbol}
           </a>
 
           {/* Tertiary CTA - Text link */}

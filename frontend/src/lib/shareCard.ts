@@ -4,20 +4,35 @@
  */
 
 import type { UserMiningStats } from '@/types/models';
+import { branding, themeColors } from '@/config';
 import { formatCompactNumber, formatGOLD, shortenAddress } from './utils';
 
 // Card dimensions (optimized for social sharing)
 const CARD_WIDTH = 800;
 const CARD_HEIGHT = 280;
 
-// Colors matching the app theme
+/**
+ * Convert hex color to rgba string
+ */
+function hexToRgba(hex: string, alpha: number): string {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result || !result[1] || !result[2] || !result[3]) {
+    return `rgba(245, 158, 11, ${alpha})`; // fallback to amber
+  }
+  const r = parseInt(result[1], 16);
+  const g = parseInt(result[2], 16);
+  const b = parseInt(result[3], 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+// Colors matching the app theme (uses configurable accent)
 const COLORS = {
-  background: '#0a0a0a',
+  background: themeColors.background,
   cardBg: 'rgba(255, 255, 255, 0.04)',
   cardBorder: 'rgba(255, 255, 255, 0.08)',
-  amber: '#f59e0b',
-  amberLight: '#fbbf24',
-  amberMuted: 'rgba(245, 158, 11, 0.7)',
+  accent: themeColors.accent,
+  accentLight: themeColors.accentLight,
+  accentMuted: `${themeColors.accent}b3`, // 70% opacity
   white: '#ffffff',
   gray300: '#d4d4d4',
   gray400: '#a3a3a3',
@@ -117,7 +132,7 @@ export async function generateShareCard(
 
   // Subtle gradient
   const bgGradient = ctx.createLinearGradient(0, 0, CARD_WIDTH, CARD_HEIGHT);
-  bgGradient.addColorStop(0, 'rgba(245, 158, 11, 0.02)');
+  bgGradient.addColorStop(0, hexToRgba(themeColors.accent, 0.02));
   bgGradient.addColorStop(1, 'transparent');
   ctx.fillStyle = bgGradient;
   ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
@@ -128,11 +143,11 @@ export async function generateShareCard(
   // === HEADER ===
   const headerY = 36;
 
-  // CPU Logo/Brand
+  // Logo/Brand
   ctx.fillStyle = COLORS.white;
   ctx.font = 'bold 28px Inter, system-ui, sans-serif';
   ctx.textAlign = 'left';
-  ctx.fillText('CPU', 40, headerY + 6);
+  ctx.fillText(branding.holdToken.symbol, 40, headerY + 6);
 
   // Tagline
   ctx.fillStyle = COLORS.gray500;
@@ -140,7 +155,7 @@ export async function generateShareCard(
   ctx.fillText('Mining Stats', 100, headerY + 4);
 
   // User wallet address
-  ctx.fillStyle = COLORS.amber;
+  ctx.fillStyle = COLORS.accent;
   ctx.font = '600 13px Inter, system-ui, sans-serif';
   ctx.textAlign = 'right';
   ctx.fillText(shortenAddress(stats.wallet, 4), CARD_WIDTH - 40, headerY + 4);
@@ -153,11 +168,11 @@ export async function generateShareCard(
   const cardWidth = (totalWidth - cardGap * 2) / 3;
   const startX = 40;
 
-  // Card 1: Pending Rewards (amber glow)
+  // Card 1: Pending Rewards (accent glow)
   roundRect(ctx, startX, cardY, cardWidth, cardHeight, 16);
-  ctx.fillStyle = 'rgba(245, 158, 11, 0.08)';
+  ctx.fillStyle = hexToRgba(themeColors.accent, 0.08);
   ctx.fill();
-  ctx.strokeStyle = 'rgba(245, 158, 11, 0.2)';
+  ctx.strokeStyle = hexToRgba(themeColors.accent, 0.2);
   ctx.lineWidth = 1;
   ctx.stroke();
 
@@ -166,7 +181,7 @@ export async function generateShareCard(
   ctx.font = '600 11px Inter, system-ui, sans-serif';
   ctx.fillText('PENDING REWARDS', startX + cardWidth / 2, cardY + 28);
 
-  ctx.fillStyle = COLORS.amberLight;
+  ctx.fillStyle = COLORS.accentLight;
   ctx.font = 'bold 32px Inter, system-ui, sans-serif';
   const pendingValue = stats.pendingReward >= 1
     ? `+${formatCompactNumber(Math.floor(stats.pendingReward))}`
@@ -175,7 +190,7 @@ export async function generateShareCard(
 
   ctx.fillStyle = COLORS.gray500;
   ctx.font = '500 13px Inter, system-ui, sans-serif';
-  ctx.fillText('$GOLD', startX + cardWidth / 2, cardY + 92);
+  ctx.fillText(`$${branding.rewardToken.symbol}`, startX + cardWidth / 2, cardY + 92);
 
   ctx.fillStyle = COLORS.gray400;
   ctx.font = '600 14px Inter, system-ui, sans-serif';
@@ -206,7 +221,7 @@ export async function generateShareCard(
   if (extras?.totalHolders && stats.rank) {
     const percentile = getPercentile(stats.rank, extras.totalHolders);
     if (percentile) {
-      ctx.fillStyle = COLORS.amber;
+      ctx.fillStyle = COLORS.accent;
       ctx.font = '600 14px Inter, system-ui, sans-serif';
       ctx.fillText(percentile, rankCardX + cardWidth / 2, cardY + 100);
     } else {
@@ -242,7 +257,7 @@ export async function generateShareCard(
 
   ctx.fillStyle = COLORS.gray500;
   ctx.font = '500 13px Inter, system-ui, sans-serif';
-  ctx.fillText('$GOLD', thirdCardX + cardWidth / 2, cardY + 92);
+  ctx.fillText(`$${branding.rewardToken.symbol}`, thirdCardX + cardWidth / 2, cardY + 92);
 
   ctx.fillStyle = COLORS.gray400;
   ctx.font = '600 14px Inter, system-ui, sans-serif';
@@ -266,7 +281,7 @@ export async function generateShareCard(
   ctx.fillStyle = COLORS.gray600;
   ctx.font = '500 12px Inter, system-ui, sans-serif';
   ctx.textAlign = 'left';
-  ctx.fillText('https://cpu-mine.xyz/', 40, footerY + 24);
+  ctx.fillText(`https://${branding.domain}/`, 40, footerY + 24);
 
   // Timestamp
   ctx.textAlign = 'right';
@@ -312,7 +327,7 @@ export function downloadBlob(blob: Blob, filename: string) {
  * Share using Web Share API (mobile) or download (desktop)
  */
 export async function shareOrDownload(blob: Blob): Promise<void> {
-  const filename = `cpu-stats-${Date.now()}.png`;
+  const filename = `${branding.holdToken.symbol.toLowerCase()}-stats-${Date.now()}.png`;
 
   const nav = typeof window !== 'undefined' ? window.navigator : null;
   if (nav && typeof nav.share === 'function' && typeof nav.canShare === 'function') {

@@ -1,38 +1,36 @@
 import type { Metadata, Viewport } from 'next';
 import { Providers } from '@/components/providers/Providers';
+import { branding, themeColors } from '@/config';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Copper Processing Unit',
-  description:
-    'Hold CPU tokens to mine $GOLD rewards. Trading fees fund the pool. Build streaks, get paid.',
-  keywords: ['solana', 'memecoin', 'mining', 'crypto', 'rewards', 'defi', 'cpu', 'gold'],
-  authors: [{ name: 'CPU Team' }],
+  title: branding.appName,
+  description: branding.seoDescription,
+  keywords: branding.seoKeywords,
+  authors: [{ name: `${branding.appShortName} Team` }],
   icons: {
-    icon: '/icon.jpg',
-    apple: '/icon.jpg',
+    icon: '/branding/icon.jpg',
+    apple: '/branding/icon.jpg',
   },
   openGraph: {
-    title: 'Copper Processing Unit',
-    description:
-      'Hold CPU tokens to mine $GOLD rewards. Trading fees fund the pool. Build streaks, get paid.',
+    title: branding.appName,
+    description: branding.seoDescription,
     type: 'website',
     locale: 'en_US',
     images: [
       {
-        url: '/logo.jpg',
-        width: 1024,
-        height: 1024,
-        alt: 'CPU Logo',
+        url: '/branding/og-image.jpg',
+        width: 1200,
+        height: 630,
+        alt: `${branding.appShortName} Logo`,
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Copper Processing Unit',
-    description:
-      'Hold CPU tokens to mine $GOLD rewards. Trading fees fund the pool. Build streaks, get paid.',
-    images: ['/logo.jpg'],
+    title: branding.appName,
+    description: branding.seoDescription,
+    images: ['/branding/og-image.jpg'],
   },
   robots: {
     index: true,
@@ -44,7 +42,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  themeColor: '#0a0a0a',
+  themeColor: themeColors.themeColor,
 };
 
 export default function RootLayout({

@@ -91,6 +91,19 @@ class Settings(BaseSettings):
     distribution_max_hours: int = 24
     min_balance_usd: float = 50.0
 
+    # Reward Split (must total 100)
+    reward_pool_percent: int = 80  # % to airdrop pool
+    algo_bot_percent: int = 10  # % to algo bot
+    team_percent: int = 10  # % to team
+
+    # Buyback Split (of the pool allocation)
+    buyback_swap_percent: int = 20  # % swapped to reward token
+    buyback_reserve_percent: int = 80  # % kept as SOL reserves
+
+    # Token Branding (for logs/display)
+    hold_token_symbol: str = "CPU"  # Token users hold
+    reward_token_symbol: str = "GOLD"  # Token distributed as rewards
+
     # Snapshot Settings
     snapshot_probability: float = 0.4  # 40% chance per hour
 

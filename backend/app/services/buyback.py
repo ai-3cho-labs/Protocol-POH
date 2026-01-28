@@ -1,12 +1,13 @@
 """
-$GOLD Buyback Service
+Buyback Service
 
 Processes creator rewards and executes Jupiter swaps.
-80% → Airdrop Pool (SOL)
-      └── 20% swapped to GOLD (buyback)
-      └── 80% kept as SOL (reserves/fees)
-10% → Algo Bot (trading operations)
-10% → Team Operations (maintenance)
+Split percentages are configurable via environment variables (defaults shown):
+  REWARD_POOL_PERCENT (80%) → Airdrop Pool (SOL)
+      └── BUYBACK_SWAP_PERCENT (20%) swapped to reward token
+      └── BUYBACK_RESERVE_PERCENT (80%) kept as SOL (reserves/fees)
+  ALGO_BOT_PERCENT (10%) → Algo Bot (trading operations)
+  TEAM_PERCENT (10%) → Team Operations (maintenance)
 """
 
 import logging
@@ -92,12 +93,12 @@ class BuybackResult:
 
 @dataclass
 class RewardSplit:
-    """80/10/10 split of creator rewards."""
+    """Configurable split of creator rewards (default 80/10/10)."""
 
     total_sol: Decimal
-    buyback_sol: Decimal  # 80% → Reward pool
-    algo_bot_sol: Decimal  # 10% → Algo bot
-    team_sol: Decimal  # 10% → Maintenance
+    buyback_sol: Decimal  # REWARD_POOL_PERCENT → Reward pool
+    algo_bot_sol: Decimal  # ALGO_BOT_PERCENT → Algo bot
+    team_sol: Decimal  # TEAM_PERCENT → Maintenance
 
 
 class BuybackService:
@@ -144,7 +145,7 @@ class BuybackService:
 
     def calculate_split(self, total_sol: Decimal) -> RewardSplit:
         """
-        Calculate 80/10/10 split of rewards.
+        Calculate reward split (configurable via env, default 80/10/10).
 
         Args:
             total_sol: Total SOL to split.
@@ -152,9 +153,13 @@ class BuybackService:
         Returns:
             RewardSplit with buyback, algo bot, and team amounts.
         """
-        buyback_sol = total_sol * Decimal("0.8")  # 80% → Reward pool
-        algo_bot_sol = total_sol * Decimal("0.1")  # 10% → Algo bot
-        team_sol = total_sol * Decimal("0.1")  # 10% → Maintenance
+        pool_pct = Decimal(settings.reward_pool_percent) / Decimal(100)
+        algo_pct = Decimal(settings.algo_bot_percent) / Decimal(100)
+        team_pct = Decimal(settings.team_percent) / Decimal(100)
+
+        buyback_sol = total_sol * pool_pct
+        algo_bot_sol = total_sol * algo_pct
+        team_sol = total_sol * team_pct
 
         return RewardSplit(
             total_sol=total_sol,
@@ -569,12 +574,13 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
     """
     Process all pending creator rewards.
 
-    Main entry point for the buyback task.
-    - 80% goes to airdrop pool:
-      - 20% of that swapped to GOLD (buyback)
-      - 80% of that kept as SOL (reserves/fees)
-    - 10% goes to algo bot wallet for trading operations
-    - 10% goes to team wallet for maintenance
+    Main entry point for the buyback task. Split percentages are configurable
+    via environment variables (see config.py for defaults):
+    - REWARD_POOL_PERCENT goes to airdrop pool:
+      - BUYBACK_SWAP_PERCENT of that swapped to reward token
+      - BUYBACK_RESERVE_PERCENT of that kept as SOL (reserves/fees)
+    - ALGO_BOT_PERCENT goes to algo bot wallet for trading operations
+    - TEAM_PERCENT goes to team wallet for maintenance
 
     Args:
         db: Database session.
@@ -641,8 +647,9 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
     )
 
     if pool_transfer_confirmed:
-        # Swap 20% of transferred SOL to GOLD, keep 80% as SOL reserves
-        swap_amount = split.buyback_sol * Decimal("0.20")
+        # Swap configured % of transferred SOL to reward token, keep rest as SOL reserves
+        swap_pct = Decimal(settings.buyback_swap_percent) / Decimal(100)
+        swap_amount = split.buyback_sol * swap_pct
         result = await service.execute_swap(
             swap_amount, settings.airdrop_pool_private_key
         )

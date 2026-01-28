@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/cn';
+import { branding } from '@/config';
 import { Card, PixelIcon } from '@/components/ui';
 
 export interface HowItWorksProps {
@@ -11,8 +12,8 @@ export interface HowItWorksProps {
 const STEPS = [
   {
     icon: 'chest' as const,
-    title: 'Hold CPU',
-    description: 'Buy CPU tokens and hold them in your wallet. Your average balance over time determines your mining power.',
+    title: `Hold ${branding.holdToken.symbol}`,
+    description: `Buy ${branding.holdToken.symbol} tokens and hold them in your wallet. Your average balance over time determines your mining power.`,
   },
   {
     icon: 'lightning' as const,
@@ -21,8 +22,8 @@ const STEPS = [
   },
   {
     icon: 'coin' as const,
-    title: 'Collect $GOLD',
-    description: '$GOLD rewards are distributed to all miners automatically based on your hash power.',
+    title: `Collect $${branding.rewardToken.symbol}`,
+    description: `$${branding.rewardToken.symbol} rewards are distributed to all miners automatically based on your hash power.`,
   },
 ];
 

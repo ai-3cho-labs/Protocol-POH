@@ -2,6 +2,8 @@
  * Application Constants
  */
 
+import { branding } from '@/config';
+
 // ===========================================
 // API Configuration
 // ===========================================
@@ -30,19 +32,19 @@ export const SOLANA_RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC_URL
 /** Desktop breakpoint in pixels */
 export const DESKTOP_BREAKPOINT = 768;
 
-/** Token decimals for CPU */
+/** Token decimals for hold token */
 export const TOKEN_DECIMALS = 6;
 
-/** CPU token symbol - what users hold for mining eligibility */
-export const CPU_TOKEN_SYMBOL = 'CPU';
+/** Hold token symbol - what users hold for mining eligibility */
+export const CPU_TOKEN_SYMBOL = branding.holdToken.symbol;
 
-/** GOLD token symbol - what users earn as rewards */
-export const TOKEN_SYMBOL = 'GOLD';
+/** Reward token symbol - what users earn as rewards */
+export const TOKEN_SYMBOL = branding.rewardToken.symbol;
 
-/** CPU token mint address */
+/** Hold token mint address */
 export const CPU_TOKEN_MINT = process.env.NEXT_PUBLIC_CPU_TOKEN_MINT || '';
 
-/** GOLD token mint address */
+/** Reward token mint address */
 export const TOKEN_MINT = process.env.NEXT_PUBLIC_GOLD_TOKEN_MINT || '';
 
 // ===========================================

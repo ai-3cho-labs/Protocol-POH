@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/cn';
+import { branding } from '@/config';
 import { AddressInput } from '@/components/wallet/AddressInput';
 
 const NAV_LINKS = [
@@ -26,8 +27,8 @@ export function Header() {
           {/* Logo - Left */}
           <Link href="/" prefetch={false} className="flex items-center group">
             <Image
-              src="/logo.jpg"
-              alt="CPU"
+              src="/branding/logo-small.jpg"
+              alt={branding.holdToken.symbol}
               width={48}
               height={48}
               className="rounded group-hover:opacity-90 transition-opacity"

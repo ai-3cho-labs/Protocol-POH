@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/cn';
+import { branding } from '@/config';
 
 export interface FooterProps {
   className?: string;
@@ -28,7 +29,7 @@ export function Footer({ className }: FooterProps) {
         <div className="flex flex-wrap items-center justify-center gap-6 mb-6">
           {/* Primary Action */}
           <a
-            href="https://pump.fun"
+            href={branding.buyTokenUrl}
             target="_blank"
             rel="noopener noreferrer"
             className={cn(
@@ -39,7 +40,7 @@ export function Footer({ className }: FooterProps) {
               'hover:shadow-[0_0_20px_rgba(255,255,255,0.15)]'
             )}
           >
-            <span className="relative z-10">Buy CPU on Pump.fun</span>
+            <span className="relative z-10">{branding.buyTokenLabel}</span>
           </a>
 
           {/* Divider */}
@@ -47,22 +48,21 @@ export function Footer({ className }: FooterProps) {
 
           {/* Links Group */}
           <div className="flex items-center gap-4">
-            <FooterLink href="https://solscan.io" label="Contract" />
-            <FooterLink href="https://x.com" label="Twitter" />
-            <FooterLink href="https://t.me" label="Telegram" />
+            <FooterLink href={branding.socials.contract} label="Contract" />
+            <FooterLink href={branding.socials.twitter} label="Twitter" />
+            <FooterLink href={branding.socials.telegram} label="Telegram" />
           </div>
         </div>
 
         {/* Disclaimer */}
         <div className="text-center space-y-3">
           <p className="text-caption text-zinc-500 leading-relaxed max-w-md mx-auto">
-            CPU and $GOLD are memecoins with no intrinsic value or expectation of financial return.
-            Not financial advice. Trade at your own risk.
+            {branding.disclaimer}
           </p>
 
           {/* Copyright */}
           <div className="flex items-center justify-center gap-2 text-caption text-zinc-600">
-            <span>&copy; {currentYear} CPU Mine</span>
+            <span>&copy; {currentYear} {branding.copyrightHolder}</span>
             <span className="text-zinc-700">•</span>
             <span>All rights reserved</span>
           </div>
