@@ -40,17 +40,11 @@ async def verify_admin_key(x_admin_key: str = Header(..., alias="X-Admin-Key")) 
 
     if not admin_key:
         logger.warning("Admin endpoint accessed but ADMIN_API_KEY not configured")
-        raise HTTPException(
-            status_code=503,
-            detail="Admin API not configured"
-        )
+        raise HTTPException(status_code=503, detail="Admin API not configured")
 
     if not x_admin_key or x_admin_key != admin_key:
         logger.warning("Invalid admin API key attempt")
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid admin API key"
-        )
+        raise HTTPException(status_code=401, detail="Invalid admin API key")
 
     return x_admin_key
 
@@ -62,6 +56,7 @@ async def verify_admin_key(x_admin_key: str = Header(..., alias="X-Admin-Key")) 
 
 class TaskResponse(BaseModel):
     """Response for triggered tasks."""
+
     task_id: str
     task_name: str
     status: str
@@ -69,6 +64,7 @@ class TaskResponse(BaseModel):
 
 class TaskStatusResponse(BaseModel):
     """Response for task status check."""
+
     task_id: str
     status: str
     result: Optional[dict] = None
@@ -77,6 +73,7 @@ class TaskStatusResponse(BaseModel):
 
 class PendingRewardsResponse(BaseModel):
     """Response for pending rewards (Creator Wallet balance)."""
+
     creator_wallet_address: str
     creator_wallet_balance_sol: float
     creator_wallet_balance_lamports: int
@@ -86,6 +83,7 @@ class PendingRewardsResponse(BaseModel):
 
 class PoolBalanceResponse(BaseModel):
     """Response for pool balance check."""
+
     sol_balance: float
     sol_balance_lamports: int
     gold_balance: float
@@ -100,10 +98,7 @@ class PoolBalanceResponse(BaseModel):
 
 @router.post("/trigger/buyback", response_model=TaskResponse)
 @limiter.limit("10/minute")
-async def trigger_buyback(
-    request: Request,
-    _: str = Depends(verify_admin_key)
-):
+async def trigger_buyback(request: Request, _: str = Depends(verify_admin_key)):
     """
     Manually trigger the buyback task.
 
@@ -116,18 +111,13 @@ async def trigger_buyback(
     logger.info(f"Admin triggered buyback task: {task.id}")
 
     return TaskResponse(
-        task_id=task.id,
-        task_name="process_creator_rewards",
-        status="queued"
+        task_id=task.id, task_name="process_creator_rewards", status="queued"
     )
 
 
 @router.post("/trigger/snapshot", response_model=TaskResponse)
 @limiter.limit("10/minute")
-async def trigger_snapshot(
-    request: Request,
-    _: str = Depends(verify_admin_key)
-):
+async def trigger_snapshot(request: Request, _: str = Depends(verify_admin_key)):
     """
     Manually trigger a balance snapshot.
 
@@ -138,19 +128,12 @@ async def trigger_snapshot(
     task = take_snapshot.delay()
     logger.info(f"Admin triggered snapshot task: {task.id}")
 
-    return TaskResponse(
-        task_id=task.id,
-        task_name="take_snapshot",
-        status="queued"
-    )
+    return TaskResponse(task_id=task.id, task_name="take_snapshot", status="queued")
 
 
 @router.post("/trigger/distribution", response_model=TaskResponse)
 @limiter.limit("10/minute")
-async def trigger_distribution(
-    request: Request,
-    _: str = Depends(verify_admin_key)
-):
+async def trigger_distribution(request: Request, _: str = Depends(verify_admin_key)):
     """
     Manually trigger distribution check.
 
@@ -163,18 +146,13 @@ async def trigger_distribution(
     logger.info(f"Admin triggered distribution task: {task.id}")
 
     return TaskResponse(
-        task_id=task.id,
-        task_name="check_distribution_triggers",
-        status="queued"
+        task_id=task.id, task_name="check_distribution_triggers", status="queued"
     )
 
 
 @router.post("/trigger/tier-update", response_model=TaskResponse)
 @limiter.limit("10/minute")
-async def trigger_tier_update(
-    request: Request,
-    _: str = Depends(verify_admin_key)
-):
+async def trigger_tier_update(request: Request, _: str = Depends(verify_admin_key)):
     """
     Manually trigger tier progression update.
 
@@ -185,11 +163,7 @@ async def trigger_tier_update(
     task = update_all_tiers.delay()
     logger.info(f"Admin triggered tier update task: {task.id}")
 
-    return TaskResponse(
-        task_id=task.id,
-        task_name="update_all_tiers",
-        status="queued"
-    )
+    return TaskResponse(task_id=task.id, task_name="update_all_tiers", status="queued")
 
 
 # ===========================================
@@ -200,9 +174,7 @@ async def trigger_tier_update(
 @router.get("/task/{task_id}", response_model=TaskStatusResponse)
 @limiter.limit("30/minute")
 async def get_task_status(
-    request: Request,
-    task_id: str,
-    _: str = Depends(verify_admin_key)
+    request: Request, task_id: str, _: str = Depends(verify_admin_key)
 ):
     """
     Check the status of a Celery task by ID.
@@ -228,7 +200,7 @@ async def get_task_status(
 async def get_pending_rewards(
     request: Request,
     _: str = Depends(verify_admin_key),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     View Creator Wallet SOL balance (pending rewards waiting for buyback).
@@ -269,7 +241,7 @@ async def get_pending_rewards(
 async def get_distribution_preview(
     request: Request,
     _: str = Depends(verify_admin_key),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Preview what the next distribution would look like (without executing).
@@ -287,7 +259,7 @@ async def get_distribution_preview(
                 "status": "no_distribution",
                 "pool_balance": status.balance,
                 "pool_value_usd": float(status.value_usd),
-                "reason": "no_eligible_recipients_or_empty_pool"
+                "reason": "no_eligible_recipients_or_empty_pool",
             }
 
         return {
@@ -304,7 +276,7 @@ async def get_distribution_preview(
                     "amount": r.amount,
                 }
                 for r in plan.recipients[:10]
-            ]
+            ],
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
@@ -312,10 +284,7 @@ async def get_distribution_preview(
 
 @router.get("/pool-balance", response_model=PoolBalanceResponse)
 @limiter.limit("30/minute")
-async def get_pool_balance(
-    request: Request,
-    _: str = Depends(verify_admin_key)
-):
+async def get_pool_balance(request: Request, _: str = Depends(verify_admin_key)):
     """
     Check airdrop pool wallet balances (SOL + GOLD).
     """
@@ -339,8 +308,7 @@ async def get_pool_balance(
     gold_balance_raw = 0
     if settings.gold_token_mint:
         gold_balance_raw = await helius.get_token_balance(
-            pool_address,
-            settings.gold_token_mint
+            pool_address, settings.gold_token_mint
         )
 
     gold_balance = Decimal(gold_balance_raw) / GOLD_MULTIPLIER

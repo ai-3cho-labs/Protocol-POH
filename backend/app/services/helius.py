@@ -261,7 +261,12 @@ class HeliusService:
             # Sum all token accounts (usually just one)
             total = 0
             for account in accounts:
-                info = account.get("account", {}).get("data", {}).get("parsed", {}).get("info", {})
+                info = (
+                    account.get("account", {})
+                    .get("data", {})
+                    .get("parsed", {})
+                    .get("info", {})
+                )
                 amount = info.get("tokenAmount", {}).get("amount", "0")
                 total += int(amount)
 

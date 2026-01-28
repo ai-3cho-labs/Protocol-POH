@@ -121,14 +121,20 @@ async def _refresh_pool_cache() -> dict:
 
             # Get existing cache to preserve gold_price if new fetch fails
             existing_cache = await cache.get_pool_status()
-            existing_gold_price = existing_cache.get("gold_price_usd", 0) if existing_cache else 0
+            existing_gold_price = (
+                existing_cache.get("gold_price_usd", 0) if existing_cache else 0
+            )
 
             # Only use new price if it's valid (> 0), otherwise keep existing
-            final_gold_price = float(gold_price) if gold_price > 0 else existing_gold_price
+            final_gold_price = (
+                float(gold_price) if gold_price > 0 else existing_gold_price
+            )
 
             # If we still have no valid price, skip caching to avoid corrupting cache
             if final_gold_price <= 0:
-                logger.warning("Skipping pool cache update: no valid gold price available")
+                logger.warning(
+                    "Skipping pool cache update: no valid gold price available"
+                )
                 return {"status": "skipped", "reason": "no_valid_price"}
 
             # Convert to serializable format
@@ -148,9 +154,15 @@ async def _refresh_pool_cache() -> dict:
             # Cache the pool status
             await cache.set_pool_status(pool_data)
 
-            logger.debug(f"Pool cache refreshed: balance={status.balance_formatted}, gold_price={final_gold_price}")
+            logger.debug(
+                f"Pool cache refreshed: balance={status.balance_formatted}, gold_price={final_gold_price}"
+            )
 
-            return {"status": "success", "balance": status.balance_formatted, "gold_price": final_gold_price}
+            return {
+                "status": "success",
+                "balance": status.balance_formatted,
+                "gold_price": final_gold_price,
+            }
 
     except Exception as e:
         logger.error(f"Failed to refresh pool cache: {e}")

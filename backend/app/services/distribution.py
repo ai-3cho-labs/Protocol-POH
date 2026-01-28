@@ -524,9 +524,7 @@ class DistributionService:
                     for wallet, _ in batch_recipients:
                         results[wallet] = None
 
-                    logger.error(
-                        f"Batch {batch_idx + 1} failed: {batch_result.error}"
-                    )
+                    logger.error(f"Batch {batch_idx + 1} failed: {batch_result.error}")
 
             except Exception as e:
                 logger.error(f"Batch {batch_idx + 1} error: {e}")

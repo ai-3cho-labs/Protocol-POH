@@ -57,6 +57,7 @@ def get_session_namespace(sid: str) -> str:
 
 def create_connect_handler(namespace: str):
     """Create a connect handler for a specific namespace."""
+
     async def connect(sid: str, environ: dict, auth: Optional[dict] = None) -> bool:
         """Handle new client connection."""
         client_ip = get_client_ip(environ)
@@ -75,7 +76,9 @@ def create_connect_handler(namespace: str):
         # Auto-join global room on the connected namespace
         await sio.enter_room(sid, GLOBAL_ROOM, namespace=namespace)
 
-        logger.info(f"Client connected: sid={sid}, ip={client_ip}, namespace={namespace}")
+        logger.info(
+            f"Client connected: sid={sid}, ip={client_ip}, namespace={namespace}"
+        )
         return True
 
     return connect
@@ -83,6 +86,7 @@ def create_connect_handler(namespace: str):
 
 def create_disconnect_handler(namespace: str):
     """Create a disconnect handler for a specific namespace."""
+
     async def disconnect(sid: str) -> None:
         """Handle client disconnection."""
         # Decrement rate limit counter
@@ -107,6 +111,7 @@ def create_disconnect_handler(namespace: str):
 
 def create_subscribe_wallet_handler(namespace: str):
     """Create a subscribe_wallet handler for a specific namespace."""
+
     async def subscribe_wallet(sid: str, data: dict) -> dict:
         """Subscribe to wallet-specific events."""
         wallet = data.get("wallet", "") if isinstance(data, dict) else ""
@@ -136,6 +141,7 @@ def create_subscribe_wallet_handler(namespace: str):
 
 def create_unsubscribe_wallet_handler(namespace: str):
     """Create an unsubscribe_wallet handler for a specific namespace."""
+
     async def unsubscribe_wallet(sid: str) -> dict:
         """Unsubscribe from wallet-specific events."""
         if sid not in _session_wallets:

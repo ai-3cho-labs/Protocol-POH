@@ -297,7 +297,9 @@ class BuybackService:
                     )
 
             # Get swap transaction from Jupiter
-            logger.info(f"Requesting Jupiter swap transaction for {user_public_key[:8]}...")
+            logger.info(
+                f"Requesting Jupiter swap transaction for {user_public_key[:8]}..."
+            )
             swap_response = await self.client.post(
                 get_jupiter_swap_url(),
                 json={
@@ -609,7 +611,9 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
     RENT_RESERVE = Decimal("0.005")
     available_sol = balance_sol - RENT_RESERVE
     if available_sol <= 0:
-        logger.info(f"Creator wallet balance {balance_sol} SOL not enough after rent reserve")
+        logger.info(
+            f"Creator wallet balance {balance_sol} SOL not enough after rent reserve"
+        )
         return None
 
     split = service.calculate_split(available_sol)

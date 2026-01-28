@@ -89,7 +89,9 @@ class Settings(BaseSettings):
     @property
     def hold_token_decimals(self) -> int:
         """Get hold token decimals (supports POH or legacy CPU)."""
-        return self.poh_token_decimals if self.poh_token_mint else self.cpu_token_decimals
+        return (
+            self.poh_token_decimals if self.poh_token_mint else self.cpu_token_decimals
+        )
 
     # Celery
     celery_broker_url: str = ""

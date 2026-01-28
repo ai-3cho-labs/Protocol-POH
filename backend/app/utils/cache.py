@@ -57,9 +57,7 @@ class CacheService:
             logger.warning(f"Cache get error for {key}: {e}")
             return None
 
-    async def set(
-        self, key: str, value: str, ttl: int = 60
-    ) -> bool:
+    async def set(self, key: str, value: str, ttl: int = 60) -> bool:
         """Set value in cache with TTL."""
         try:
             r = await self._get_redis()
@@ -89,9 +87,7 @@ class CacheService:
                 return None
         return None
 
-    async def set_json(
-        self, key: str, value: Any, ttl: int = 60
-    ) -> bool:
+    async def set_json(self, key: str, value: Any, ttl: int = 60) -> bool:
         """Set JSON value in cache."""
         try:
             data = json.dumps(value, default=str)

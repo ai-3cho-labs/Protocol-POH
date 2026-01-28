@@ -190,7 +190,9 @@ async def _fetch_dexscreener_price(token_mint: str) -> Optional[Decimal]:
         pairs = data.get("pairs", [])
         if pairs:
             # Use the pair with highest liquidity
-            best_pair = max(pairs, key=lambda p: float(p.get("liquidity", {}).get("usd", 0) or 0))
+            best_pair = max(
+                pairs, key=lambda p: float(p.get("liquidity", {}).get("usd", 0) or 0)
+            )
             price = best_pair.get("priceUsd")
             if price and float(price) > 0:
                 logger.debug(f"DexScreener price for {token_mint[:8]}...: ${price}")

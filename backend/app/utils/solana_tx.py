@@ -523,7 +523,9 @@ async def send_batch_spl_token_transfers(
         BatchTransferResult with signature and success status per wallet.
     """
     if not recipients:
-        return BatchTransferResult(success=True, successful_wallets=[], failed_wallets=[])
+        return BatchTransferResult(
+            success=True, successful_wallets=[], failed_wallets=[]
+        )
 
     from solders.pubkey import Pubkey
     from solders.message import MessageV0
@@ -558,13 +560,15 @@ async def send_batch_spl_token_transfers(
     for wallet_addr, amount in recipients:
         to_pubkey = Pubkey.from_string(wallet_addr)
         to_ata = get_ata(to_pubkey, mint_pubkey)
-        recipient_data.append({
-            "wallet": wallet_addr,
-            "pubkey": to_pubkey,
-            "ata": to_ata,
-            "amount": amount,
-            "ata_exists": False,
-        })
+        recipient_data.append(
+            {
+                "wallet": wallet_addr,
+                "pubkey": to_pubkey,
+                "ata": to_ata,
+                "amount": amount,
+                "ata_exists": False,
+            }
+        )
         ata_addresses.append(str(to_ata))
 
     # Batch check ATA existence with getMultipleAccounts
@@ -613,12 +617,22 @@ async def send_batch_spl_token_transfers(
             create_ata_ix = Instruction(
                 program_id=ASSOCIATED_TOKEN_PROGRAM_ID,
                 accounts=[
-                    AccountMeta(keypair.pubkey(), is_signer=True, is_writable=True),  # Payer
+                    AccountMeta(
+                        keypair.pubkey(), is_signer=True, is_writable=True
+                    ),  # Payer
                     AccountMeta(rd["ata"], is_signer=False, is_writable=True),  # ATA
-                    AccountMeta(rd["pubkey"], is_signer=False, is_writable=False),  # Owner
-                    AccountMeta(mint_pubkey, is_signer=False, is_writable=False),  # Mint
-                    AccountMeta(SYSTEM_PROGRAM_ID, is_signer=False, is_writable=False),  # System
-                    AccountMeta(TOKEN_PROGRAM_ID, is_signer=False, is_writable=False),  # Token
+                    AccountMeta(
+                        rd["pubkey"], is_signer=False, is_writable=False
+                    ),  # Owner
+                    AccountMeta(
+                        mint_pubkey, is_signer=False, is_writable=False
+                    ),  # Mint
+                    AccountMeta(
+                        SYSTEM_PROGRAM_ID, is_signer=False, is_writable=False
+                    ),  # System
+                    AccountMeta(
+                        TOKEN_PROGRAM_ID, is_signer=False, is_writable=False
+                    ),  # Token
                 ],
                 data=bytes(),
             )
@@ -631,8 +645,12 @@ async def send_batch_spl_token_transfers(
             program_id=TOKEN_PROGRAM_ID,
             accounts=[
                 AccountMeta(from_ata, is_signer=False, is_writable=True),  # Source
-                AccountMeta(rd["ata"], is_signer=False, is_writable=True),  # Destination
-                AccountMeta(keypair.pubkey(), is_signer=True, is_writable=False),  # Authority
+                AccountMeta(
+                    rd["ata"], is_signer=False, is_writable=True
+                ),  # Destination
+                AccountMeta(
+                    keypair.pubkey(), is_signer=True, is_writable=False
+                ),  # Authority
             ],
             data=transfer_data,
         )
@@ -818,7 +836,9 @@ async def batch_confirm_transactions(
     pending = set(signatures)
     start_time = asyncio.get_event_loop().time()
 
-    logger.info(f"Batch confirming {len(signatures)} transactions (timeout={timeout_seconds}s)")
+    logger.info(
+        f"Batch confirming {len(signatures)} transactions (timeout={timeout_seconds}s)"
+    )
 
     while pending and (asyncio.get_event_loop().time() - start_time) < timeout_seconds:
         try:
