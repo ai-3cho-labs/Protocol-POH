@@ -97,6 +97,7 @@ celerybeat.pid
 .env.prod
 backend/.env.dev
 backend/.env.prod
+backend/.env.setup
 
 # Test data
 test_wallets.json

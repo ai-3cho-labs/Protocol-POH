@@ -5,7 +5,6 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "pages:build": "next build",
     "start": "next start",
     "lint": "eslint .",
     "type-check": "tsc --noEmit"
@@ -15,6 +14,7 @@
     "@tanstack/react-query": "^5.90.20",
     "@tanstack/react-query-persist-client": "^5.90.22",
     "clsx": "^2.1.1",
+    "lucide-react": "^0.563.0",
     "next": "^15.5.9",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
