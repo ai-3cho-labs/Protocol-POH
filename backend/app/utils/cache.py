@@ -7,17 +7,13 @@ Uses Upstash Redis with configurable TTLs.
 
 import json
 import logging
-from datetime import timedelta
-from typing import Optional, Any, TypeVar, Callable
-from functools import wraps
+from typing import Optional, Any
 
 import redis.asyncio as redis
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
-
-T = TypeVar("T")
 
 # Cache key prefixes
 CACHE_PREFIX = "protocol:cache:"
