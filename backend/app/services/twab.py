@@ -311,8 +311,8 @@ class TWABService:
                 wallet_tiers[wallet] = tier if tier is not None else 1
 
         logger.info(
-            f"Batch TWAB: {len(wallet_balances)} wallets, {total_records} records "
-            f"({len(excluded_wallets)} excluded)"
+            f"Batch TWAB: {len(wallet_balances)} eligible wallets from {total_records} records "
+            f"(excluded {len(excluded_wallets)} wallets: team/CEX/pools)"
         )
 
         if not wallet_balances:
@@ -327,6 +327,16 @@ class TWABService:
             end,
             min_balance,
         )
+
+        # Log filtering results for debugging
+        filtered_count = len(wallet_balances) - len(hash_powers)
+        if filtered_count > 0:
+            logger.info(
+                f"Hash power filter: {len(hash_powers)} wallets passed, "
+                f"{filtered_count} filtered (min_balance={min_balance})"
+            )
+        else:
+            logger.info(f"Hash power: {len(hash_powers)} wallets (no filtering applied)")
 
         # Apply limit if specified
         if limit:

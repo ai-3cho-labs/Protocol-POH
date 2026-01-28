@@ -95,6 +95,14 @@ class Settings(BaseSettings):
     snapshot_probability: float = 0.4  # 40% chance per hour
 
     # Jupiter Swap Settings
+    # API key for Jupiter paid API (optional, provides better rates and priority)
+    jupiter_api_key: str = ""
+
+    # Jupiter API base URL (paid API uses different endpoint)
+    # Free: https://quote-api.jup.ag/v6
+    # Paid: https://api.jup.ag/swap/v1
+    jupiter_api_base_url: str = "https://quote-api.jup.ag/v6"
+
     # Slippage in basis points (100 = 1%, 50 = 0.5%)
     # Lower slippage protects against MEV sandwich attacks but may cause swap failures
     # SECURITY: Capped at 200 bps (2%) to prevent excessive MEV extraction

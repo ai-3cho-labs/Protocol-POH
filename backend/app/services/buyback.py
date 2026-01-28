@@ -37,10 +37,28 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-JUPITER_QUOTE_API = "https://quote-api.jup.ag/v6/quote"
-JUPITER_SWAP_API = "https://quote-api.jup.ag/v6/swap"
 # Jupiter quotes expire after ~60s, use 50s to be safe
 JUPITER_QUOTE_MAX_AGE_SECONDS = 50
+
+
+def get_jupiter_quote_url() -> str:
+    """Get Jupiter quote API URL."""
+    base = settings.jupiter_api_base_url.rstrip("/")
+    return f"{base}/quote"
+
+
+def get_jupiter_swap_url() -> str:
+    """Get Jupiter swap API URL."""
+    base = settings.jupiter_api_base_url.rstrip("/")
+    return f"{base}/swap"
+
+
+def get_jupiter_headers() -> dict:
+    """Get headers for Jupiter API requests, including API key if configured."""
+    headers = {"Content-Type": "application/json"}
+    if settings.jupiter_api_key:
+        headers["x-api-key"] = settings.jupiter_api_key
+    return headers
 
 
 @dataclass
@@ -161,10 +179,15 @@ class BuybackService:
             logger.error("Token mint not configured")
             return None
 
+        logger.info(
+            f"Jupiter quote request: {sol_amount_lamports} lamports "
+            f"({sol_amount_lamports / LAMPORTS_PER_SOL:.6f} SOL) → {self.token_mint[:8]}..."
+        )
+
         try:
             fetch_time = utc_now()
             response = await self.client.get(
-                JUPITER_QUOTE_API,
+                get_jupiter_quote_url(),
                 params={
                     "inputMint": SOL_MINT,
                     "outputMint": self.token_mint,
@@ -173,12 +196,29 @@ class BuybackService:
                     "onlyDirectRoutes": False,
                     "asLegacyTransaction": False,
                 },
+                headers=get_jupiter_headers(),
             )
-            response.raise_for_status()
-            return JupiterQuote(data=response.json(), fetched_at=fetch_time)
+
+            if response.status_code != 200:
+                logger.error(
+                    f"Jupiter quote failed: HTTP {response.status_code} - {response.text}"
+                )
+                return None
+
+            quote_data = response.json()
+
+            # Log quote details for debugging
+            out_amount = quote_data.get("outAmount", 0)
+            route_plan = quote_data.get("routePlan", [])
+            logger.info(
+                f"Jupiter quote received: {out_amount} GOLD output, "
+                f"{len(route_plan)} route steps"
+            )
+
+            return JupiterQuote(data=quote_data, fetched_at=fetch_time)
 
         except Exception as e:
-            logger.error(f"Error getting Jupiter quote: {e}")
+            logger.error(f"Error getting Jupiter quote: {type(e).__name__}: {e}")
             return None
 
     async def execute_swap(
@@ -246,8 +286,9 @@ class BuybackService:
                     )
 
             # Get swap transaction from Jupiter
+            logger.info(f"Requesting Jupiter swap transaction for {user_public_key[:8]}...")
             swap_response = await self.client.post(
-                JUPITER_SWAP_API,
+                get_jupiter_swap_url(),
                 json={
                     "quoteResponse": quote.data,
                     "userPublicKey": user_public_key,
@@ -255,8 +296,23 @@ class BuybackService:
                     "dynamicComputeUnitLimit": True,
                     "prioritizationFeeLamports": "auto",
                 },
+                headers=get_jupiter_headers(),
             )
-            swap_response.raise_for_status()
+
+            if swap_response.status_code != 200:
+                error_text = swap_response.text
+                logger.error(
+                    f"Jupiter swap API failed: HTTP {swap_response.status_code} - {error_text}"
+                )
+                return BuybackResult(
+                    success=False,
+                    tx_signature=None,
+                    sol_spent=Decimal(0),
+                    copper_received=0,
+                    price_per_token=None,
+                    error=f"Jupiter API error: {error_text}",
+                )
+
             swap_data = swap_response.json()
 
             swap_tx = swap_data.get("swapTransaction")

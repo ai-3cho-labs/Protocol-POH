@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from solders.keypair import Keypair
 from solders.transaction import VersionedTransaction
 
-from app.utils.http_client import get_http_client
+from app.utils.http_client import get_http_client, rpc_counter
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -84,6 +84,7 @@ async def get_recent_blockhash() -> Optional[str]:
                 "params": [{"commitment": "finalized"}],
             },
         )
+        rpc_counter.increment("getLatestBlockhash")
         response.raise_for_status()
         data = response.json()
 
@@ -145,6 +146,7 @@ async def sign_and_send_transaction(
                 ],
             },
         )
+        rpc_counter.increment("sendTransaction")
         response.raise_for_status()
         data = response.json()
 
@@ -249,6 +251,7 @@ async def send_sol_transfer(
                     ],
                 },
             )
+            rpc_counter.increment("sendTransaction")
             response.raise_for_status()
             data = response.json()
 
@@ -350,6 +353,7 @@ async def send_spl_token_transfer(
                 "params": [str(to_ata), {"encoding": "base64"}],
             },
         )
+        rpc_counter.increment("getAccountInfo")
         ata_check_response.raise_for_status()
         ata_check_data = ata_check_response.json()
         ata_exists = ata_check_data.get("result", {}).get("value") is not None
@@ -442,6 +446,7 @@ async def send_spl_token_transfer(
                     ],
                 },
             )
+            rpc_counter.increment("sendTransaction")
             response.raise_for_status()
             data = response.json()
 
@@ -573,6 +578,7 @@ async def send_batch_spl_token_transfers(
                 "params": [ata_addresses, {"encoding": "base64"}],
             },
         )
+        rpc_counter.increment("getMultipleAccounts")
         ata_check_response.raise_for_status()
         ata_check_data = ata_check_response.json()
 
@@ -676,6 +682,7 @@ async def send_batch_spl_token_transfers(
                     ],
                 },
             )
+            rpc_counter.increment("sendTransaction")
             response.raise_for_status()
             data = response.json()
 
@@ -757,6 +764,7 @@ async def confirm_transaction(signature: str, timeout_seconds: int = 60) -> bool
                     "params": [[signature]],
                 },
             )
+            rpc_counter.increment("getSignatureStatuses")
             response.raise_for_status()
             data = response.json()
 
@@ -824,6 +832,7 @@ async def batch_confirm_transactions(
                     "params": [list(pending)],
                 },
             )
+            rpc_counter.increment("getSignatureStatuses")
             response.raise_for_status()
             data = response.json()
 

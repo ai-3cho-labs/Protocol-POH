@@ -10,7 +10,7 @@ from decimal import Decimal
 from typing import Optional
 from dataclasses import dataclass
 
-from app.utils.http_client import get_http_client
+from app.utils.http_client import get_http_client, rpc_counter
 from app.config import (
     get_settings,
     SOL_MINT,
@@ -107,6 +107,7 @@ class HeliusService:
                         },
                     },
                 )
+                rpc_counter.increment("getTokenAccounts")
                 response.raise_for_status()
                 data = response.json()
 
@@ -168,6 +169,7 @@ class HeliusService:
                     "params": [mint],
                 },
             )
+            rpc_counter.increment("getTokenSupply")
             response.raise_for_status()
             data = response.json()
 
@@ -203,6 +205,7 @@ class HeliusService:
                     "params": [wallet],
                 },
             )
+            rpc_counter.increment("getBalance")
             response.raise_for_status()
             data = response.json()
 
@@ -242,6 +245,7 @@ class HeliusService:
                     ],
                 },
             )
+            rpc_counter.increment("getTokenAccountsByOwner")
             response.raise_for_status()
             data = response.json()
 

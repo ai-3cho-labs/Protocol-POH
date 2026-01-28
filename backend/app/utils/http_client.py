@@ -8,10 +8,47 @@ Ensures proper connection pool management and cleanup.
 import asyncio
 import logging
 from typing import Optional
+from collections import defaultdict
 
 import httpx
 
 logger = logging.getLogger(__name__)
+
+
+class RPCCallCounter:
+    """Tracks RPC calls for debugging and monitoring."""
+
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        """Reset all counters."""
+        self.calls = defaultdict(int)
+        self.total = 0
+
+    def increment(self, endpoint: str):
+        """Increment counter for an endpoint."""
+        self.calls[endpoint] += 1
+        self.total += 1
+
+    def get_stats(self) -> dict:
+        """Get call statistics."""
+        return {
+            "total": self.total,
+            "by_endpoint": dict(self.calls),
+        }
+
+    def log_summary(self):
+        """Log a summary of RPC calls."""
+        if self.total == 0:
+            return
+        logger.info(f"RPC Call Summary: {self.total} total calls")
+        for endpoint, count in sorted(self.calls.items(), key=lambda x: -x[1]):
+            logger.info(f"  {endpoint}: {count}")
+
+
+# Global RPC counter
+rpc_counter = RPCCallCounter()
 
 
 class HTTPClientManager:

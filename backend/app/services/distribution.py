@@ -109,13 +109,12 @@ class DistributionService:
                 logger.warning("Airdrop pool wallet not configured")
                 return 0
 
-            accounts = await self.helius.get_token_accounts(settings.gold_token_mint)
-
-            for account in accounts:
-                if account.wallet == pool_wallet:
-                    return account.balance
-
-            return 0
+            # Use single-wallet balance fetch (1 RPC call) instead of
+            # fetching all token holders (many RPC calls for pagination)
+            balance = await self.helius.get_token_balance(
+                pool_wallet, settings.gold_token_mint
+            )
+            return balance
 
         except Exception as e:
             logger.error(f"Error fetching pool balance: {e}")
@@ -211,11 +210,9 @@ class DistributionService:
             delta = utc_now() - last_dist.executed_at
             hours_since = delta.total_seconds() / 3600
 
-        # Check triggers
-        threshold_met = value_usd >= settings.distribution_threshold_usd
-        time_trigger_met = (
-            hours_since is None or hours_since >= settings.distribution_max_hours
-        )
+        # Triggers removed - distribute whenever pool has balance
+        # Previously: threshold ($250 USD) or time (24h) triggers
+        has_balance = balance > 0
 
         return PoolStatus(
             balance=balance,
@@ -223,24 +220,24 @@ class DistributionService:
             value_usd=value_usd,
             last_distribution=last_dist.executed_at if last_dist else None,
             hours_since_last=hours_since,
-            threshold_met=threshold_met,
-            time_trigger_met=time_trigger_met,
-            should_distribute=threshold_met or time_trigger_met,
+            threshold_met=has_balance,  # Legacy field - now just checks balance > 0
+            time_trigger_met=has_balance,  # Legacy field - now just checks balance > 0
+            should_distribute=has_balance,  # Distribute if pool has any balance
         )
 
     async def should_distribute(self) -> tuple[bool, str]:
         """
         Check if distribution should be triggered.
 
+        Triggers removed - distribute whenever pool has balance.
+
         Returns:
             Tuple of (should_distribute, trigger_type).
         """
         status = await self.get_pool_status()
 
-        if status.threshold_met:
-            return True, "threshold"
-        if status.time_trigger_met:
-            return True, "time"
+        if status.should_distribute:
+            return True, "manual"  # Triggers removed - all distributions are manual now
 
         return False, ""
 
@@ -280,22 +277,17 @@ class DistributionService:
         else:
             start = end - timedelta(hours=24)
 
-        # Get minimum balance threshold (convert USD to CPU tokens)
-        price = await self.get_gold_price_usd()
-        min_balance_tokens = 0
-        if price > 0:
-            min_balance_tokens = int(
-                (Decimal(settings.min_balance_usd) / price) * TOKEN_MULTIPLIER
-            )
-
-        # Calculate hash powers for all wallets
+        # Calculate hash powers for all wallets (no minimum balance filter)
+        # All CPU token holders are eligible for GOLD distribution
         hash_powers = await self.twab_service.calculate_all_hash_powers(
-            start, end, min_balance=min_balance_tokens
+            start, end, min_balance=0
         )
 
         if not hash_powers:
             logger.warning("No eligible wallets for distribution")
             return None
+
+        logger.info(f"Distribution: {len(hash_powers)} wallets with hash power")
 
         # Calculate total hash power
         total_hp = sum(hp.hash_power for hp in hash_powers)
@@ -356,8 +348,16 @@ class DistributionService:
                 f"Distributed {remainder} remainder tokens to top {min(remainder, len(recipients))} holders"
             )
 
-        # Filter out recipients with 0 amount
+        # Filter out recipients with 0 amount (dust shares that round to 0)
+        zero_amount_count = sum(1 for r in recipients if r.amount == 0)
         recipients = [r for r in recipients if r.amount > 0]
+
+        if zero_amount_count > 0:
+            logger.info(
+                f"Distribution: filtered {zero_amount_count} wallets with 0 amount (dust)"
+            )
+
+        logger.info(f"Distribution plan: {len(recipients)} final recipients")
 
         return DistributionPlan(
             pool_amount=pool_amount,
