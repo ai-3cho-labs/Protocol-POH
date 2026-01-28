@@ -347,7 +347,6 @@ function Leaderboard({
   currentUser,
   userRank,
   userHoldings,
-  userMinedValue,
   isConnected,
 }: {
   entries: Array<{
@@ -359,7 +358,6 @@ function Leaderboard({
   currentUser: string;
   userRank: number | null;
   userHoldings: number;
-  userMinedValue: number;
   isConnected: boolean;
 }) {
   const truncateAddress = (addr: string) =>
@@ -628,7 +626,6 @@ export default function HomePage() {
                 currentUser={address ?? ''}
                 userRank={stats?.rank ?? null}
                 userHoldings={stats?.balance ?? 0}
-                userMinedValue={totalClaimedUsd}
                 isConnected={isConnected}
               />
             </div>
