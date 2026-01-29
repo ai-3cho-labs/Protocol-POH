@@ -150,22 +150,6 @@ async def trigger_distribution(request: Request, _: str = Depends(verify_admin_k
     )
 
 
-@router.post("/trigger/tier-update", response_model=TaskResponse)
-@limiter.limit("10/minute")
-async def trigger_tier_update(request: Request, _: str = Depends(verify_admin_key)):
-    """
-    Manually trigger tier progression update.
-
-    Updates tier levels for all holders based on their streak duration.
-    """
-    from app.tasks.snapshot_task import update_all_tiers
-
-    task = update_all_tiers.delay()
-    logger.info(f"Admin triggered tier update task: {task.id}")
-
-    return TaskResponse(task_id=task.id, task_name="update_all_tiers", status="queued")
-
-
 # ===========================================
 # Status & Debug Endpoints
 # ===========================================

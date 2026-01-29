@@ -616,11 +616,14 @@ async def process_pending_rewards(db: AsyncSession) -> Optional[BuybackResult]:
         )
         return None
 
-    split = service.calculate_split(available_sol)
+    # Only transfer configured % of available SOL to pool (rest stays in creator wallet)
+    transfer_pct = Decimal(settings.buyback_pool_transfer_percent) / Decimal(100)
+    pool_sol = available_sol * transfer_pct
+    split = service.calculate_split(pool_sol)
 
     logger.info(
         f"Processing creator wallet balance: {balance_sol} SOL "
-        f"(available: {available_sol} SOL after rent reserve) → pool"
+        f"(available: {available_sol} SOL, transferring {settings.buyback_pool_transfer_percent}%: {pool_sol} SOL) → pool"
     )
 
     # Step 1: Transfer 100% available SOL from CREATOR → AIRDROP_POOL

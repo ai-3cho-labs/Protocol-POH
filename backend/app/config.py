@@ -103,6 +103,7 @@ class Settings(BaseSettings):
 
     # Buyback Settings
     buyback_min_sol_threshold: float = 0.01  # Minimum SOL to trigger processing
+    buyback_pool_transfer_percent: int = 90  # % of creator wallet SOL sent to pool (rest stays in creator wallet)
 
     # Token Branding (for logs/display)
     hold_token_symbol: str = "POH"  # Token users hold
