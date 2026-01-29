@@ -67,6 +67,7 @@ class GlobalStatsResponse(BaseModel):
     total_volume_24h: float
     total_buybacks_sol: float
     total_distributed: float
+    distribution_count: int
     last_snapshot_at: Optional[datetime]
     last_distribution_at: Optional[datetime]
 
@@ -153,10 +154,15 @@ def format_wallet(wallet: str) -> str:
 @limiter.limit("60/minute")
 async def get_global_stats(request: Request, db: AsyncSession = Depends(get_db)):
     """Get global system statistics."""
-    from app.models import SystemStats
+    from app.models import SystemStats, Distribution
 
     result = await db.execute(select(SystemStats).where(SystemStats.id == 1))
     stats = result.scalar_one_or_none()
+
+    dist_count_result = await db.execute(
+        select(func.count()).select_from(Distribution)
+    )
+    dist_count = dist_count_result.scalar() or 0
 
     if not stats:
         return GlobalStatsResponse(
@@ -164,6 +170,7 @@ async def get_global_stats(request: Request, db: AsyncSession = Depends(get_db))
             total_volume_24h=0,
             total_buybacks_sol=0,
             total_distributed=0,
+            distribution_count=dist_count,
             last_snapshot_at=None,
             last_distribution_at=None,
         )
@@ -175,6 +182,7 @@ async def get_global_stats(request: Request, db: AsyncSession = Depends(get_db))
         total_distributed=float(
             Decimal(stats.total_distributed or 0) / GOLD_MULTIPLIER
         ),
+        distribution_count=dist_count,
         last_snapshot_at=stats.last_snapshot_at,
         last_distribution_at=stats.last_distribution_at,
     )

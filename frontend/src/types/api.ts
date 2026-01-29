@@ -18,6 +18,8 @@ export interface GlobalStatsResponse {
   total_buybacks_sol: number;
   /** Total tokens distributed (human-readable) */
   total_distributed: number;
+  /** Total number of distributions executed */
+  distribution_count: number;
   /** When last balance snapshot occurred (ISO string) */
   last_snapshot_at: string | null;
   /** When last distribution was executed (ISO string) */

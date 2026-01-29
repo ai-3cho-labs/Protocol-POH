@@ -19,10 +19,12 @@ import {
   usePoolStatus,
   useLeaderboard,
   useUserHistory,
+  useGlobalStats,
 } from '@/hooks/api';
 import { useTickingCounter } from '@/hooks/useCountdown';
 import {
   formatCompactNumber,
+  formatNumber,
   formatGOLD,
   formatUSD,
   calculateEarningRate,
@@ -379,6 +381,52 @@ function ResourceVault({
 }
 
 // ===========================================
+// PROTOCOL STATS
+// ===========================================
+
+function ProtocolStats({
+  distributionCount,
+  totalHolders,
+  totalDistributed,
+}: {
+  distributionCount: number;
+  totalHolders: number;
+  totalDistributed: number;
+}) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <Card>
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+          Distributions
+        </p>
+        <h2 className="text-3xl font-black text-gray-900">
+          {formatNumber(distributionCount)}
+        </h2>
+      </Card>
+
+      <Card>
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+          Holders
+        </p>
+        <h2 className="text-3xl font-black text-gray-900">
+          {formatNumber(totalHolders)}
+        </h2>
+      </Card>
+
+      <Card>
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+          Total Distributed
+        </p>
+        <h2 className="text-3xl font-black text-gray-900">
+          {formatGOLD(totalDistributed)}{' '}
+          <span className="text-xs text-gray-400 font-normal uppercase">GOLD</span>
+        </h2>
+      </Card>
+    </div>
+  );
+}
+
+// ===========================================
 // LEADERBOARD
 // ===========================================
 
@@ -532,6 +580,7 @@ export default function HomePage() {
   const { data: pool } = usePoolStatus();
   const { data: leaderboard } = useLeaderboard(10, address);
   const { data: history } = useUserHistory(address, 20);
+  const { data: globalStats } = useGlobalStats();
 
   // Computed values
   const earningRate = calculateEarningRate(
@@ -660,6 +709,12 @@ export default function HomePage() {
                 lifetimeEarnings={lifetimeEarnings}
                 totalClaimedUsd={totalClaimedUsd}
                 onOpenShare={() => setIsShareModalOpen(true)}
+              />
+
+              <ProtocolStats
+                distributionCount={globalStats?.distribution_count ?? 0}
+                totalHolders={globalStats?.total_holders ?? 0}
+                totalDistributed={globalStats?.total_distributed ?? 0}
               />
 
               <Leaderboard
