@@ -4,6 +4,7 @@ $COPPER Solana Transaction Utilities
 Handles transaction signing and sending using solders.
 """
 
+import asyncio
 import logging
 import base64
 import base58
@@ -29,6 +30,9 @@ BLOCKHASH_ERROR_PATTERNS = [
 
 # Maximum retries for stale blockhash
 MAX_BLOCKHASH_RETRIES = 2
+
+# Retry backoff: delay in seconds for attempt 0, 1, 2
+RETRY_BACKOFF_SECONDS = [0.5, 1.5, 3.0]
 
 # SECURITY: Maximum transaction limits to prevent accidental/malicious large transfers
 MAX_SOL_LAMPORTS = 100_000_000_000_000  # 100,000 SOL
@@ -260,10 +264,13 @@ async def send_sol_transfer(
 
                 # Check if this is a stale blockhash error and we can retry
                 if _is_blockhash_error(error_msg) and attempt < MAX_BLOCKHASH_RETRIES:
+                    backoff = RETRY_BACKOFF_SECONDS[min(attempt, len(RETRY_BACKOFF_SECONDS) - 1)]
                     logger.warning(
-                        f"Stale blockhash on SOL transfer (attempt {attempt + 1}), retrying..."
+                        f"Stale blockhash on SOL transfer (attempt {attempt + 1}), "
+                        f"retrying in {backoff}s..."
                     )
                     last_error = error_msg
+                    await asyncio.sleep(backoff)
                     continue
 
                 logger.error(f"SOL transfer error: {error_msg}")
@@ -279,9 +286,12 @@ async def send_sol_transfer(
         except Exception as e:
             last_error = str(e)
             if attempt < MAX_BLOCKHASH_RETRIES:
+                backoff = RETRY_BACKOFF_SECONDS[min(attempt, len(RETRY_BACKOFF_SECONDS) - 1)]
                 logger.warning(
-                    f"SOL transfer exception (attempt {attempt + 1}): {e}, retrying..."
+                    f"SOL transfer exception (attempt {attempt + 1}): {e}, "
+                    f"retrying in {backoff}s..."
                 )
+                await asyncio.sleep(backoff)
                 continue
             # SECURITY: Do not use exc_info=True to avoid exposing private key bytes in stack traces
             logger.error(f"Error sending SOL transfer: {type(e).__name__}: {e}")
@@ -455,10 +465,13 @@ async def send_spl_token_transfer(
 
                 # Check if this is a stale blockhash error and we can retry
                 if _is_blockhash_error(error_msg) and attempt < MAX_BLOCKHASH_RETRIES:
+                    backoff = RETRY_BACKOFF_SECONDS[min(attempt, len(RETRY_BACKOFF_SECONDS) - 1)]
                     logger.warning(
-                        f"Stale blockhash on token transfer (attempt {attempt + 1}), retrying..."
+                        f"Stale blockhash on token transfer (attempt {attempt + 1}), "
+                        f"retrying in {backoff}s..."
                     )
                     last_error = error_msg
+                    await asyncio.sleep(backoff)
                     continue
 
                 logger.error(f"Token transfer error: {error_msg}")
@@ -474,9 +487,12 @@ async def send_spl_token_transfer(
         except Exception as e:
             last_error = str(e)
             if attempt < MAX_BLOCKHASH_RETRIES:
+                backoff = RETRY_BACKOFF_SECONDS[min(attempt, len(RETRY_BACKOFF_SECONDS) - 1)]
                 logger.warning(
-                    f"Token transfer exception (attempt {attempt + 1}): {e}, retrying..."
+                    f"Token transfer exception (attempt {attempt + 1}): {e}, "
+                    f"retrying in {backoff}s..."
                 )
+                await asyncio.sleep(backoff)
                 continue
             # SECURITY: Do not use exc_info=True to avoid exposing private key bytes in stack traces
             logger.error(f"Error sending token transfer: {type(e).__name__}: {e}")
@@ -708,10 +724,13 @@ async def send_batch_spl_token_transfers(
                 error_msg = data["error"].get("message", str(data["error"]))
 
                 if _is_blockhash_error(error_msg) and attempt < MAX_BLOCKHASH_RETRIES:
+                    backoff = RETRY_BACKOFF_SECONDS[min(attempt, len(RETRY_BACKOFF_SECONDS) - 1)]
                     logger.warning(
-                        f"Stale blockhash on batch transfer (attempt {attempt + 1}), retrying..."
+                        f"Stale blockhash on batch transfer (attempt {attempt + 1}), "
+                        f"retrying in {backoff}s..."
                     )
                     last_error = error_msg
+                    await asyncio.sleep(backoff)
                     continue
 
                 logger.error(f"Batch transfer error: {error_msg}")
@@ -742,9 +761,12 @@ async def send_batch_spl_token_transfers(
         except Exception as e:
             last_error = str(e)
             if attempt < MAX_BLOCKHASH_RETRIES:
+                backoff = RETRY_BACKOFF_SECONDS[min(attempt, len(RETRY_BACKOFF_SECONDS) - 1)]
                 logger.warning(
-                    f"Batch transfer exception (attempt {attempt + 1}): {e}, retrying..."
+                    f"Batch transfer exception (attempt {attempt + 1}): {e}, "
+                    f"retrying in {backoff}s..."
                 )
+                await asyncio.sleep(backoff)
                 continue
             logger.error(f"Error sending batch transfer: {type(e).__name__}: {e}")
 

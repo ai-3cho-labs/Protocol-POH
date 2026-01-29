@@ -464,8 +464,12 @@ class DistributionService:
 
         # Batch size: ~10 transfers per transaction (conservative for tx size limits)
         BATCH_SIZE = 10
-        # Delay between batches (seconds)
-        BATCH_DELAY_SECONDS = 1.0
+        # Delay between batches (seconds) - generous to avoid RPC rate limits
+        BATCH_DELAY_SECONDS = 2.0
+        # Errors that indicate pool is drained (no point sending more batches)
+        INSUFFICIENT_FUNDS_PATTERNS = ["custom program error: 0x1", "insufficient"]
+        # Max consecutive failures before aborting remaining batches
+        MAX_CONSECUTIVE_FAILURES = 3
 
         results: dict[str, Optional[str]] = {}
         token_mint = settings.gold_token_mint  # Distribute GOLD tokens
@@ -487,6 +491,7 @@ class DistributionService:
 
         # Collect signatures for batch confirmation
         pending_signatures: list[tuple[str, str]] = []  # (wallet, signature)
+        consecutive_failures = 0
 
         # Process in batches
         for batch_idx in range(num_batches):
@@ -511,6 +516,7 @@ class DistributionService:
 
                 if batch_result.success and batch_result.signature:
                     # All recipients in batch succeeded
+                    consecutive_failures = 0
                     for wallet in batch_result.successful_wallets:
                         results[wallet] = batch_result.signature
                         pending_signatures.append((wallet, batch_result.signature))
@@ -521,15 +527,45 @@ class DistributionService:
                     )
                 else:
                     # Batch failed - mark all recipients as failed
+                    consecutive_failures += 1
                     for wallet, _ in batch_recipients:
                         results[wallet] = None
 
                     logger.error(f"Batch {batch_idx + 1} failed: {batch_result.error}")
 
+                    # Check if pool is drained (insufficient funds) - abort remaining
+                    error_lower = (batch_result.error or "").lower()
+                    if any(p in error_lower for p in INSUFFICIENT_FUNDS_PATTERNS):
+                        remaining = num_batches - batch_idx - 1
+                        logger.warning(
+                            f"Pool drained (insufficient funds) - aborting {remaining} remaining batches"
+                        )
+                        for future_idx in range(batch_idx + 1, num_batches):
+                            fs = future_idx * BATCH_SIZE
+                            fe = min(fs + BATCH_SIZE, total)
+                            for r in recipients[fs:fe]:
+                                results[r.wallet] = None
+                        break
+
             except Exception as e:
+                consecutive_failures += 1
                 logger.error(f"Batch {batch_idx + 1} error: {e}")
                 for wallet, _ in batch_recipients:
                     results[wallet] = None
+
+            # Abort if too many consecutive failures (likely systemic issue)
+            if consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
+                remaining = num_batches - batch_idx - 1
+                logger.error(
+                    f"{consecutive_failures} consecutive batch failures - "
+                    f"aborting {remaining} remaining batches"
+                )
+                for future_idx in range(batch_idx + 1, num_batches):
+                    fs = future_idx * BATCH_SIZE
+                    fe = min(fs + BATCH_SIZE, total)
+                    for r in recipients[fs:fe]:
+                        results[r.wallet] = None
+                break
 
             # Delay between batches (except after the last one)
             if batch_idx < num_batches - 1:
