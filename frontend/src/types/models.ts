@@ -60,8 +60,8 @@ export interface LeaderboardUser {
   wallet: string;
   /** Shortened wallet (4...4) */
   walletShort: string;
-  /** Total GOLD earned */
-  totalEarned: number;
+  /** Total USD earned (at distribution time) */
+  totalEarnedUsd: number;
   /** Is this the connected user? */
   isCurrentUser: boolean;
 }

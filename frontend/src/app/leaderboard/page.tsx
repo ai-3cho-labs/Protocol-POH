@@ -10,7 +10,7 @@ import {
   Skeleton,
 } from '@/components/ui';
 import { useLeaderboard } from '@/hooks/api';
-import { formatCompactNumber } from '@/lib/utils';
+import { formatUSD } from '@/lib/utils';
 import { cn } from '@/lib/cn';
 import type { LeaderboardUser } from '@/types/models';
 
@@ -38,7 +38,7 @@ export default function LeaderboardPage() {
         <div className="text-center">
           <h1 className="text-xl font-bold text-white">Leaderboard</h1>
           <p className="text-xs text-gray-500 mt-1">
-            Top earners by GOLD received
+            Top earners by USD earned
           </p>
         </div>
 
@@ -90,7 +90,7 @@ export default function LeaderboardPage() {
             LEADERBOARD
           </h1>
           <p className="text-sm text-zinc-500 mt-1">
-            Top earners ranked by GOLD received
+            Top earners ranked by USD earned
           </p>
         </div>
 
@@ -188,7 +188,7 @@ function MobilePodium({ entries }: { entries: LeaderboardUser[] }) {
 
               {/* Balance */}
               <span className="text-[10px] text-gray-500 mb-2">
-                {formatCompactNumber(entry.totalEarned)}
+                {formatUSD(entry.totalEarnedUsd)}
               </span>
 
               {/* Podium bar */}
@@ -298,7 +298,7 @@ function MobileRow({ entry }: { entry: LeaderboardUser }) {
             entry.isCurrentUser ? 'text-amber-400' : 'text-white'
           )}
         >
-          {formatCompactNumber(entry.totalEarned)}
+          {formatUSD(entry.totalEarnedUsd)}
         </div>
       </div>
     </div>
@@ -361,7 +361,7 @@ function DesktopRow({ entry }: { entry: LeaderboardUser }) {
             entry.isCurrentUser ? 'text-white glow-white' : 'text-white'
           )}
         >
-          {formatCompactNumber(entry.totalEarned)}
+          {formatUSD(entry.totalEarnedUsd)}
         </span>
       </div>
     </div>

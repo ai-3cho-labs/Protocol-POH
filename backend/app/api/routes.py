@@ -12,7 +12,8 @@ from typing import Optional, Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func
+from sqlalchemy import select, and_, func, cast, case
+from sqlalchemy.types import Numeric as SQLNumeric
 from app.database import get_db
 from app.services.snapshot import SnapshotService
 from app.services.distribution import DistributionService
@@ -99,7 +100,7 @@ class LeaderboardEntry(BaseModel):
     rank: int
     wallet: str
     wallet_short: str
-    total_earned: float
+    total_earned_usd: float
 
 
 class PoolStatusResponse(BaseModel):
@@ -310,51 +311,70 @@ async def get_leaderboard(
     limit: int = Query(default=10, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get top earners by total GOLD received (cached)."""
+    """Get top earners by total USD earned at distribution time (cached)."""
     from app.utils.cache import get_cache_service
 
     cache = get_cache_service()
 
     # Try cache first
     cached = await cache.get_leaderboard()
-    if cached and "total_earned" in cached[0]:
+    if cached and "total_earned_usd" in cached[0]:
         # Return from cache (slice to requested limit)
         return [
             LeaderboardEntry(
                 rank=entry["rank"],
                 wallet=entry["wallet"],
                 wallet_short=format_wallet(entry["wallet"]),
-                total_earned=float(Decimal(entry["total_earned"]) / GOLD_MULTIPLIER),
+                total_earned_usd=round(entry["total_earned_usd"], 2),
             )
             for entry in cached[:limit]
         ]
 
-    from app.models import DistributionRecipient, ExcludedWallet
+    from app.models import Distribution, DistributionRecipient, ExcludedWallet
 
     # Get excluded wallets
     excluded_result = await db.execute(select(ExcludedWallet.wallet))
     excluded = {w for (w,) in excluded_result.all()}
 
-    # Get top earners by total amount received across all distributions
-    total_earned = func.sum(DistributionRecipient.amount_received).label(
-        "total_earned"
-    )
+    # Compute USD earned per recipient at distribution time:
+    # usd = (amount_received / pool_amount) * pool_value_usd
+    total_earned_usd = func.sum(
+        case(
+            (
+                and_(
+                    Distribution.pool_amount > 0,
+                    Distribution.pool_value_usd.isnot(None),
+                ),
+                (
+                    cast(DistributionRecipient.amount_received, SQLNumeric)
+                    / cast(Distribution.pool_amount, SQLNumeric)
+                )
+                * Distribution.pool_value_usd,
+            ),
+            else_=0,
+        )
+    ).label("total_earned_usd")
+
     result = await db.execute(
-        select(DistributionRecipient.wallet, total_earned)
+        select(DistributionRecipient.wallet, total_earned_usd)
+        .join(
+            Distribution,
+            Distribution.id == DistributionRecipient.distribution_id,
+        )
         .group_by(DistributionRecipient.wallet)
-        .order_by(total_earned.desc())
+        .order_by(total_earned_usd.desc())
         .limit(100)
     )
-    earners = [(w, e) for w, e in result.all() if w not in excluded and e > 0]
+    earners = [(w, float(e)) for w, e in result.all() if w not in excluded and e > 0]
 
     # Cache for next time
     leaderboard_data = [
         {
             "rank": i + 1,
             "wallet": w,
-            "total_earned": e,
+            "total_earned_usd": usd,
         }
-        for i, (w, e) in enumerate(earners)
+        for i, (w, usd) in enumerate(earners)
     ]
     await cache.set_leaderboard(leaderboard_data)
 
@@ -363,9 +383,9 @@ async def get_leaderboard(
             rank=i + 1,
             wallet=w,
             wallet_short=format_wallet(w),
-            total_earned=float(Decimal(e) / GOLD_MULTIPLIER),
+            total_earned_usd=round(usd, 2),
         )
-        for i, (w, e) in enumerate(earners[:limit])
+        for i, (w, usd) in enumerate(earners[:limit])
     ]
 
 

@@ -66,8 +66,8 @@ export interface LeaderboardEntry {
   wallet: string;
   /** Shortened wallet format (first 4 + last 4) */
   wallet_short: string;
-  /** Total GOLD earned across all distributions */
-  total_earned: number;
+  /** Total USD earned across all distributions (at distribution time) */
+  total_earned_usd: number;
 }
 
 /** GET /api/pool - Airdrop pool status */

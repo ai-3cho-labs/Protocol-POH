@@ -21,7 +21,7 @@ function transformLeaderboardEntry(
     rank: entry.rank,
     wallet: entry.wallet,
     walletShort: entry.wallet_short,
-    totalEarned: entry.total_earned,
+    totalEarnedUsd: entry.total_earned_usd,
     isCurrentUser: currentWallet?.toLowerCase() === entry.wallet.toLowerCase(),
   };
 }

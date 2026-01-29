@@ -386,22 +386,25 @@ function Leaderboard({
   entries,
   currentUser,
   userRank,
-  userHoldings,
   isConnected,
 }: {
   entries: Array<{
     wallet: string;
     walletShort: string;
-    totalEarned: number;
+    totalEarnedUsd: number;
     rank: number;
   }>;
   currentUser: string;
   userRank: number | null;
-  userHoldings: number;
   isConnected: boolean;
 }) {
   const truncateAddress = (addr: string) =>
     addr.length > 12 ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : addr;
+
+  // Check if the current user is already shown in the top entries
+  const userInList = entries.some(
+    (e) => e.wallet.toLowerCase() === currentUser.toLowerCase()
+  );
 
   return (
     <Card>
@@ -431,19 +434,17 @@ function Leaderboard({
                   {miner.walletShort}
                 </td>
                 <td className="py-4 text-right font-medium">
-                  {formatCompactNumber(miner.totalEarned)}
+                  {formatUSD(miner.totalEarnedUsd)}
                 </td>
               </tr>
             ))}
-            {userRank && (
+            {userRank && !userInList && (
               <tr className="bg-gray-50/80 font-bold">
                 <td className="py-4 pl-2">{userRank}</td>
                 <td className="py-4 font-mono">
                   {isConnected ? truncateAddress(currentUser) : 'YOU'}
                 </td>
-                <td className="py-4 text-right">
-                  {formatCompactNumber(userHoldings)}
-                </td>
+                <td className="py-4 text-right">—</td>
               </tr>
             )}
           </tbody>
@@ -665,7 +666,6 @@ export default function HomePage() {
                 entries={leaderboard ?? []}
                 currentUser={address ?? ''}
                 userRank={stats?.rank ?? null}
-                userHoldings={stats?.balance ?? 0}
                 isConnected={isConnected}
               />
             </div>
