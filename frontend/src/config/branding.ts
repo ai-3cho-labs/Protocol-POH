@@ -23,7 +23,7 @@ export const branding = {
 
   // Links
   domain: process.env.NEXT_PUBLIC_DOMAIN || '',
-  buyTokenUrl: process.env.NEXT_PUBLIC_BUY_TOKEN_URL || 'https://pump.fun/coin/HxsdzSBqoBJreJvynzXwHBJtc9qts3v4afhNfaWdpump',
+  buyTokenUrl: process.env.NEXT_PUBLIC_BUY_TOKEN_URL || 'https://pump.fun/coin/2UGL8evhUzGkHPxkFVB1BwFocchLVmzxHGKVc6GLpump',
   buyTokenLabel:
     process.env.NEXT_PUBLIC_BUY_TOKEN_LABEL ||
     `Buy ${process.env.NEXT_PUBLIC_HOLD_TOKEN_SYMBOL || 'POH'} on Pump.fun`,
@@ -32,7 +32,7 @@ export const branding = {
   socials: {
     twitter: process.env.NEXT_PUBLIC_TWITTER_URL || 'https://x.com',
     telegram: process.env.NEXT_PUBLIC_TELEGRAM_URL || 'https://t.me',
-    contract: process.env.NEXT_PUBLIC_CONTRACT_URL || 'https://solscan.io/token/HxsdzSBqoBJreJvynzXwHBJtc9qts3v4afhNfaWdpump',
+    contract: process.env.NEXT_PUBLIC_CONTRACT_URL || 'https://solscan.io/token/2UGL8evhUzGkHPxkFVB1BwFocchLVmzxHGKVc6GLpump',
   },
 
   // Legal

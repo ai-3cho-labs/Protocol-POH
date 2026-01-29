@@ -131,7 +131,7 @@ function Modal({
 // HERO SECTION
 // ===========================================
 
-const CONTRACT_ADDRESS = 'HxsdzSBqoBJreJvynzXwHBJtc9qts3v4afhNfaWdpump';
+const CONTRACT_ADDRESS = '2UGL8evhUzGkHPxkFVB1BwFocchLVmzxHGKVc6GLpump';
 
 function HeroSection({
   addressInput,
