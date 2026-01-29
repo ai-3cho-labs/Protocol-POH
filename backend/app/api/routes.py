@@ -317,7 +317,7 @@ async def get_leaderboard(
 
     # Try cache first
     cached = await cache.get_leaderboard()
-    if cached:
+    if cached and "total_earned" in cached[0]:
         # Return from cache (slice to requested limit)
         return [
             LeaderboardEntry(
