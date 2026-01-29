@@ -9,8 +9,8 @@ export const metadata: Metadata = {
   keywords: branding.seoKeywords,
   authors: [{ name: `${branding.appShortName} Team` }],
   icons: {
-    icon: '/branding/icon.jpg',
-    apple: '/branding/icon.jpg',
+    icon: '/branding/icon.png',
+    apple: '/branding/icon.png',
   },
   openGraph: {
     title: branding.appName,
