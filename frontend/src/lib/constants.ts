@@ -9,10 +9,10 @@ import { branding } from '@/config';
 // ===========================================
 
 /** Base URL for the backend API */
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').trim();
 
 /** WebSocket URL for real-time updates */
-export const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:8000';
+export const WS_URL = (process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:8000').trim();
 
 /** API key for authenticated requests (optional) */
 export const API_KEY = process.env.NEXT_PUBLIC_API_KEY || '';

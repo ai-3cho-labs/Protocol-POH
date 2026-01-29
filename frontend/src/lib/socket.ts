@@ -71,7 +71,7 @@ export function getSocket(): Socket {
     // IMPORTANT: Strip /ws from URL if present - it's an HTTP path, not a namespace
     // The path option handles the HTTP routing; including /ws in URL would make
     // Socket.IO interpret it as a namespace, causing "Unable to connect" errors
-    let baseUrl = WS_URL;
+    let baseUrl = WS_URL.trim();
     if (baseUrl.endsWith('/ws') || baseUrl.endsWith('/ws/')) {
       baseUrl = baseUrl.replace(/\/ws\/?$/, '');
     }
