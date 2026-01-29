@@ -60,26 +60,30 @@ def create_connect_handler(namespace: str):
 
     async def connect(sid: str, environ: dict, auth: Optional[dict] = None) -> bool:
         """Handle new client connection."""
-        client_ip = get_client_ip(environ)
+        try:
+            client_ip = get_client_ip(environ)
 
-        # Check rate limit
-        if not connection_tracker.can_connect(client_ip):
-            logger.warning(f"Connection rejected for {client_ip}: rate limit exceeded")
+            # Check rate limit
+            if not connection_tracker.can_connect(client_ip):
+                logger.warning(f"Connection rejected for {client_ip}: rate limit exceeded")
+                return False
+
+            # Track connection with sid->IP mapping for proper cleanup
+            connection_tracker.add_connection(sid, client_ip)
+
+            # Track which namespace this session connected to
+            _session_namespaces[sid] = namespace
+
+            # Auto-join global room on the connected namespace
+            await sio.enter_room(sid, GLOBAL_ROOM, namespace=namespace)
+
+            logger.info(
+                f"Client connected: sid={sid}, ip={client_ip}, namespace={namespace}"
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Connect handler error for sid={sid}, namespace={namespace}: {e}", exc_info=True)
             return False
-
-        # Track connection with sid->IP mapping for proper cleanup
-        connection_tracker.add_connection(sid, client_ip)
-
-        # Track which namespace this session connected to
-        _session_namespaces[sid] = namespace
-
-        # Auto-join global room on the connected namespace
-        await sio.enter_room(sid, GLOBAL_ROOM, namespace=namespace)
-
-        logger.info(
-            f"Client connected: sid={sid}, ip={client_ip}, namespace={namespace}"
-        )
-        return True
 
     return connect
 
