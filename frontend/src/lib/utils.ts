@@ -12,6 +12,10 @@
 export function formatCompactNumber(value: number): string {
   if (value === 0) return '0';
 
+  if (Math.abs(value) < 1) {
+    return value.toLocaleString('en-US', { maximumSignificantDigits: 3 });
+  }
+
   const formatter = new Intl.NumberFormat('en-US', {
     notation: 'compact',
     compactDisplay: 'short',
