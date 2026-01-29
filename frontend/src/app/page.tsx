@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   Pickaxe,
   ArrowRightLeft,
@@ -9,6 +9,8 @@ import {
   Trophy,
   Share2,
   ChevronDown,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { useAddressContext } from '@/contexts/AddressContext';
@@ -129,6 +131,8 @@ function Modal({
 // HERO SECTION
 // ===========================================
 
+const CONTRACT_ADDRESS = 'HxsdzSBqoBJreJvynzXwHBJtc9qts3v4afhNfaWdpump';
+
 function HeroSection({
   addressInput,
   setAddressInput,
@@ -138,6 +142,14 @@ function HeroSection({
   setAddressInput: (value: string) => void;
   onInitialize: (e?: React.FormEvent) => void;
 }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyCA = useCallback(() => {
+    navigator.clipboard.writeText(CONTRACT_ADDRESS);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, []);
+
   return (
     <section className="relative h-screen flex flex-col justify-center items-center text-center px-4 overflow-hidden border-b border-gray-50">
       <div
@@ -183,6 +195,34 @@ function HeroSection({
         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
           No wallet connection required. Read-only visualization.
         </p>
+
+        <a
+          href={branding.buyTokenUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-50 border border-gray-200 hover:border-black hover:bg-white transition-all group"
+        >
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">CA:</span>
+          <span className="font-mono text-xs text-gray-600 group-hover:text-black transition-colors">
+            {CONTRACT_ADDRESS.slice(0, 6)}...{CONTRACT_ADDRESS.slice(-4)}
+          </span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleCopyCA();
+            }}
+            className="p-1 rounded-md hover:bg-gray-200 transition-colors"
+            title="Copy contract address"
+          >
+            {copied ? (
+              <Check className="w-3 h-3 text-emerald-500" />
+            ) : (
+              <Copy className="w-3 h-3 text-gray-400" />
+            )}
+          </button>
+        </a>
       </div>
 
       <div className="absolute bottom-10 animate-pulse flex flex-col items-center text-gray-300">
@@ -535,7 +575,7 @@ export default function HomePage() {
   };
 
   const handleOpenBuy = () => {
-    window.open('https://pump.fun', '_blank');
+    window.open(branding.buyTokenUrl, '_blank');
   };
 
   const handleDownloadShareCard = async () => {
