@@ -392,7 +392,7 @@ function Leaderboard({
   entries: Array<{
     wallet: string;
     walletShort: string;
-    balance: number;
+    totalEarned: number;
     rank: number;
   }>;
   currentUser: string;
@@ -418,7 +418,7 @@ function Leaderboard({
             <tr>
               <th className="pb-4">Rank</th>
               <th className="pb-4">Address</th>
-              <th className="pb-4 text-right">Balance</th>
+              <th className="pb-4 text-right">Earned</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -431,7 +431,7 @@ function Leaderboard({
                   {miner.walletShort}
                 </td>
                 <td className="py-4 text-right font-medium">
-                  {formatCompactNumber(miner.balance)}
+                  {formatCompactNumber(miner.totalEarned)}
                 </td>
               </tr>
             ))}

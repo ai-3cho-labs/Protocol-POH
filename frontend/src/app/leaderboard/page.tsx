@@ -38,7 +38,7 @@ export default function LeaderboardPage() {
         <div className="text-center">
           <h1 className="text-xl font-bold text-white">Leaderboard</h1>
           <p className="text-xs text-gray-500 mt-1">
-            Top holders by Balance
+            Top earners by GOLD received
           </p>
         </div>
 
@@ -90,7 +90,7 @@ export default function LeaderboardPage() {
             LEADERBOARD
           </h1>
           <p className="text-sm text-zinc-500 mt-1">
-            Top holders ranked by Balance
+            Top earners ranked by GOLD received
           </p>
         </div>
 
@@ -100,7 +100,7 @@ export default function LeaderboardPage() {
           <div className="grid grid-cols-12 gap-4 px-4 py-3 border-b border-terminal-border font-mono text-sm text-gray-500">
             <div className="col-span-1">RANK</div>
             <div className="col-span-7">HOLDER</div>
-            <div className="col-span-4 text-right">BALANCE</div>
+            <div className="col-span-4 text-right">EARNED</div>
           </div>
 
           {/* Rows */}
@@ -188,7 +188,7 @@ function MobilePodium({ entries }: { entries: LeaderboardUser[] }) {
 
               {/* Balance */}
               <span className="text-[10px] text-gray-500 mb-2">
-                {formatCompactNumber(entry.balance)}
+                {formatCompactNumber(entry.totalEarned)}
               </span>
 
               {/* Podium bar */}
@@ -298,7 +298,7 @@ function MobileRow({ entry }: { entry: LeaderboardUser }) {
             entry.isCurrentUser ? 'text-amber-400' : 'text-white'
           )}
         >
-          {formatCompactNumber(entry.balance)}
+          {formatCompactNumber(entry.totalEarned)}
         </div>
       </div>
     </div>
@@ -361,7 +361,7 @@ function DesktopRow({ entry }: { entry: LeaderboardUser }) {
             entry.isCurrentUser ? 'text-white glow-white' : 'text-white'
           )}
         >
-          {formatCompactNumber(entry.balance)}
+          {formatCompactNumber(entry.totalEarned)}
         </span>
       </div>
     </div>

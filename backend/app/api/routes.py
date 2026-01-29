@@ -12,7 +12,7 @@ from typing import Optional, Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, func
 from app.database import get_db
 from app.services.snapshot import SnapshotService
 from app.services.distribution import DistributionService
@@ -99,7 +99,7 @@ class LeaderboardEntry(BaseModel):
     rank: int
     wallet: str
     wallet_short: str
-    balance: float
+    total_earned: float
 
 
 class PoolStatusResponse(BaseModel):
@@ -310,7 +310,7 @@ async def get_leaderboard(
     limit: int = Query(default=10, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get top holders by balance (cached)."""
+    """Get top earners by total GOLD received (cached)."""
     from app.utils.cache import get_cache_service
 
     cache = get_cache_service()
@@ -324,41 +324,37 @@ async def get_leaderboard(
                 rank=entry["rank"],
                 wallet=entry["wallet"],
                 wallet_short=format_wallet(entry["wallet"]),
-                balance=float(entry["balance"] / TOKEN_MULTIPLIER),
+                total_earned=float(Decimal(entry["total_earned"]) / GOLD_MULTIPLIER),
             )
             for entry in cached[:limit]
         ]
 
-    # Cache miss - compute from latest snapshot
-    snapshot_service = SnapshotService(db)
-    latest_snapshot = await snapshot_service.get_latest_snapshot()
-
-    if not latest_snapshot:
-        return []
-
-    from app.models import Balance, ExcludedWallet
+    from app.models import DistributionRecipient, ExcludedWallet
 
     # Get excluded wallets
     excluded_result = await db.execute(select(ExcludedWallet.wallet))
     excluded = {w for (w,) in excluded_result.all()}
 
-    # Get top balances from latest snapshot
+    # Get top earners by total amount received across all distributions
+    total_earned = func.sum(DistributionRecipient.amount_received).label(
+        "total_earned"
+    )
     result = await db.execute(
-        select(Balance.wallet, Balance.balance)
-        .where(Balance.snapshot_id == latest_snapshot.id)
-        .order_by(Balance.balance.desc())
+        select(DistributionRecipient.wallet, total_earned)
+        .group_by(DistributionRecipient.wallet)
+        .order_by(total_earned.desc())
         .limit(100)
     )
-    balances = [(w, b) for w, b in result.all() if w not in excluded and b > 0]
+    earners = [(w, e) for w, e in result.all() if w not in excluded and e > 0]
 
     # Cache for next time
     leaderboard_data = [
         {
             "rank": i + 1,
             "wallet": w,
-            "balance": b,
+            "total_earned": e,
         }
-        for i, (w, b) in enumerate(balances)
+        for i, (w, e) in enumerate(earners)
     ]
     await cache.set_leaderboard(leaderboard_data)
 
@@ -367,9 +363,9 @@ async def get_leaderboard(
             rank=i + 1,
             wallet=w,
             wallet_short=format_wallet(w),
-            balance=float(Decimal(b) / TOKEN_MULTIPLIER),
+            total_earned=float(Decimal(e) / GOLD_MULTIPLIER),
         )
-        for i, (w, b) in enumerate(balances[:limit])
+        for i, (w, e) in enumerate(earners[:limit])
     ]
 
 
