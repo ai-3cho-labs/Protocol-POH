@@ -47,7 +47,7 @@ from app.core.security_headers import SecurityHeadersMiddleware
 from app.database import init_db, close_db
 from app.utils.http_client import close_http_client
 from app.utils.rate_limiter import limiter, validate_rate_limiter_config
-from app.websocket import socket_app, setup_redis_adapter
+from app.websocket import socket_app
 
 
 # ===========================================
@@ -262,8 +262,6 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("No database URL configured, skipping DB init")
 
-    # Setup WebSocket Redis adapter
-    await setup_redis_adapter()
     logger.info("WebSocket server initialized")
 
     # Warm price cache at startup

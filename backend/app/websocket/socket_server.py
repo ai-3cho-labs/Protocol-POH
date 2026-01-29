@@ -17,10 +17,32 @@ settings = get_settings()
 # Connection tracking for rate limiting
 MAX_CONNECTIONS_PER_IP = 5
 
-# Create Socket.IO server
+
+def _create_client_manager():
+    """Create Redis manager for production, None for development."""
+    if not settings.is_production or not settings.redis_url:
+        if not settings.redis_url:
+            logger.warning("No Redis URL configured, WebSocket in single-worker mode")
+        else:
+            logger.info("WebSocket running in single-worker mode (development)")
+        return None
+
+    try:
+        mgr = socketio.AsyncRedisManager(settings.redis_url)
+        logger.info("WebSocket Redis manager created")
+        return mgr
+    except Exception as e:
+        logger.error(
+            f"Failed to create Redis manager: {e}, falling back to single-worker mode"
+        )
+        return None
+
+
+# Create Socket.IO server with manager at construction time
 sio = socketio.AsyncServer(
     async_mode="asgi",
     cors_allowed_origins=settings.cors_origins_list,
+    client_manager=_create_client_manager(),
     logger=True,  # Enable Socket.IO logging for debugging
     engineio_logger=True,  # Enable Engine.IO logging for debugging
     ping_timeout=20,
@@ -32,36 +54,6 @@ socket_app = socketio.ASGIApp(
     sio,
     socketio_path="",  # Socket.IO path handled by FastAPI mount
 )
-
-
-async def setup_redis_adapter() -> None:
-    """
-    Setup Redis adapter for multi-worker pub/sub.
-
-    Called during application startup if Redis is configured.
-    """
-    if not settings.redis_url:
-        logger.warning(
-            "No Redis URL configured, WebSocket will run in single-worker mode"
-        )
-        return
-
-    # Skip Redis adapter in development to avoid SSL issues with Upstash
-    # WebSocket will still work fine in single-worker mode
-    if not settings.is_production:
-        logger.info("WebSocket running in single-worker mode (development)")
-        return
-
-    try:
-        # Use Redis manager for pub/sub across workers
-        # The rediss:// scheme automatically handles SSL/TLS
-        mgr = socketio.AsyncRedisManager(settings.redis_url)
-        mgr.set_server(sio)
-        sio.manager = mgr
-        logger.info("WebSocket Redis adapter initialized")
-    except Exception as e:
-        logger.error(f"Failed to setup Redis adapter: {e}")
-        logger.info("Falling back to single-worker mode")
 
 
 class ConnectionTracker:

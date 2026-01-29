@@ -8,7 +8,6 @@ Real-time updates via Socket.IO with Redis adapter.
 from app.websocket.socket_server import (
     sio,
     socket_app,
-    setup_redis_adapter,
     connection_tracker,
     GLOBAL_ROOM,
     wallet_room,
@@ -42,7 +41,6 @@ __all__ = [
     # Server
     "sio",
     "socket_app",
-    "setup_redis_adapter",
     "connection_tracker",
     "GLOBAL_ROOM",
     "wallet_room",
